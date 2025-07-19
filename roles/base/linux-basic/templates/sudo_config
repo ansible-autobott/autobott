@@ -1,0 +1,10 @@
+# set a timeout for sudo
+{% if linux_basic.sudo_timeout is defined and linux_basic.sudo_timeout != "" %}
+Defaults:%sudo  timestamp_timeout={{ linux_basic.sudo_timeout }}
+%sudo   ALL=(ALL:ALL) ALL
+{% else %}
+# sudo timeout has been disabled
+%sudo   ALL=(ALL:ALL) NOPASSWD:ALL
+{% endif %}
+
+

@@ -1,0 +1,86 @@
+---
+#============================================================================================================
+# Mealie Role
+#============================================================================================================
+
+- name: Main Mealie installation and configuration
+  tags:
+    - mealie
+    - servarr
+    - untagged
+  when: run_role_mealie | bool
+  block:
+    - name: Set merged mealie configuration
+      ansible.builtin.set_fact:
+        mealie_config: "{{ mealie_defaults | combine(mealie, recursive=true) }}"
+
+    - name: Create mealie system group
+      ansible.builtin.group:
+        name: "{{ mealie_config.user.group }}"
+        gid: "{{ mealie_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create mealie system user
+      ansible.builtin.user:
+        name: "{{ mealie_config.user.name }}"
+        uid: "{{ mealie_config.user.uid | default(omit, true) }}"
+        group: "{{ mealie_config.user.group }}"
+        home: "{{ mealie_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Get UID of mealie user
+      ansible.builtin.command: id -u {{ mealie_config.user.name }}
+      register: mealie_uid_cmd
+      changed_when: false
+
+    - name: Set mealie_uid fact
+      ansible.builtin.set_fact:
+        mealie_uid: "{{ mealie_uid_cmd.stdout }}"
+
+    - name: Get GID of mealie group
+      ansible.builtin.command: id -g {{ mealie_config.user.group }}
+      register: mealie_gid_cmd
+      changed_when: false
+
+    - name: Set mealie_gid fact
+      ansible.builtin.set_fact:
+        mealie_gid: "{{ mealie_gid_cmd.stdout }}"
+
+    - name: Create Mealie directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ mealie_config.user.name }}"
+        group: "{{ mealie_config.user.group }}"
+      loop:
+        - "{{ mealie_config.paths.base_dir }}/config"
+
+    - name: "Create files needed for run docker"
+      ansible.builtin.template:
+        src: "docker-compose.yml"
+        dest: "{{ mealie_config.paths.base_dir }}/docker-compose.yml"
+        owner: "{{ mealie_config.user.name }}"
+        group: "{{ mealie_config.user.group }}"
+        mode: "0644"
+
+    - name: Configure systemd wrapper service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/mealie.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart mealie
+
+    - name: Enable and start the service
+      ansible.builtin.systemd:
+        name: mealie
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd

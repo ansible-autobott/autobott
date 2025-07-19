@@ -1,0 +1,21 @@
+[Unit]
+Description=Readarr Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+{% if readarr_config.daemon.umask is defined and readarr_config.daemon.umask | length %}
+UMask={{ readarr4_config.daemon.umask }}
+{% endif %}
+
+User={{ readarr_config.user.name }}
+Group={{ readarr_config.user.group }}
+ExecStart={{ readarr_config.paths.base_dir }}/install/Readarr/Readarr -nobrowser -data={{ readarr_config.paths.data_dir }}
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

@@ -1,0 +1,21 @@
+---
+#============================================================================================================
+# Jellyfin Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_jellyfin: false
+
+# User overrides - will be combined with jellyfin_defaults
+jellyfin: {}
+# Default configuration structure
+jellyfin_defaults:
+  data_dir: /var/lib/jellyfin
+  extra_groups: []
+
+  # allow remote connections to the server (without proxy)
+  enable_remote: False
+  port: 8096
+  # start the service with different umask value
+  # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+  umask: ""

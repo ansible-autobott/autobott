@@ -1,0 +1,172 @@
+---
+#============================================================================================================
+# Wireguard Role
+#============================================================================================================
+
+- name: Main Wireguard installation and configuration
+  tags:
+    - wireguard
+    - servarr
+    - untagged
+  when: run_role_wireguard | bool
+  block:
+    - name: Set merged wireguard configuration
+      ansible.builtin.set_fact:
+        wireguard_config: "{{ wireguard_defaults | combine(wireguard, recursive=true) }}"
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - wireguard
+          - ufw
+        state: present
+        update_cache: true
+      become: true
+
+    - name: Check if private key file exists
+      ansible.builtin.stat:
+        path: /etc/wireguard/private.key
+      register: private_key_file
+      become: true
+
+    - name: Generate private key if not configured and file missing
+      when:
+        - wireguard_config.private_key == ""
+        - not private_key_file.stat.exists
+      block:
+        - name: Generate WireGuard private key
+          ansible.builtin.command: wg genkey
+          register: wireguard_private_key_cmd
+          changed_when: false
+          no_log: "{{ ansible_verbosity < 3 }}"
+          become: true
+
+        - name: Save generated private key
+          ansible.builtin.copy:
+            content: "{{ wireguard_private_key_cmd.stdout }}"
+            dest: /etc/wireguard/private.key
+            owner: root
+            group: root
+            mode: "0600"
+          become: true
+
+    - name: Store private key from variable if provided
+      when: wireguard_config.private_key != ""
+      ansible.builtin.copy:
+        content: "{{ wireguard_config.private_key }}"
+        dest: /etc/wireguard/private.key
+        owner: root
+        group: root
+        mode: "0600"
+      become: true
+
+    - name: Read private key file content
+      ansible.builtin.slurp:
+        src: /etc/wireguard/private.key
+      register: wireguard_private_key_b64
+      become: true
+
+    - name: Decode private key
+      ansible.builtin.set_fact:
+        wireguard_private_key: "{{ wireguard_private_key_b64.content | b64decode }}"
+      no_log: "{{ ansible_verbosity < 3 }}"
+
+    - name: Get Default network if used as exit node
+      when: wireguard_config.exit_node
+      block:
+        - name: Get default network interface
+          ansible.builtin.command:
+            cmd: ip route list default
+          register: default_route
+          changed_when: false
+          become: true
+
+        - name: Set default network interface fact
+          ansible.builtin.set_fact:
+            wireguard_default_net: "{{ (default_route.stdout_lines[0].split() | select('match', '^[a-zA-Z0-9]+$') | list)[-1] }}"
+
+    - name: Wireguard config block
+      block:
+        - name: Backup existing wg0.conf if exists
+          ansible.builtin.copy:
+            src: /etc/wireguard/wg0.conf
+            dest: /etc/wireguard/wg0.conf.bak
+            remote_src: true
+            owner: root
+            group: root
+            mode: "0640"
+          ignore_errors: true
+          changed_when: false
+          become: true
+
+        - name: Deploy wg0.conf from template
+          ansible.builtin.template:
+            src: wg0.conf
+            dest: /etc/wireguard/wg0.conf
+            owner: root
+            group: root
+            mode: "0640"
+          register: wireguard_config_change
+          notify: restart wireguard interface
+          become: true
+
+        - name: Check Wireguard service status
+          ansible.builtin.systemd:
+            name: wg-quick@wg0
+            state: started
+            enabled: false
+          register: wireguard_status
+          check_mode: true
+          become: true
+
+        - name: Stop Wireguard service if running and config changed
+          ansible.builtin.systemd:
+            name: wg-quick@wg0
+            state: stopped
+          when: wireguard_status.status.ActiveState == "active" and wireguard_config_change.changed
+          become: true
+
+    - name: Enable or disable Wireguard service based on enabled flag
+      ansible.builtin.systemd:
+        name: wg-quick@wg0
+        enabled: "{{ wireguard_config.enabled | bool }}"
+        state: "{{ 'started' if wireguard_config.enabled | bool else 'stopped' }}"
+      become: true
+
+    # =========================================================================================
+    # Route traffic block
+    # =========================================================================================
+    - name: Configure routing for Wireguard traffic
+      when:
+        - wireguard_config.exit_node  | bool
+        - wireguard_config.enabled  | bool
+      block:
+        - name: Deploy Wireguard sysctl config
+          ansible.builtin.template:
+            src: wireguard_sysctl.conf
+            dest: /etc/sysctl.d/50-wireguard-sysctl.conf
+            owner: root
+            group: root
+            mode: "0644"
+          register: sysctl_conf_changed
+          become: true
+
+        - name: Reload sysctl settings
+          ansible.builtin.command: sysctl --system
+          when: sysctl_conf_changed.changed
+          become: true
+
+    - name: Remove Wireguard sysctl config when routing disabled or Wireguard disabled
+      when: not (wireguard_config.exit_node | bool) or not ( wireguard_config.enabled | bool)
+      block:
+        - name: Remove Wireguard sysctl config file
+          ansible.builtin.file:
+            path: /etc/sysctl.d/50-wireguard-sysctl.conf
+            state: absent
+          register: sysctl_conf_removed
+          become: true
+
+        - name: Reload sysctl settings after removal
+          ansible.builtin.command: sysctl --system
+          when: sysctl_conf_removed.changed
+          become: true

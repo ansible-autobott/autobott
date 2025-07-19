@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# readarr Daemon Role Handlers
+#============================================================================================================
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart readarr
+  ansible.builtin.service:
+    name: readarr
+    state: restarted
+  listen: restart readarr

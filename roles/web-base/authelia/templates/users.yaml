@@ -1,0 +1,19 @@
+users:
+{% for user in authelia_config.users %}
+
+  {{ user.username }}:
+    password: {{ user.password | password_hash('bcrypt', user.salt | default(lookup('password', '/dev/null', length=22, chars='ascii_letters,digits'))) }}
+    displayname: "{{ user.displayname | default (user.username)  }}"
+    email: "{{ user.email }}"
+    disabled: {{ user.disabled | default (false) }}
+{% if user.groups is defined and user.groups | length > 0 %}
+    groups:
+{% for group in user.groups %}
+      - {{ group }}
+{% endfor %}
+
+{% else %}
+    groups: []
+{% endif %}
+
+{% endfor %}

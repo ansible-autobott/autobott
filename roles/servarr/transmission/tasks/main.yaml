@@ -1,0 +1,179 @@
+---
+#============================================================================================================
+# Transmission Daemon Role Tasks
+#============================================================================================================
+
+- name: Main transmission installation block
+  tags:
+    - transmission
+    - untagged
+  when:
+    - run_role_transmission | bool
+  block:
+    - name: Set merged transmission facts
+      ansible.builtin.set_fact:
+        transmission_config: "{{ transmission_defaults | combine(transmission, recursive=true) }}"
+
+    - name: Install Transmission packages
+      ansible.builtin.apt:
+        name:
+          - transmission-daemon
+        state: present
+        update_cache: true
+
+    - name: Add transmission user to specified groups
+      ansible.builtin.user:
+        name: debian-transmission
+        groups: "{{ transmission_config.groups }}"
+        append: true
+
+    - name: Create flood theme directory
+      ansible.builtin.file:
+        path: /var/lib/transmission-daemon-flood-theme
+        state: directory
+        owner: debian-transmission
+        group: debian-transmission
+        mode: "0750"
+
+    - name: Extract flood theme
+      ansible.builtin.unarchive:
+        src: "flood-for-transmission.tar.gz"
+        dest: "/var/lib/transmission-daemon-flood-theme"
+        creates: "/var/lib/transmission-daemon-flood-theme/flood-for-transmission/index.html"
+        remote_src: false
+
+    - name: Set correct theme permissions
+      ansible.builtin.file:
+        path: /var/lib/transmission-daemon-flood-theme
+        owner: debian-transmission
+        group: debian-transmission
+        mode: "u=rwX,g=rX,o="
+        recurse: true
+
+    - name: Ensure systemd override directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/transmission-daemon.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create systemd service override
+      ansible.builtin.template:
+        src: systemd.override.conf
+        dest: "/etc/systemd/system/transmission-daemon.service.d/override.conf"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: "Reload systemd"
+
+    - name: Enable and start transmission service
+      ansible.builtin.systemd:
+        name: transmission-daemon
+        enabled: true
+        daemon_reload: true
+      notify: "Reload systemd"
+
+    - name: Ensure download directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: debian-transmission
+        group: debian-transmission
+        mode: "0750"
+      loop:
+        - "{{ transmission_config.download_path }}"
+        - "{{ transmission_config.download_path }}/incomplete"
+
+    - name: Stop transmission-daemon for configuration
+      ansible.builtin.service:
+        name: transmission-daemon
+        state: stopped
+      changed_when: false
+
+    - name: Configure transmission settings
+      ansible.builtin.lineinfile:
+        path: /etc/transmission-daemon/settings.json
+        regexp: '^[ \t]*"{{ item.property | regex_escape() }}":'
+        line: '    "{{ item.property }}": {{ item.value | to_json }},'
+        backup: true
+      loop:
+        - { property: "rpc-bind-address", value: "{{ transmission_config.remote_bind_address }}" }
+        - { property: "rpc-username", value: "{{ transmission_config.remote_user }}" }
+        - { property: "incomplete-dir", value: "{{ transmission_config.download_path }}/incomplete" }
+        - { property: "download-dir", value: "{{ transmission_config.download_path }}" }
+        - { property: "rpc-whitelist-enabled", value: "{{ transmission_config.remote_whitelist_enabled }}" }
+
+    - name: Configure transmission port
+      ansible.builtin.lineinfile:
+        path: /etc/transmission-daemon/settings.json
+        regexp: '^[ \t]*"rpc-port":'
+        line: '    "rpc-port": {{ transmission_config.remote_bind_port | int }},'
+        backup: true
+
+    - name: Configure transmission umask
+      ansible.builtin.lineinfile:
+        path: /etc/transmission-daemon/settings.json
+        regexp: '^[ \t]*"umask":'
+        line: '    "umask": {{ transmission_config.umask | int }},'
+        backup: true
+
+    - name: Configure transmission password
+      ansible.builtin.lineinfile:
+        path: /etc/transmission-daemon/settings.json
+        regexp: '^[ \t]*"rpc-password":'
+        line: '    "rpc-password": {{ transmission_config.remote_password | to_json }},'
+        backup: true
+      changed_when: false
+
+    - name: Restart transmission-daemon after configuration
+      ansible.builtin.service:
+        name: transmission-daemon
+        state: restarted
+      changed_when: false
+
+#============================================================================================================
+# Transmission Removal Block
+#============================================================================================================
+
+- name: Main transmission removal block
+  tags:
+    - transmission
+    - untagged
+  when:
+    - run_role_transmission is defined
+    - not run_role_transmission
+  block:
+    - name: Set merged transmission facts
+      ansible.builtin.set_fact:
+        transmission_config: "{{ transmission_defaults | combine(transmission, recursive=true) }}"
+
+    - name: Stop transmission service
+      ansible.builtin.service:
+        name: transmission-daemon
+        state: stopped
+      ignore_errors: true
+
+    - name: Remove transmission packages
+      ansible.builtin.apt:
+        name:
+          - transmission-daemon
+          - transmission-cli
+          - transmission-common
+        state: absent
+        purge: true
+        autoremove: true
+
+    - name: Remove transmission data directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/transmission-daemon/
+        - /var/lib/transmission-daemon-flood-theme
+
+    - name: Remove download directory
+      ansible.builtin.file:
+        path: "{{ transmission_config.download_path }}"
+        state: absent
+      when: transmission_config.delete_data_on_uninstall

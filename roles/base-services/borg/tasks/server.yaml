@@ -1,0 +1,71 @@
+---
+#============================================================================================================
+# Borg Server Configuration
+#============================================================================================================
+
+- name: Main Borg Server Block
+  when:
+    - borg_config.server.enabled | bool
+  block:
+    - name: Ensure borg group exists
+      ansible.builtin.group:
+        name: "{{ borg_config.server.user.group }}"
+        gid: "{{ borg_config.server.user.gid | default(omit, true) }}"
+
+    - name: Ensure borg user exists
+      ansible.builtin.user:
+        name: "{{ borg_config.server.user.name }}"
+        group: "{{ borg_config.server.user.group }}"
+        uid: "{{ borg_config.server.user.uid | default(omit, true) }}"
+        home: "{{ borg_config.server.user.home }}"
+        createhome: true
+        system: true
+
+    - name: Create SSH directory
+      ansible.builtin.file:
+        path: "{{ borg_config.server.user.home }}/.ssh"
+        state: directory
+        owner: "{{ borg_config.server.user.name }}"
+        group: "{{ borg_config.server.user.group }}"
+        mode: "0700"
+
+    - name: Create backup data directory
+      ansible.builtin.file:
+        path: "{{ borg_config.server.data_directory }}"
+        state: directory
+        owner: "{{ borg_config.server.user.name }}"
+        group: "{{ borg_config.server.user.group }}"
+        mode: "0700"
+
+    - name: Create symbolic link to backup directory
+      ansible.builtin.file:
+        src: "{{ borg_config.server.data_directory }}"
+        dest: "{{ borg_config.server.data_symlink }}"
+        owner: "{{ borg_config.server.user.name }}"
+        group: "{{ borg_config.server.user.group }}"
+        state: link
+      when:
+        - borg_config.server.data_symlink | length > 0
+        - borg_config.server.data_directory | length > 0
+
+    - name: Remove symbolic link to backup directory
+      ansible.builtin.file:
+        path: "{{ borg_config.server.data_symlink }}"
+        state: absent
+      when: borg_config.server.data_symlink | length == 0
+
+    - name: Configure ssh keys for borg repos
+      ansible.builtin.blockinfile:
+        path: "{{ borg_config.server.user.home }}/.ssh/authorized_keys"
+        create: true
+        owner: "{{ borg_config.server.user.name }}"
+        group: "{{ borg_config.server.user.group }}"
+        mode: "0600"
+        block: |
+          # BORG: List of individual keys with access to specific repos, one key per access
+          {% for profile in borg_config.server.repos %}
+          command="cd {{ borg_config.server.data_directory }} && borg serve {% if profile.append_only %}--append-only {% endif -%}
+          --restrict-to-repository {{ borg_config.server.data_directory }}/{{ profile.name -}}
+          " {{ profile.public_key }}
+          {% endfor %}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - BORG BACKUP ACCESS"

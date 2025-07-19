@@ -1,0 +1,98 @@
+---
+# Distribution Upgrade Tasks
+# Handles the process of upgrading Debian/Ubuntu to a new release version
+
+- name: "Perform distribution upgrade to {{ linux_apt_defaults.release }}"
+  tags:
+    - "linux-upgrade"
+    - "never"
+  block:
+    - name: "Load distribution-specific variables"
+      ansible.builtin.include_vars:
+        file: "{{ lookup('first_found', linux_apt_defaults.release + '.yaml') }}"
+      when: linux_apt_defaults.release is defined
+
+    - name: "Update APT sources for new release"
+      ansible.builtin.template:
+        src: "sources.{{ linux_apt_defaults.release }}.j2"
+        dest: /etc/apt/sources.list
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+
+    - name: "Update APT cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      changed_when: false
+
+    - name: "Remove packages before upgrade"
+      ansible.builtin.apt:
+        name: "{{ linux_apt_pre_upgrade_pkg_remove | default([]) }}"
+        state: absent
+      when: linux_apt_pre_upgrade_pkg_remove is defined
+
+    - name: "Purge packages before upgrade"
+      ansible.builtin.apt:
+        name: "{{ linux_apt_pre_upgrade_pkg_purge | default([]) }}"
+        state: absent
+        purge: true
+      when: linux_apt_pre_upgrade_pkg_purge is defined
+
+    - name: "Perform distribution upgrade"
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+        force_apt_get: true # More reliable than apt
+      register: dist_upgrade_result
+      until: dist_upgrade_result is success
+      retries: 3
+      delay: 5
+
+    - name: "Purge packages after upgrade"
+      ansible.builtin.apt:
+        name: "{{ linux_apt_post_upgrade_pkg_purge | default([]) }}"
+        state: absent
+        purge: true
+      when: linux_apt_post_upgrade_pkg_purge is defined
+
+    - name: "Remove obsolete packages"
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true
+
+    - name: "Reboot system to apply changes"
+      ansible.builtin.reboot:
+        reboot_timeout: 3600
+        msg: "Rebooting to complete distribution upgrade"
+        pre_reboot_delay: 5
+        post_reboot_delay: 30
+        test_command: uptime
+
+    - name: "Clean up post-upgrade files"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ linux_apt_post_upgrade_cleanup_files | default([]) }}"
+      when: linux_apt_post_upgrade_cleanup_files is defined
+
+    - name: "Clean package cache"
+      ansible.builtin.apt:
+        autoclean: true
+        clean: true
+
+    - name: "Mark distribution upgrade as completed"
+      ansible.builtin.debug:
+        msg: "Distribution upgrade to {{ linux_apt_defaults.release }} completed successfully"
+      changed_when: true
+
+  rescue:
+    - name: "Log upgrade failure"
+      ansible.builtin.debug:
+        msg: "Distribution upgrade failed. Please check the logs and system state."
+
+    - name: "Fail with clear message"
+      ansible.builtin.fail:
+        msg: "Distribution upgrade to {{ linux_apt_defaults.release }} failed. Manual intervention required."

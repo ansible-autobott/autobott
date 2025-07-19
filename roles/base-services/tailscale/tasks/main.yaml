@@ -1,0 +1,35 @@
+---
+# Install opentailscale
+
+- name: Configure basic Linux system
+  tags:
+    - "tailscale"
+    - "untagged"
+  when:
+    - run_role_tailscale | bool
+  block:
+    - name: Set merged tailscale facts
+      ansible.builtin.set_fact:
+        tailscale_data: "{{ tailscale_defaults | combine(tailscale, recursive=True) }}"
+
+    - name: Copy tailscale GPG key
+      ansible.builtin.copy:
+        src: files/bookworm.noarmor.gpg
+        dest: /etc/apt/keyrings/tailscale-archive-keyring.gpg
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Create tailscale APT sources list
+      ansible.builtin.copy:
+        src: sources.list
+        dest: /etc/apt/sources.list.d/tailscale.list
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install tailscale package
+      ansible.builtin.apt:
+        name: tailscale
+        state: present
+        update_cache: true

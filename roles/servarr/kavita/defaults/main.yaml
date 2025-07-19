@@ -1,0 +1,36 @@
+---
+#============================================================================================================
+# Kavita  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_kavita: false
+
+# User overrides - will be combined with kavita_defaults
+kavita: {}
+# Default configuration structure
+kavita_defaults:
+  version: 0.8.6.2
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: kavita
+    uid: # Let system assign UID
+    group: kavita
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/kavita
+    data_dir: /opt/kavita/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 5000
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
+    auth_method: "External" # Basic | Forms | External | None
+
+kavita_checksums:
+  "0.8.6.2": "d0213e237dd92a57b6cdc9bd5116e9efd1459921ea1130acd323a4b6277e6ccc"

@@ -1,0 +1,142 @@
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        h2, h3 {
+            width: 80%;
+            margin: auto;
+            padding: 1rem;
+        }
+
+        .service-table {
+            width: 80%;
+            border-collapse: collapse;
+            margin: auto;
+            border: 1px solid #ddd;
+        }
+
+        .service-table th, .service-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .service-table th {
+            background-color: #f4f4f4;
+            color: #333;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .service-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .service-table tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .service-table td a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .service-table td a:hover {
+            text-decoration: underline;
+        }
+
+        .service-table .red {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .service-table .green {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .service-table .orange {
+            color: #ae6f27;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<h2>Autbott</h2>
+
+{% if vhosts is defined %}
+<h3>Vhosts:</h3>
+
+<table class="service-table">
+    <tbody>
+    <tr>
+        <th>Service Name</th>
+        <th>Comment</th>
+        <th>Domain</th>
+        <th>Type</th>
+        <th>Redirect Target</th>
+        <th>Authentication</th>
+        <th>PHP</th>
+        <th>MariaDB</th>
+    </tr>
+    {% for webservice in vhosts %}
+    {% if webservice.enabled %}
+    {% set valid_servers = webservice.servers | selectattr("enabled") | list %}
+    {% for server in valid_servers %}
+    <tr>
+        {% if loop.index == 1 %}
+        <td rowspan="{{ valid_servers | length }}">
+            {{ webservice.name }}
+        </td>
+        <td rowspan="{{ valid_servers | length }}">
+            {{ webservice.comment | default("") }}
+        </td>
+        {% endif %}
+        <td>
+            {% for domain in server.domains %}
+            <a href="{{ domain }}">{{ domain }}</a><br>
+            {% endfor %}
+        </td>
+        <td>{{ server.type }}</td>
+        <td>
+            {% if server.type == "redirect" and server.redirect_target is defined %}
+            {{ server.redirect_target }}
+            {% endif %}
+        </td>
+        <td>
+            {% if server.authentication is defined %}
+            <span class="{{ 'green' if server.authentication else 'red' }}">{{ server.authentication }}</span>
+            {% else %}
+            <span class="orange">undefined</span>
+            {% endif %}
+        </td>
+        {% if loop.index == 1 %}
+        <td rowspan="{{ valid_servers | length }}">
+            {% if webservice.php is defined and webservice.php.enabled is defined %}
+            <span class="{{ 'green' if webservice.php.enabled else 'red' }}">{{ webservice.php.enabled }}</span>
+            {% else %}
+            <span class="orange">undefined</span>
+            {% endif %}
+        </td>
+        <td rowspan="{{ valid_servers | length }}">
+            {% if webservice.mariadb is defined and webservice.mariadb.enabled is defined %}
+            <span class="{{ 'green' if webservice.mariadb.enabled else 'red' }}">{{ webservice.mariadb.enabled }}</span>
+            {% else %}
+            <span class="orange">undefined</span>
+            {% endif %}
+        </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>This host does not contain vhosts</p>
+{% endif %}
+
+</body>
+</html>

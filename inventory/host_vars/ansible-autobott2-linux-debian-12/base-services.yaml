@@ -1,0 +1,109 @@
+---
+#============================================================================================================
+# wireguard
+#============================================================================================================
+run_role_wireguard: true
+wireguard:
+  private_key: "iOUAd90FUZVjOxviGw48G93by+Bwfh6pIXjHelECrnc="
+  port: "55555"
+  address: "192.168.20.1/24"
+  address_ipv6: "fdc3:064b:b727::1/64"
+  exit_node: yes
+
+  peers:
+    - name: samplePeer
+      public_key: "WGajroLJnYGTYTH6ywldJdSvOjUXOKIg3GTfiN2d3VM="
+      endpoint: ""
+      AllowedIPs: "192.168.20.2/32,fdc3:064b:b727::2/128"
+
+#============================================================================================================
+# Tailscale
+#============================================================================================================
+run_role_tailscale: true
+
+#============================================================================================================
+# Docker
+#============================================================================================================
+run_role_docker: true
+docker:
+  expose_metrics: true
+  users:
+    - jsmith
+
+#============================================================================================================
+# Samba
+#============================================================================================================
+run_role_samba: true
+samba:
+  shares:
+    - name: "shared_folder"
+      comment: "A shared folder"
+      path: "/path/to/shared_folder"
+      valid_users: ["@smbusers"] # list of valid users
+      write_list: ["@smbusers"] # list of write users
+  users:
+    - name: jsmith
+      password: "{{ secrets.users.jsmith.passwd }}"
+
+#============================================================================================================
+# MariaDb (mysql)
+#============================================================================================================
+run_role_mariadb: true
+
+#============================================================================================================
+# Borg
+#============================================================================================================
+run_role_borg: true
+borg:
+  version: "2.0.0b14" # check borg_checksums below
+  server:
+    enabled: true
+    repos:
+      - name: test
+        public_key: "ssh-rsa AAAAB...ss"
+        append_only: true
+
+#============================================================================================================
+# Borgmatic
+#============================================================================================================
+run_role_borgmatic: true
+borgmatic_backups:
+  - name: test_php
+    enabled: true
+
+    ssh_key: |
+      -----BEGIN OPENSSH PRIVATE KEY-----
+      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+      QyNTUxOQAAACDCHKuBvMtJ+AsiuWPfx8F7NrYBVkGccTcHrSAG6ytRfQAAAJgolqJEKJai
+      RAAAAAtzc2gtZWQyNTUxOQAAACDCHKuBvMtJ+AsiuWPfx8F7NrYBVkGccTcHrSAG6ytRfQ
+      AAAEDqR3a0COkKitHz6gKwJ60uyrv9iaUueocXBiZOYCVlN8Icq4G8y0n4CyK5Y9/HwXs2
+      tgFWQZxxNwetIAbrK1F9AAAAFXlvdXItYXBwbGljYXRpb24tbmFtZQ==
+      -----END OPENSSH PRIVATE KEY-----
+    encryption_passphrase: 123
+    destination:
+      - path: /backups/test_php
+        label: local
+      - path: ssh://dq202kq5@dq202kq5.repo.borgbase.com/./repo
+        label: borgbase
+        encryption: repokey-blake2-aes-ocb
+
+    dirs:
+      - root: /vhosts/php/home_dir/public_html
+
+  - name: test2
+    enabled: true
+    # used for encrypted repos
+    encryption_passphrase: 123
+    destination:
+      - path: /backups/ttest2
+        label: local
+        # select the encryption type, common values are: repokey-blake2, keyfile-blake2, default is none
+        # if you set an encryption you also must add a encryption_passphrase
+        # check "borg init --help" or "borg repo-create --help" with Borg 2.
+        encryption: repokey-blake2-aes-ocb
+
+    dirs:
+      - root: /vhosts/php/home_dir/public_html
+#    mariadb:
+#      - php
+

@@ -1,0 +1,27 @@
+[Unit]
+Description=Authelia authentication and authorization server
+Documentation=https://www.authelia.com
+After=multi-user.target
+
+[Service]
+User={{ authelia_config.user.name }}
+Group={{ authelia_config.user.group }}
+UMask=027
+Environment=AUTHELIA_SERVER_DISABLE_HEALTHCHECK=true
+ExecStart={{ authelia_config.paths.base_dir }}/install/authelia_latest/authelia-linux-amd64 --config {{ authelia_config.paths.data_dir }}/config.yaml
+SyslogIdentifier=authelia
+CapabilityBoundingSet=
+NoNewPrivileges=yes
+RestrictNamespaces=yes
+ProtectHome=true
+PrivateDevices=yes
+PrivateUsers=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=multi-user.target

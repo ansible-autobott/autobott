@@ -1,0 +1,12 @@
+---
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart homepage
+  ansible.builtin.systemd:
+    name: homepage
+    state: restarted
+  listen: restart homepage

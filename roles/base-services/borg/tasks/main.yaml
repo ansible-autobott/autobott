@@ -1,0 +1,69 @@
+---
+#============================================================================================================
+# Borg Backup
+#============================================================================================================
+
+- name: Main Borg block
+  tags:
+    - borg
+    - untagged
+  when:
+    - run_role_borg is defined
+    - run_role_borg
+  block:
+    - name: Set merged borg configuration
+      ansible.builtin.set_fact:
+        borg_config: "{{ borg_defaults | combine(borg, recursive=true) }}"
+
+    #=============================
+    # Borg Binary Installation
+    #=============================
+
+    - name: Download Borg binary
+      ansible.builtin.get_url:
+        # depending on the Debian version on or the other can be installed, see readme
+        #  borg-linuxcurrent64 Linux 64bit (built on Debian 12 "BookWorm" with glibc 2.36)
+        #  borg-linuxnew64     Linux 64bit (built on Debian 11 "BullsEye" with glibc 2.31)
+        #  borg-linux64        Linux 64bit (built on Debian 10 "Buster" with glibc 2.28)
+        #  borg-linuxold64     Linux 64bit (built on Debian 9 "Stretch" with glibc 2.24)
+        url: "https://github.com/borgbackup/borg/releases/download/{{ borg_config.version }}/borg-linux-glibc236"
+        dest: /usr/local/bin/borg
+        checksum: "sha256:{{ borg_checksums[borg_config.version] }}"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create borgfs symlink
+      ansible.builtin.file:
+        src: /usr/local/bin/borg
+        dest: /usr/local/bin/borgfs
+        state: link
+
+    #=============================
+    # Server Setup
+    #=============================
+    - name: Include server configuration tasks
+      ansible.builtin.include_tasks: server.yaml
+
+#=============================
+# Remove
+#=============================
+
+- name: Main Borg remove
+  tags:
+    - borg
+    - untagged
+  when: >
+    run_role_borg is not defined or
+    not run_role_borg
+  block:
+    - name: Delete borg
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /usr/local/bin/borg
+        - /usr/local/bin/borg2
+        - /usr/local/bin/borgfs
+        - /usr/local/bin/borgfs2
+        - /usr/local/bin/borgcheat

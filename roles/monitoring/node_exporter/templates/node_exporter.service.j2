@@ -1,0 +1,21 @@
+[Unit]
+Description=Prometheus node exporter
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ node_exporter_config.user.name }}
+ExecStart={{ node_exporter_config.paths.base_dir }}/install/node_exporter_latest/node_exporter --web.listen-address="{{ node_exporter_config.service.bind_ip }}:{{ node_exporter_config.service.port }}" --log.level={{ node_exporter_config.service.log_level }} {% if node_exporter_config.default_collectors != true  %}--collector.disable-defaults {% endif %} {% for item in node_exporter_config.collectors  %} --collector.{{ item}} {% endfor %} --collector.textfile.directory="{{ node_exporter_config.paths.textfile_collector }}/export/"
+Restart=on-failure
+WorkingDirectory={{ node_exporter_config.paths.base_dir }}
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+
+

@@ -1,0 +1,145 @@
+---
+#============================================================================================================
+# Lidarr Role
+#============================================================================================================
+
+- name: Main Lidarr installation and configuration
+  tags:
+    - lidarr
+    - servarr
+    - untagged
+  when: run_role_lidarr | bool
+  block:
+    - name: Set merged lidarr configuration
+      ansible.builtin.set_fact:
+        lidarr_config: "{{ lidarr_defaults | combine(lidarr, recursive=true) }}"
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3-lxml # needed to change xml configs
+        state: present
+        update_cache: true
+
+    - name: Create lidarr system group
+      ansible.builtin.group:
+        name: "{{ lidarr_config.user.group }}"
+        gid: "{{ lidarr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create lidarr system user
+      ansible.builtin.user:
+        name: "{{ lidarr_config.user.name }}"
+        uid: "{{ lidarr_config.user.uid | default(omit, true) }}"
+        group: "{{ lidarr_config.user.group }}"
+        home: "{{ lidarr_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create Lidarr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ lidarr_config.user.name }}"
+        group: "{{ lidarr_config.user.group }}"
+      loop:
+        - "{{ lidarr_config.paths.base_dir }}/install"
+        - "{{ lidarr_config.paths.data_dir }}"
+
+    - name: Unarchive Lidarr release
+      ansible.builtin.unarchive:
+        src: "{{ lidarr_config.download_url }}"
+        dest: "{{ lidarr_config.paths.base_dir }}/install"
+        owner: "{{ lidarr_config.user.name }}"
+        group: "{{ lidarr_config.user.group }}"
+        remote_src: true
+        creates: "{{ lidarr_config.paths.base_dir }}/install/Lidarr/LICENSE.md"
+
+    - name: Ensure correct permissions on Lidarr directory
+      ansible.builtin.file:
+        path: "{{ lidarr_config.paths.base_dir }}/install"
+        state: directory
+        owner: "{{ lidarr_config.user.name }}"
+        group: "{{ lidarr_config.user.group }}"
+        recurse: true
+
+    - name: Configure systemd service for Lidarr
+      ansible.builtin.template:
+        src: lidarr.service
+        dest: /lib/systemd/system/lidarr.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart lidarr
+
+    - name: Enable and start Lidarr  service
+      ansible.builtin.systemd:
+        name: lidarr
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart lidarr
+
+    #============================================================================================================
+    # Lidarr Configuration
+    #============================================================================================================
+
+    - name: Check for existing config.xml
+      ansible.builtin.stat:
+        path: "{{ lidarr_config.paths.data_dir }}/config.xml"
+      register: lidarr_config_file
+
+    - name: Start Lidarr to generate config.xml
+      ansible.builtin.service:
+        name: lidarr
+        state: restarted
+      when: not lidarr_config_file.stat.exists
+
+    - name: Pause to allow Lidarr startup and config creation
+      ansible.builtin.pause:
+        seconds: 10
+      when: not lidarr_config_file.stat.exists
+
+    - name: Stop Lidarr before applying config
+      ansible.builtin.service:
+        name: lidarr
+        state: stopped
+      when: not lidarr_config_file.stat.exists
+
+    - name: Set Lidarr bind address in config.xml
+      community.general.xml:
+        path: "{{ lidarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/BindAddress
+        value: "{{ lidarr_config.service.bind_ip | string }}"
+      notify: restart lidarr
+
+    - name: Set Lidarr port in config.xml
+      community.general.xml:
+        path: "{{ lidarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/Port
+        value: "{{ lidarr_config.service.port | int }}"
+      notify: restart lidarr
+
+    - name: Set AuthenticationRequired false in config.xml
+      community.general.xml:
+        path: "{{ lidarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationRequired
+        value: "Enabled"
+      notify: restart lidarr
+
+    - name: Set AuthenticationMethod to in config.xml
+      community.general.xml:
+        path: "{{ lidarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationMethod
+        value: "{{ lidarr_config.service.auth_method }}"
+      notify: restart lidarr
+
+    - name: Ensure Lidarr is running
+      ansible.builtin.service:
+        name: lidarr
+        state: started

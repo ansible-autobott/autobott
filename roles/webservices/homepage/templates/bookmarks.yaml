@@ -1,0 +1,5 @@
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/bookmarks
+
+
+{{ homepage_config.bookmarks | to_nice_yaml(indent=2) }}

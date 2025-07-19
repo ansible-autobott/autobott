@@ -1,0 +1,39 @@
+---
+#============================================================================================================
+# Wireguard  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_wireguard: false
+
+# User overrides - will be combined with wireguard_defaults
+wireguard: {}
+# Default configuration structure
+wireguard_defaults:
+  # set false to disable the wg0 interface, but still leave it configured
+  enabled: true
+  # private key can be generated with "wg genkey", create the public key with: echo <priv_key> | wg pubkey
+  # if left empty a key will be created at /etc/wireguard/private.key
+  # configure the private key of the interface wg0
+  private_key: ""
+  port: "51820"
+
+  # the allowed IP blocks are limited to:
+  #  10.0.0.0 to 10.255.255.255 (10/8 prefix)
+  #  172.16.0.0 to 172.31.255.255 (172.16/12 prefix)
+  #  192.168.0.0 to 192.168.255.255 (192.168/16 prefix)
+  address: "192.168.20.1/24" #
+  address_ipv6: ""
+
+  # setup firewall rules to use as exit node
+  exit_node: false
+
+  # peers to configure
+  #    - name: peer1
+  #      public_key: "" # the public key of the peer
+  #      endpoint: "" # only used to connect to the server, e.g. Endpoint = my.dyndns.com:51820
+  #      # for VPN client limit the traffic going to the vpn.
+  #      # for VPN servers, limit the ips a client can assign itself
+  #      # defaults to 0.0.0.0/0,::/0 ( all traffic)
+  #      AllowedIPs: "192.168.20.2/32"
+  peers: []

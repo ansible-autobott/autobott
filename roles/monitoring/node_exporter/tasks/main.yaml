@@ -1,0 +1,253 @@
+---
+#============================================================================================================
+# Node Exporter Role
+#============================================================================================================
+
+- name: Main Node Exporter installation and configuration
+  tags:
+    - node_exporter
+    - monitoring
+    - untagged
+  when: run_role_node_exporter | bool
+  block:
+    - name: Set merged node_exporter configuration
+      ansible.builtin.set_fact:
+        node_exporter_config: "{{ node_exporter_defaults | combine(node_exporter, recursive=true) }}"
+
+    - name: Create node_exporter system group
+      ansible.builtin.group:
+        name: "{{ node_exporter_config.user.group }}"
+        gid: "{{ node_exporter_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create node_exporter system user
+      ansible.builtin.user:
+        name: "{{ node_exporter_config.user.name }}"
+        uid: "{{ node_exporter_config.user.uid | default(omit, true) }}"
+        group: "{{ node_exporter_config.user.group }}"
+        home: "{{ node_exporter_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create node_exporter directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ node_exporter_config.paths.data_dir }}"
+        - "{{ node_exporter_config.paths.config_dir }}/rules"
+        - "{{ node_exporter_config.paths.base_dir }}/install"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Node Exporter tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_config.version }}/node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ node_exporter_checksums[node_exporter_config.version] }}"
+
+    - name: Extract Node Exporter tarball
+      ansible.builtin.unarchive:
+        src: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ node_exporter_config.paths.base_dir }}/install"
+        remote_src: true
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0750"
+        creates: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter-{{ node_exporter_config.version }}.linux-amd64/node_exporter"
+
+    - name: Link Node Exporter binary to latest
+      ansible.builtin.file:
+        src: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter-{{ node_exporter_config.version }}.linux-amd64/"
+        dest: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter_latest"
+        state: link
+      notify: restart node_exporter
+
+    - name: Find old Node Exporter tarballs
+      ansible.builtin.find:
+        paths: "{{ node_exporter_config.paths.base_dir }}/install"
+        patterns: "node_exporter-*.linux-amd64.tar.gz"
+        use_regex: false
+      register: node_exporter_tarballs
+
+    - name: Delete outdated Node Exporter tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ node_exporter_tarballs.files }}"
+      when: "'node_exporter-' ~ node_exporter_config.version ~ '.linux-amd64.tar.gz' not in item.path"
+
+    - name: Find old Node Exporter extracted directories
+      ansible.builtin.find:
+        paths: "{{ node_exporter_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "node_exporter-*"
+        use_regex: false
+      register: node_exporter_dirs
+
+    - name: Delete outdated Node Exporter extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ node_exporter_dirs.files }}"
+      when: "'node_exporter-' ~ node_exporter_config.version ~ '.linux-amd64' not in item.path"
+
+    #====================================================
+    # Config
+    #====================================================
+
+    #    - name: main node_exporter configuration
+    #      ansible.builtin.template:
+    #        src: node_exporter.yaml
+    #        dest: '{{ node_exporter_config.paths.config_dir }}/node_exporter.yaml'
+    #        owner: "{{ node_exporter_config.user.name }}"
+    #        group: "{{ node_exporter_config.user.group }}"
+    #        mode: 0640
+    #      notify:
+    #        - restart node_exporter
+
+    #====================================================
+    # Service
+    #====================================================
+
+    - name: Setup Node Exporter systemd service
+      ansible.builtin.template:
+        src: node_exporter.service.j2
+        dest: /lib/systemd/system/node_exporter.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - reload systemd
+        - restart node_exporter
+
+    - name: Enable and reload Node Exporter systemd service
+      ansible.builtin.systemd:
+        name: node_exporter
+        enabled: true
+        daemon_reload: true
+      notify:
+        - reload systemd
+        - restart node_exporter
+
+    #====================================================
+    # Textfile Collector
+    #====================================================
+
+    - name: Create textfile collector export dirs
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ node_exporter_config.paths.textfile_collector }}/bin"
+        - "{{ node_exporter_config.paths.textfile_collector }}/export"
+
+    - name: Clean up textfile collector export directory (except annotations.prom)
+      ansible.builtin.find:
+        paths: "{{ node_exporter_config.paths.textfile_collector }}/export"
+        file_type: file
+        excludes:
+          - "annotations.prom"
+      register: node_exporter_textfile_to_delete
+
+    - name: Delete old files from textfile collector export
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ node_exporter_textfile_to_delete.files }}"
+      changed_when: false
+
+    - name: Create static annotations.prom file
+      ansible.builtin.template:
+        src: annotations.prom.j2
+        dest: "{{ node_exporter_config.paths.textfile_collector }}/export/annotations.prom"
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0644"
+
+    - name: Copy textfile collector scripts
+      ansible.builtin.copy:
+        src: "{{ lookup('first_found', params) }}"
+        dest: "{{ node_exporter_config.paths.textfile_collector }}/bin/{{ lookup('first_found', params) | basename }}"
+        owner: "{{ node_exporter_config.user.name }}"
+        group: "{{ node_exporter_config.user.group }}"
+        mode: "0750"
+      loop: "{{ node_exporter_config.textfile_collectors }}"
+      vars:
+        params:
+          files:
+            - "{{ item.file }}"
+          paths:
+            - "{{ inventory_dir }}/files/textfile_exporters"
+            - "{{ role_path }}/files/textfile_exporters"
+      when:
+        - (node_exporter_config.textfile_collectors | length) > 0
+        - item.enabled | default(true)
+
+    - name: Remove disabled textfile collector scripts
+      ansible.builtin.file:
+        path: "{{ node_exporter_config.paths.textfile_collector }}/bin/{{ item.file }}"
+        state: absent
+      loop: "{{ node_exporter_config.textfile_collectors }}"
+      when:
+        - not item.enabled | default(false)
+
+    #====================================================
+    # Cron Management
+    #====================================================
+
+    - name: Check if node_exporter cron.d file exists
+      ansible.builtin.stat:
+        path: /etc/cron.d/node_exporter
+      register: node_exporter_cron_file
+
+    - name: Check for obsolete cron entries
+      ansible.builtin.shell: >
+        grep -c -v -E '(Ansible: )|({{ node_exporter_config.textfile_collectors | map(attribute="file") | join(",") }})' /etc/cron.d/node_exporter || true
+      register: node_exporter_cron_check
+      changed_when: false
+      when: node_exporter_cron_file.stat.exists
+
+    - name: Remove old cron file if obsolete entries found
+      ansible.builtin.file:
+        path: /etc/cron.d/node_exporter
+        state: absent
+      when:
+        - node_exporter_cron_file.stat.exists
+        - node_exporter_cron_check.stdout != "0"
+
+    - name: Create cron jobs for textfile collectors
+      ansible.builtin.cron:
+        name: "node_exporter_textfile_{{ item.file }}"
+        minute: "{{ item.cron.split(' ')[0] }}"
+        hour: "{{ item.cron.split(' ')[1] }}"
+        day: "{{ item.cron.split(' ')[2] }}"
+        weekday: "{{ item.cron.split(' ')[3] }}"
+        month: "{{ item.cron.split(' ')[4] }}"
+        user: root
+        job: "{{ nep }}/bin/{{ item.file }} > {{ nep }}/export/{{ item.file }}.prom.$$ && mv {{ nep }}/export/{{ item.file }}.prom.$$ {{ nep }}/export/{{ item.file
+          }}.prom && chown {{ node_exporter_config.user.name }}:{{ node_exporter_config.user.group }} {{ nep }}/export/{{ item.file }}.prom"
+        cron_file: node_exporter
+      loop: "{{ node_exporter_config.textfile_collectors }}"
+      vars:
+        nep: "{{ node_exporter_config.paths.textfile_collector }}"
+      when: item.enabled | default(true)
+
+    - name: Disable cron jobs for disabled collectors
+      ansible.builtin.cron:
+        name: "node_exporter_textfile_{{ item.file }}"
+        state: absent
+        cron_file: node_exporter
+      loop: "{{ node_exporter_config.textfile_collectors }}"
+      when: not item.enabled | default(true)

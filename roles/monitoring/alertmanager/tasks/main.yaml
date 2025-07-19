@@ -1,0 +1,141 @@
+---
+#============================================================================================================
+# Alertmanager Role
+#============================================================================================================
+
+- name: Main Alertmanager installation and configuration
+  tags:
+    - alertmanager
+    - monitoring
+    - untagged
+  when: run_role_alertmanager | bool
+  block:
+    - name: Set merged alertmanager configuration
+      ansible.builtin.set_fact:
+        alertmanager_config: "{{ alertmanager_defaults | combine(alertmanager, recursive=true) }}"
+
+    - name: Create alertmanager system group
+      ansible.builtin.group:
+        name: "{{ alertmanager_config.user.group }}"
+        gid: "{{ alertmanager_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create alertmanager system user
+      ansible.builtin.user:
+        name: "{{ alertmanager_config.user.name }}"
+        uid: "{{ alertmanager_config.user.uid | default(omit, true) }}"
+        group: "{{ alertmanager_config.user.group }}"
+        home: "{{ alertmanager_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create alertmanager directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ alertmanager_config.user.name }}"
+        group: "{{ alertmanager_config.user.group }}"
+        mode: 0750
+      loop:
+        - "{{ alertmanager_config.paths.data_dir }}"
+        - "{{ alertmanager_config.paths.config_dir }}/rules"
+        - "{{ alertmanager_config.paths.base_dir }}/install"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Alertmanager tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_config.version }}/alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
+        owner: "{{ alertmanager_config.user.name }}"
+        group: "{{ alertmanager_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ alertmanager_checksums[alertmanager_config.version] }}"
+
+    - name: Extract Alertmanager tarball
+      ansible.builtin.unarchive:
+        src: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ alertmanager_config.paths.base_dir }}/install"
+        remote_src: true
+        owner: "{{ alertmanager_config.user.name }}"
+        group: "{{ alertmanager_config.user.group }}"
+        mode: "0750"
+        creates: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager-{{ alertmanager_config.version }}.linux-amd64/alertmanager"
+
+    - name: Link Alertmanager binary to latest
+      ansible.builtin.file:
+        src: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager-{{ alertmanager_config.version }}.linux-amd64/"
+        dest: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager_latest"
+        state: link
+      notify: restart alertmanager
+
+    - name: Find old Alertmanager tarballs
+      ansible.builtin.find:
+        paths: "{{ alertmanager_config.paths.base_dir }}/install"
+        patterns: "alertmanager-*.linux-amd64.tar.gz"
+        use_regex: false
+      register: alertmanager_tarballs
+
+    - name: Delete outdated Alertmanager tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ alertmanager_tarballs.files }}"
+      when: "'alertmanager-' ~ alertmanager_config.version ~ '.linux-amd64.tar.gz' not in item.path"
+
+    - name: Find old Alertmanager extracted directories
+      ansible.builtin.find:
+        paths: "{{ alertmanager_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "alertmanager-*"
+        use_regex: false
+      register: alertmanager_dirs
+
+    - name: Delete outdated Alertmanager extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ alertmanager_dirs.files }}"
+      when: "'alertmanager-' ~ alertmanager_config.version ~ '.linux-amd64' not in item.path"
+
+      #====================================================
+      # Config
+      #====================================================
+
+    - name: Main alertmanager configuration
+      ansible.builtin.template:
+        src: alertmanager.yaml
+        dest: "{{ alertmanager_config.paths.config_dir }}/alertmanager.yaml"
+        owner: "{{ alertmanager_config.user.name }}"
+        group: "{{ alertmanager_config.user.group }}"
+        mode: "0640"
+      notify:
+        - restart alertmanager
+
+    # TODO: ignoring message templates for now
+
+    #====================================================
+    # Service
+    #====================================================
+
+    - name: Setup Alertmanager systemd service
+      ansible.builtin.template:
+        src: alertmanager.service.j2
+        dest: /lib/systemd/system/alertmanager.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - restart alertmanager
+
+    - name: Enable and reload Alertmanager systemd service
+      ansible.builtin.systemd:
+        name: alertmanager
+        enabled: true
+        daemon_reload: true
+      notify:
+        - Reload systemd
+        - restart alertmanager

@@ -1,0 +1,58 @@
+---
+#============================================================================================================
+# Node Exporter Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_node_exporter: false
+
+# User configuration override (will be merged with node_exporter_defaults)
+node_exporter: {}
+# Default configuration structure
+node_exporter_defaults:
+  version: 1.9.1
+  # User and group configuration
+  user:
+    name: node_exporter
+    uid: # Let system assign UID
+    group: node_exporter
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/node_exporter
+    data_dir: /opt/node_exporter/data
+    config_dir: /opt/node_exporter/config
+    textfile_collector: /var/lib/node_exporter/textfile_collector
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9100
+    log_level: info
+
+  default_collectors: true # set to false to disable the default set of collectors
+  collectors: # list of extra collectors to be enabled, see: https://github.com/prometheus/node_exporter
+    - textfile
+
+  # allows to define scripts that will run with cron that will output monitoring data
+  # to a static file that node_exporter picks up
+  # Example:
+  # - file: disk_usage.sh
+  #   enabled: true
+  #   cron: "*/5 * * * *"
+  textfile_collectors: []
+  # allows to create static metrics, useful to show details about the instance in grafana
+  #    - name: "metric name"
+  #      desc: "metric description"
+  #      metric_values: # apparently item.values os a reserved word in jinja
+  #        - value: "1"
+  #          labels:
+  #            - name: "test"
+  #              value: "value"
+  #            - name: "bla"
+  #              value: "ble"
+  static_annotations: []
+# Supported node_exporter versions and checksums
+node_exporter_checksums:
+  "1.9.1": "becb950ee80daa8ae7331d77966d94a611af79ad0d3307380907e0ec08f5b4e8"

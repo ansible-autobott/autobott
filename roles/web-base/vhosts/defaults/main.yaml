@@ -1,0 +1,142 @@
+---
+#============================================================================================================
+# Main vhosts config
+#============================================================================================================
+
+# Role execution control
+run_role_vhosts: false
+
+# root dir for all vhosts (immutable)
+vhosts_root: "/vhosts"
+# User override variable - will be combined with defaults
+vhosts_config: {}
+vhosts_defaults:
+  # use www-data for nginx
+  group: caddy
+  # uid for the system user to be created
+  uid:
+  # allow shell for that user
+  shell: "/bin/false"
+  # delete all data associated with this service
+  delete_data: false
+  sample_content: false # todo remove property, we have all info needed to add some content                # add sample landing page, accepted values: no, "html", "php", "info_page",  useful as dummy content
+
+  php:
+    # select the process manager: static, dynamic, ondemand
+    pm: "ondemand"
+    # maximum amount of child processes, this has an impact on ram
+    pm_max_children: 10
+    # amount of start child processes
+    pm_start_servers: 2
+    # lower end of child processes, only applied to "dynamic"
+    pm_min_spare_servers: 2
+    # higher end of child processes, only applied to "dynamic"
+    pm_max_spare_servers: 4
+    # amount of requests handled by a child before killing it an spawning a new one
+    pm_max_requests: 5000
+    # time a child process has to be idle before being killed
+    pm_process_idle_timeout: 30s
+    # change the error log level according to php config string
+    error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+    # list of additional dirs where php has access to
+    open_basedir: []
+  mariadb:
+    collation: "utf8_general_ci"
+    encoding: "utf8"
+
+vhosts: []
+vhosts_sample:
+  - name: demons_run # (mandatory) use simple names (no dots, special chars)
+    enabled: true # (mandatory)
+    comment: "" # used to add a hint or comment in the info page
+    delete_data: false # delete all data associated with this service
+    uid: # uid for the system user to be created
+    shell: "/bin/false" # allow shell for that user
+    ssh_key: # allow ssh login using ssh keys (multi-value)
+      - "ssh-rsa AAAAA.... john@laptop"
+    groups: [] # add this web-services user to a specific group
+    password: "clear-text" # add a password (cleartext, encrypted later) , set to 'no' (false) to disable password login
+    sample_content: "html" # add sample landing page, accepted values: no, "html", "php", "info_page",  useful as dummy content
+
+    caddy:
+      staging_ssl: true # use let's encrypt staging server
+    php:
+      # create a php-fpm worker for this service
+      enabled: true
+      # all the vhosts_defaults.php items can be overwritten
+
+    mariadb:
+      # create a mariadb database for this user
+      enabled: true
+      # use webservice name if left empty
+      db_name: ""
+      # use webservice name if left empty
+      user: ""
+      password: "DBSECRET"
+      # all the vhosts_defaults.php items can be overwritten
+
+    servers:
+      # multiple server types exist: redirect, static, php, proxy
+      # each has its own parameters
+      - enabled: true
+        domains:
+          - "http://localhost:8080"
+        type: "redirect"
+        redirect_target: "https://localhost:8443"
+        redirect_code: "304" # default is 308, possible values 303, 304, 308
+
+      # type proxy
+      - enabled: true
+        domains:
+          - "http://fe26.localhost:8080"
+          - "https://fe26.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:7070"
+        proxy_lines: # add additional lines in the proxy settings like:
+          - 'header_up X-Remote-User "{http.auth.user.id}"'
+
+      # static content
+      - enabled: true
+        domains:
+          - "https://localhost:8443"
+        type: "static"
+        document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
+
+      # php server
+      - enabled: true
+        domains:
+          - "http://php.localhost:8080"
+          - "https://php.localhost:8443"
+        type: "php"
+        document_root: "default" # same as document_root for static html
+
+      # basicauth => the types static, php, and proxy support bsicauth protection
+      # static content
+      - enabled: true
+        domains:
+          - "https://private.localhost:8443"
+        type: "static"
+        document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
+
+        authentication: true # no to disable | yes to use basicauth
+        authentication_path: "" # empty string for all
+        htpasswd_file_users: # list of user:passwords
+          - user: user1
+            pass: "1234"
+            enabled: true
+          - user: user2
+            pass: "1234"
+            enabled: true
+
+      # authelia => the types static, php, and proxy support authelila protection
+      - enabled: true
+        domains:
+          - "https://private.localhost:8443"
+        type: "static"
+        document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
+        authelia: true
+        authelia_port:  9031 # optional, port where authelia is running
+
+
+
+

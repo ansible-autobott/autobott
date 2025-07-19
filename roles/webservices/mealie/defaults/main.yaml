@@ -1,0 +1,32 @@
+---
+#============================================================================================================
+# Mealie  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_mealie: false
+
+# User overrides - will be combined with mealie_defaults
+mealie: {}
+# Default configuration structure
+mealie_defaults:
+
+  # https://github.com/getmealie/mealie/releases
+  version: v2.8.0
+  base_url: localhost:8080
+  # User and group configuration
+  user:
+    name: mealie
+    uid: # Let system assign UID
+    group: mealie
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/mealie
+    data_dir: /opt/mealie/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9925
+    timezone: Etc/UTC
+

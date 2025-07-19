@@ -1,0 +1,13 @@
+[
+{% for user in minecraft_config.server.whitelist_users %}
+  {
+    "uuid": "{{ user.uuid}}",
+    "name": "{{ user.name }}"
+  }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+]
+
+
+
+

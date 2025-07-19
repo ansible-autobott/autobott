@@ -1,0 +1,20 @@
+[Unit]
+Description=Grafana
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ grafana_config.user.name }}
+ExecStart={{  grafana_config.paths.base_dir }}/install/latest/bin/grafana-server
+Restart=on-failure
+WorkingDirectory={{  grafana_config.paths.base_dir }}/install/latest
+
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+

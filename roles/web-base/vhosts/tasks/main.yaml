@@ -1,0 +1,156 @@
+---
+#============================================================================================================
+# Main vhosts role
+#============================================================================================================
+
+- name: Main vhosts installation and configuration
+  tags:
+    - vhosts
+    - vhosts-redo
+    - vhosts-force
+    - untagged
+  when: run_role_vhosts | bool
+  block:
+    - name: Set merged vhosts configuration
+      ansible.builtin.set_fact:
+        vhosts_cfg_data: "{{ vhosts_defaults | combine(vhosts_config, recursive=true) }}"
+        basicauth_hashes_dir: "/etc/caddy/basicauth_hashes"
+
+    # get som information about the system
+    - name: Get PHP version
+      ansible.builtin.command: php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"
+      register: php_version_result
+      failed_when: false
+      changed_when: false
+
+    - name: Set PHP version fact
+      ansible.builtin.set_fact:
+        php_vers: "{{ php_version_result.stdout }}"
+
+    - name: Get MySQL version
+      ansible.builtin.command: mysql --version
+      register: mysql_version_result
+      failed_when: false
+      changed_when: false
+
+    - name: Set MySQL version fact
+      ansible.builtin.set_fact:
+        mysql_version: "{{ mysql_version_result.stdout }}"
+      when: mysql_version_result.rc == 0
+
+    - name: Ensure vhosts root exists
+      ansible.builtin.file:
+        path: "{{ vhosts_root }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure directory for basicauth_hashes_dir exists
+      ansible.builtin.file:
+        path: "{{ basicauth_hashes_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: "Delete all non managed caddy sites"
+      block:
+        - name: Collect valid Caddy filenames
+          ansible.builtin.set_fact:
+            valid_caddy_files: "{{ vhosts | map(attribute='name') | map('regex_replace', '^(.*)$', '\\1.caddy') | list }}"
+
+        - name: Find all .caddy files in sites-available
+          ansible.builtin.find:
+            paths: /etc/caddy/sites-available/
+            patterns: "*.caddy"
+            file_type: file
+          register: available_caddy_files
+
+        - name: Delete Caddy configs not matching any active available webservice
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ available_caddy_files.files }}"
+          when: item.path | basename not in valid_caddy_files
+          loop_control:
+            label: "{{ item.path }}"
+
+        - name: Find all .caddy files in sites-enabled
+          ansible.builtin.find:
+            paths: /etc/caddy/sites-enabled/
+            patterns: "*.caddy"
+            file_type: any
+          register: enabled_caddy_files
+
+        - name: Delete Caddy configs not matching any active enabled webservice
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ enabled_caddy_files.files }}"
+          when: item.path | basename not in valid_caddy_files
+          loop_control:
+            label: "{{ item.path }}"
+          notify: restart caddy
+
+        - name: Delete Caddy default site
+          ansible.builtin.file:
+            path: /etc/caddy/sites-enabled/default
+            state: absent
+          notify: restart caddy
+
+    - name: Process vhosts one by one
+      ansible.builtin.include_tasks: process_webservice.yaml
+      loop: "{{ vhosts }}"
+      no_log: true
+      loop_control:
+        loop_var: webservice
+
+    - name: tidy up php worker config
+      when: php_vers is defined and php_vers != ""
+      block:
+
+        - name: Find PHP FPM pool configuration files (excluding www.conf)
+          ansible.builtin.find:
+            paths: "/etc/php/{{ php_vers }}/fpm/pool.d/"
+            patterns: "*.conf"
+            use_regex: true
+            excludes: "www.conf"
+          register: php_worker_files
+
+        - name: Check if www.conf exists
+          ansible.builtin.stat:
+            path: "/etc/php/{{ php_vers }}/fpm/pool.d/www.conf"
+          register: www_conf_stat
+
+        - name: Remove default php worker if other workers exist
+          ansible.builtin.file:
+            path: "/etc/php/{{ php_vers }}/fpm/pool.d/www.conf"
+            state: absent
+          when:
+            - php_worker_files.matched > 0
+            - www_conf_stat.stat.exists
+          notify: restart php-fpm
+
+        - name: Create default PHP worker if no workers exist
+          ansible.builtin.copy:
+            dest: "/etc/php/{{ php_vers }}/fpm/pool.d/www.conf"
+            content: |
+              [www]
+              user = www-data
+              group = www-data
+              listen = /run/php/php{{ php_vers }}-fpm.sock
+              pm = dynamic
+              pm.max_children = 1
+              pm.start_servers = 1
+              pm.min_spare_servers = 1
+              pm.max_spare_servers = 1
+            owner: root
+            group: root
+            mode: '0644'
+          when:
+            - php_worker_files.matched == 0
+            - not www_conf_stat.stat.exists
+          notify: restart php-fpm
+
+

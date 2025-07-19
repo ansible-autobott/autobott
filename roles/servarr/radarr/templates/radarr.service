@@ -1,0 +1,21 @@
+[Unit]
+Description=Radarr Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+{% if radarr_config.daemon.umask is defined and radarr_config.daemon.umask | length %}
+UMask={{ radarr4_config.daemon.umask }}
+{% endif %}
+
+User={{ radarr_config.user.name }}
+Group={{ radarr_config.user.group }}
+ExecStart={{ radarr_config.paths.base_dir }}/install/Radarr/Radarr -nobrowser -data={{ radarr_config.paths.data_dir }}
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

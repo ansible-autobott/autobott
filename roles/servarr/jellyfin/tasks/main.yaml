@@ -1,0 +1,110 @@
+---
+#============================================================================================================
+# Jellyfin Role
+#============================================================================================================
+
+- name: Main Jellyfin installation and configuration
+  tags:
+    - jellyfin
+    - servarr
+    - untagged
+  when: run_role_jellyfin | bool
+  block:
+    - name: Set merged jellyfin configuration
+      ansible.builtin.set_fact:
+        jellyfin_config: "{{ jellyfin_defaults | combine(jellyfin, recursive=true) }}"
+
+    - name: Copy Jellyfin GPG key
+      ansible.builtin.copy:
+        src: files/jellyfin_team.debian.gpg.key
+        dest: /etc/apt/keyrings/jellyfin.asc
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Create Jellyfin APT sources list
+      ansible.builtin.template:
+        src: sources.list
+        dest: /etc/apt/sources.list.d/jellyfin.list
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install Jellyfin package
+      ansible.builtin.apt:
+        name: jellyfin
+        state: present
+        update_cache: true
+
+    - name: Add Jellyfin user to additional groups
+      ansible.builtin.user:
+        name: "jellyfin"
+        groups: "{{ jellyfin_config.extra_groups }}"
+        append: true
+      notify: restart jellyfin
+
+    - name: Create systemd override for Jellyfin
+      ansible.builtin.template:
+        src: systemd.override.conf
+        dest: /etc/systemd/system/jellyfin.service.d/override.conf
+        owner: root
+        group: root
+        mode: "0644"
+      when: jellyfin_config.service.umask is defined and jellyfin_config.service.umask | length > 0
+      notify: restart jellyfin
+
+    - name: Check if network.xml exists
+      ansible.builtin.stat:
+        path: /etc/jellyfin/network.xml
+      register: network_xml_exists
+      changed_when: false
+
+    - name: Create network.xml from template if it does NOT exist
+      ansible.builtin.template:
+        src: network.xml
+        dest: /etc/jellyfin/network.xml
+        owner: root
+        group: root
+        mode: '0644'
+      when: not network_xml_exists.stat.exists
+
+    - name: Set Jellyfin InternalHttpPort in /etc/jellyfin/network.xml
+      community.general.xml:
+        path: /etc/jellyfin/network.xml
+        xpath: /NetworkConfiguration/InternalHttpPort
+        value: "{{ jellyfin_config.port | int }}"
+      notify: restart jellyfin
+
+    - name: Set Jellyfin PublicHttpPort in /etc/jellyfin/network.xml
+      community.general.xml:
+        path: /etc/jellyfin/network.xml
+        xpath: /NetworkConfiguration/PublicHttpPort
+        value: "{{ jellyfin_config.port | int }}"
+      notify: restart jellyfin
+
+    - name: Set Jellyfin EnableRemoteAccess in /etc/jellyfin/network.xml
+      community.general.xml:
+        path: /etc/jellyfin/network.xml
+        xpath: /NetworkConfiguration/EnableRemoteAccess
+        value: "{{ 'true' if jellyfin_config.enable_remote else 'false' }}"
+      notify: restart jellyfin
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+#============================================================================================================
+# Jellyfin Removal
+#============================================================================================================
+
+- name: Main Jellyfin block (remove)
+  tags:
+    - jellyfin
+    - untagged
+  when:
+    - run_role_jellyfin is defined
+    - not run_role_jellyfin
+  block:
+    - name: Report Jellyfin is disabled
+      ansible.builtin.debug:
+        msg: "Jellyfin role is disabled. IMPORTANT! uninstall is not implemented"

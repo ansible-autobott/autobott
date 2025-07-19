@@ -1,0 +1,19 @@
+[Unit]
+Description=Prometheus monitoring
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ prometheus_config.user.name }}
+ExecStart={{ prometheus_config.paths.base_dir }}/install/prometheus_latest/prometheus --config.file="{{ prometheus_config.paths.config_dir }}/prometheus.yaml" --web.listen-address="{{ prometheus_config.service.bind_ip }}:{{ prometheus_config.service.port }}" --log.level={{ prometheus_config.service.loglevel }}  --storage.tsdb.retention.time={{ prometheus_config.service.retention }}
+Restart=on-failure
+WorkingDirectory={{ prometheus_config.paths.base_dir }}
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+

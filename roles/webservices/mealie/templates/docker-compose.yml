@@ -1,0 +1,20 @@
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:{{ mealie_config.version }}
+    container_name: mealie
+    restart: always
+    ports:
+      - "{{ mealie_config.service.bind_ip }}:{{ mealie_config.service.port }}:9000"
+    deploy:
+      resources:
+        limits:
+          memory: 500M #
+    volumes:
+      - {{ mealie_config.paths.data_dir }}:/app/data/
+    environment:
+      # Set Backend ENV Variables Here
+      ALLOW_SIGNUP: "false"
+      PUID: {{ mealie_uid }} # optional, your user id
+      PGID: {{ mealie_gid }} # optional, your group id
+      TZ: {{ mealie_config.service.timezone }}
+      BASE_URL: {{ mealie_config.base_url }}

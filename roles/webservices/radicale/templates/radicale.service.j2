@@ -1,0 +1,14 @@
+[Unit]
+Description=Radicale2: A simple CalDAV (calendar) and CardDAV (contact) server
+After=network.target
+
+[Service]
+User={{ radicale_config.user.name }}
+ExecStart={{ radicale_config.paths.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/python -m radicale --config "{{ radicale_config.paths.base_dir }}/radicale3.config"
+Restart=on-failure
+WorkingDirectory={{ radicale_config.paths.base_dir }}/py3_venv/{{ py3_version.stdout }}/
+
+[Install]
+WantedBy=default.target
+
+

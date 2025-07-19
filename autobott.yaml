@@ -1,0 +1,100 @@
+---
+#============================================================================================================
+# Basic Settings
+#============================================================================================================
+- hosts: all
+  become: true
+  roles:
+    - base/enroll
+    - base/linux-apt
+    - base/linux-basic
+    - base/zfs
+    - base/nullmailer
+    #  - base/linux-hardware
+    #  - base/se-linux
+
+    # ===============  Base Services  =============== #
+    - base-services/wireguard
+    - base-services/tailscale
+    - base-services/docker
+    - base-services/samba
+    - base-services/mariadb
+#    - base-services/postgres
+    - base-services/headscale
+
+    # ===============  Backup   =============== #
+    - base-services/borg
+    - base-services/borgmatic
+
+    # ===============  Security   =============== #
+    - security/lynis
+    - security/malwarescan
+
+#============================================================================================================
+# Linux Server
+#============================================================================================================
+- hosts:
+    - linux_servers
+  become: true
+  roles:
+    # ===============  Security   =============== #
+    #    - security/fail2ban
+    #    - security/crowdsec
+    - security/firewall
+
+    # ===============  Web Base  =============== #
+    - web-base/php-fpm
+    - web-base/caddy
+    - web-base/authelia
+    - web-base/vhosts # configure caddy proxies, php, etc.
+
+    # ===============  Monitoring  =============== #
+    - monitoring/prometheus
+    - monitoring/alertmanager
+    - monitoring/node_exporter
+    - monitoring/grafana
+
+    # ===============  Servarr  =============== #
+    - servarr/transmission
+    - servarr/prowlarr
+    - servarr/sonarr
+    - servarr/radarr
+    - servarr/readarr
+    - servarr/lidarr
+    - servarr/whisparr
+    - servarr/romm
+
+    # ===============  Web  =============== #
+    - webservices/radicale
+    - webservices/fe26
+
+    # docker compose based
+    - webservices/mealie # https://github.com/mealie-recipes/mealie/discussions/801
+    - webservices/homepage
+    - webservices/immich
+    - webservices/docmost
+
+    # php based
+    - webservices/mediawiki
+    - webservices/phpmyadmin
+
+    # servar related
+    - servarr/jellyfin
+    - servarr/stash
+    - servarr/xbvr
+    - servarr/kavita
+
+    # ===============  Other services  =============== #
+    - games/minecraft
+
+
+#============================================================================================================
+# Linux Desktop
+#============================================================================================================
+
+#- hosts:
+#    - linux_desktop
+#  become: true
+#  roles:
+#    - desktop/linux-kde
+#    - desktop/linux-desktop

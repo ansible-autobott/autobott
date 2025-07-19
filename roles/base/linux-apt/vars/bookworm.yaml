@@ -1,0 +1,7 @@
+---
+linux_apt_pre_upgrade_pkg_remove:
+  - php
+
+linux_apt_pre_upgrade_pkg_purge: []
+linux_apt_post_upgrade_pkg_purge: []
+linux_apt_post_upgrade_cleanup_files: []

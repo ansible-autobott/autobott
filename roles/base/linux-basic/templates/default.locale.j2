@@ -1,0 +1,50 @@
+# {{ ansible_managed }}
+LANG="{{ linux_basic.locale.set.lang }}"
+
+{% if linux_basic.locale.set.language is defined and linux_basic.locale.set.language != "" %}
+LANGUAGE="{{ linux_basic.locale.set.language }}"
+{% endif %}
+
+{% if linux_basic.locale.set.ctype is defined and linux_basic.locale.set.ctype != "" %}
+LC_CTYPE="{{ linux_basic.locale.set.ctype }}"
+{% endif %}
+
+{% if linux_basic.locale.set.numeric is defined and linux_basic.locale.set.numeric != "" %}
+LC_NUMERIC="{{ linux_basic.locale.set.numeric }}"
+{% endif %}
+
+{% if linux_basic.locale.set.time is defined and linux_basic.locale.set.time != "" %}
+LC_TIME="{{ linux_basic.locale.set.time }}"
+{% endif %}
+
+{% if linux_basic.locale.set.monetary is defined and linux_basic.locale.set.monetary != "" %}
+LC_MONETARY="{{ linux_basic.locale.set.monetary }}"
+{% endif %}
+
+{% if linux_basic.locale.set.paper is defined and linux_basic.locale.set.paper != "" %}
+LC_PAPER="{{ linux_basic.locale.set.paper }}"
+{% endif %}
+
+{% if linux_basic.locale.set.identification is defined and linux_basic.locale.set.identification != "" %}
+LC_IDENTIFICATION="{{ linux_basic.locale.set.identification }}"
+{% endif %}
+
+{% if linux_basic.locale.set.name is defined and linux_basic.locale.set.name != "" %}
+LC_NAME="{{ linux_basic.locale.set.name }}"
+{% endif %}
+
+{% if linux_basic.locale.set.address is defined and linux_basic.locale.set.address != "" %}
+LC_ADDRESS="{{ linux_basic.locale.set.address }}"
+{% endif %}
+
+{% if linux_basic.locale.set.telephone is defined and linux_basic.locale.set.telephone != "" %}
+LC_TELEPHONE="{{ linux_basic.locale.set.telephone }}"
+{% endif %}
+
+{% if linux_basic.locale.set.measurement is defined and linux_basic.locale.set.measurement != "" %}
+LC_MEASUREMENT="{{ linux_basic.locale.set.measurement }}"
+{% endif %}
+
+{% if linux_basic.locale.set.all is defined and linux_basic.locale.set.all != "" %}
+LC_ALL="{{ linux_basic.locale.set.all }}"
+{% endif %}

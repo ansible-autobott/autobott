@@ -1,0 +1,35 @@
+---
+#============================================================================================================
+# FE26 Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_fe26: false
+
+# User configuration override (will be merged with fe26_defaults)
+fe26: {}
+# Default configuration structure
+fe26_defaults:
+  version: 1.0.9
+  # User and group configuration
+  user:
+    name: fe26
+    uid: # Let system assign UID
+    group: fe26
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/fe26
+    data_dir: /opt/fe26/data
+    binaries_dir: /opt/fe26/binaries
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 7070
+    loglevel: info
+
+# Supported fe26 versions and checksums
+fe26_checksums:
+  "1.0.9": "c7cafad787552dee30fd39ea1f4e22a78ce22bc48a65029bbd8d3341124da158"

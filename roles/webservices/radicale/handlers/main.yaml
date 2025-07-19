@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart Radicale
+  ansible.builtin.service:
+    name: radicale
+    state: restarted
+  listen: restart radicale

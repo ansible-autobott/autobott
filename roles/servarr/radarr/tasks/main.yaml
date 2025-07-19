@@ -1,0 +1,145 @@
+---
+#============================================================================================================
+# Radarr Role
+#============================================================================================================
+
+- name: Main Radarr installation and configuration
+  tags:
+    - radarr
+    - servarr
+    - untagged
+  when: run_role_radarr | bool
+  block:
+    - name: Set merged radarr configuration
+      ansible.builtin.set_fact:
+        radarr_config: "{{ radarr_defaults | combine(radarr, recursive=true) }}"
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3-lxml # needed to change xml configs
+        state: present
+        update_cache: true
+
+    - name: Create radarr system group
+      ansible.builtin.group:
+        name: "{{ radarr_config.user.group }}"
+        gid: "{{ radarr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create radarr system user
+      ansible.builtin.user:
+        name: "{{ radarr_config.user.name }}"
+        uid: "{{ radarr_config.user.uid | default(omit, true) }}"
+        group: "{{ radarr_config.user.group }}"
+        home: "{{ radarr_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create Radarr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ radarr_config.user.name }}"
+        group: "{{ radarr_config.user.group }}"
+      loop:
+        - "{{ radarr_config.paths.base_dir }}/install"
+        - "{{ radarr_config.paths.data_dir }}"
+
+    - name: Unarchive Radarr release
+      ansible.builtin.unarchive:
+        src: "{{ radarr_config.download_url }}"
+        dest: "{{ radarr_config.paths.base_dir }}/install"
+        owner: "{{ radarr_config.user.name }}"
+        group: "{{ radarr_config.user.group }}"
+        remote_src: true
+        creates: "{{ radarr_config.paths.base_dir }}/install/Radarr/LICENSE"
+
+    - name: Ensure correct permissions on Radarr directory
+      ansible.builtin.file:
+        path: "{{ radarr_config.paths.base_dir }}/install"
+        state: directory
+        owner: "{{ radarr_config.user.name }}"
+        group: "{{ radarr_config.user.group }}"
+        recurse: true
+
+    - name: Configure systemd service for Radarr
+      ansible.builtin.template:
+        src: radarr.service
+        dest: /lib/systemd/system/radarr.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart radarr
+
+    - name: Enable and start Radarr  service
+      ansible.builtin.systemd:
+        name: radarr
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart radarr
+
+    #============================================================================================================
+    # Radarr Configuration
+    #============================================================================================================
+
+    - name: Check for existing config.xml
+      ansible.builtin.stat:
+        path: "{{ radarr_config.paths.data_dir }}/config.xml"
+      register: radarr_config_file
+
+    - name: Start Radarr to generate config.xml
+      ansible.builtin.service:
+        name: radarr
+        state: restarted
+      when: not radarr_config_file.stat.exists
+
+    - name: Pause to allow Radarr startup and config creation
+      ansible.builtin.pause:
+        seconds: 10
+      when: not radarr_config_file.stat.exists
+
+    - name: Stop Radarr before applying config
+      ansible.builtin.service:
+        name: radarr
+        state: stopped
+      when: not radarr_config_file.stat.exists
+
+    - name: Set Radarr bind address in config.xml
+      community.general.xml:
+        path: "{{ radarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/BindAddress
+        value: "{{ radarr_config.service.bind_ip | string }}"
+      notify: restart radarr
+
+    - name: Set Radarr port in config.xml
+      community.general.xml:
+        path: "{{ radarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/Port
+        value: "{{ radarr_config.service.port | int }}"
+      notify: restart radarr
+
+    - name: Set AuthenticationRequired false in config.xml
+      community.general.xml:
+        path: "{{ radarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationRequired
+        value: "Enabled"
+      notify: restart radarr
+
+    - name: Set AuthenticationMethod to in config.xml
+      community.general.xml:
+        path: "{{ radarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationMethod
+        value: "{{ radarr_config.service.auth_method }}"
+      notify: restart radarr
+
+    - name: Ensure Radarr is running
+      ansible.builtin.service:
+        name: radarr
+        state: started

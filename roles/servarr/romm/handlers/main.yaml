@@ -1,0 +1,12 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+
+- name: Restart romm
+  ansible.builtin.systemd:
+    name: romm
+    state: restarted
+  listen: restart romm

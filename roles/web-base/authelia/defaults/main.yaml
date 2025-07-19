@@ -1,0 +1,75 @@
+---
+#============================================================================================================
+# Authelia Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_authelia: false
+
+# User override variable - will be combined with defaults
+authelia: {}
+# Default Authelia configuration structure
+authelia_defaults:
+
+  version: 4.39.4
+  # User and group configuration
+  user:
+    name: authelia
+    uid: # Let system assign UID
+    group: authelia
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/authelia
+    data_dir: /opt/authelia/data
+    config_dir: /opt/authelia/config
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9031
+    loglevel: info
+    metrics: false
+
+  secrets:
+    # needs to be more than 20 chars
+    storage_encryption_key: "ff10bfa787976e1f8eb6e0686edd34e457b7d9f6765ff10bfa787976e1f8eb6e0686edd34e457b7d9f6765"
+
+  totp_issuer: "Authelia"
+
+  # Sites protected by Authelia,
+  # sample site has this fields
+  #    - name: fe26
+  #      domain: "fe26.localhost"
+  #      auth_url: "https://auth.fe26.localhost:8443"
+  #      policy: "two_factor" # one_factor | two_factors
+  #      # restrict to specific - groups:
+  #      groups:
+  #        - team1
+  sites: []
+
+  # list of users allowed in Authelia:
+  #  - username: alice
+  #    displayname: "Alice Example"
+  #    password: "changeme"
+  #    salt: "BuMcDk78nYRxSvUXLIKeHZ" # needs to be exactly 22 chars
+  #    email: "alice@example.com"
+  #    groups:
+  #      - team1
+  #      - tema2
+  #    disabled: false
+  users: []
+
+  # defines the cookies that Authelia handles,
+  # make sure that the domain overlaps the sites you configure.
+  # - name: "authelia_session"
+  #   domain: "localhost"
+  #   authelia_url: "https://auth.localhost:8443"
+  cookies: []
+
+
+
+# Supported authelia versions and checksums
+authelia_checksums:
+  "4.39.4": "2022410ff10bfa787976e1f8eb6e0686edd34e457b7d9f67653edd8561781cbc"

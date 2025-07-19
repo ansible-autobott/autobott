@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart fe26
+  ansible.builtin.systemd:
+    name: fe26
+    state: restarted
+  listen: restart fe26

@@ -1,0 +1,21 @@
+[Unit]
+Description=Prowlarr Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+{% if prowlarr_config.daemon.umask is defined and prowlarr_config.daemon.umask | length %}
+UMask={{ prowlarr4_config.daemon.umask }}
+{% endif %}
+
+User={{ prowlarr_config.user.name }}
+Group={{ prowlarr_config.user.group }}
+ExecStart={{ prowlarr_config.paths.base_dir }}/install/Prowlarr/Prowlarr -nobrowser -data={{ prowlarr_config.paths.data_dir }}
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

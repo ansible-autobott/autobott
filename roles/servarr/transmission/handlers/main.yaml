@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart transmission
+  ansible.builtin.service:
+    name: transmission-daemon
+    state: restarted
+  listen: restart headscale

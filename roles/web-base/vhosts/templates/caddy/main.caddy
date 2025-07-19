@@ -1,0 +1,8 @@
+# {{ ansible_managed }}
+{% for server in webservice.servers | default([]) %}
+  {% if server.enabled | default(true) %}
+
+{% include "caddy/" ~ server.type ~ ".caddy" %}
+
+  {% endif %}
+{% endfor %}

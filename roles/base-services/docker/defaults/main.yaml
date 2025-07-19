@@ -1,0 +1,21 @@
+---
+#============================================================================================================
+# Docker
+#============================================================================================================
+run_role_docker: false
+docker: []
+docker_defaults:
+  expose_metrics: true # add a metrics endpoint on "127.0.0.1:9323"
+  # Enable experimental features
+  experimental: false
+  # Enable live restore, https://docs.docker.com/engine/daemon/live-restore/
+  live_restore: true
+  users: [] # users added to the docker group
+
+# Package management
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin

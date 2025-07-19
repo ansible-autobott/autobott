@@ -1,0 +1,112 @@
+---
+#============================================================================================================
+# Phpmyadmin Role
+#============================================================================================================
+
+- name: Main Phpmyadmin installation and configuration
+  tags:
+    - phpmyadmin
+    - untagged
+  when: run_role_phpmyadmin | bool
+  block:
+    - name: Set merged phpmyadmin configuration
+      ansible.builtin.set_fact:
+        phpmyadmin_config: "{{ phpmyadmin_defaults | combine(phpmyadmin, recursive=true) }}"
+
+    - name: Remove conflicting phpmyadmin package
+      ansible.builtin.apt:
+        name: phpmyadmin
+        state: absent
+        purge: true
+        update_cache: false
+
+    - name: Fail if blowfish_secret is not set or is empty
+      fail:
+        msg: "The variable 'phpmyadmin_config.blowfish_secret' is required and cannot be empty."
+      when: phpmyadmin_config.blowfish_secret is not defined or phpmyadmin_config.blowfish_secret | length == 0
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - php
+          - unzip
+        state: present
+        update_cache: true
+        install_recommends: false
+
+    - name: Create PhpMyadmin install directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}"
+
+    - name: Download phpmyadmin tarball
+      ansible.builtin.get_url:
+        url: "https://files.phpmyadmin.net/phpMyAdmin/{{ phpmyadmin_config.version }}/phpMyAdmin-{{ phpmyadmin_config.version }}-all-languages.zip"
+        dest: "{{ phpmyadmin_config.install_dir }}/phpmyadmin-{{ phpmyadmin_config.version }}.tar.gz"
+        owner: root
+        group: root
+        mode: "0644"
+        checksum: "sha256:{{ phpmyadmin_checksums[phpmyadmin_config.version] }}"
+
+    - name: Extract phpmyadmin tarball
+      ansible.builtin.unarchive:
+        src: "{{ phpmyadmin_config.install_dir }}/phpmyadmin-{{ phpmyadmin_config.version }}.tar.gz"
+        dest: "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+        creates: "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}/phpMyAdmin-5.2.0-all-languages"
+
+    - name: Link phpmyadmin latest
+      ansible.builtin.file:
+        src: "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}/phpMyAdmin-{{ phpmyadmin_config.version }}-all-languages"
+        dest: "{{ phpmyadmin_config.link_dir }}"
+        state: link
+
+    - name: Find old phpmyadmin tarballs
+      ansible.builtin.find:
+        paths: "{{ phpmyadmin_config.install_dir }}"
+        patterns: "phpmyadmin-*.tar.gz"
+        use_regex: false
+      register: phpmyadmin_tarballs
+
+    - name: Delete outdated phpmyadmin tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ phpmyadmin_tarballs.files }}"
+      when: "'phpmyadmin-' ~ phpmyadmin_config.version ~ '.tar.gz' not in item.path"
+
+    - name: Find old phpmyadmin extracted directories
+      ansible.builtin.find:
+        paths: "{{ phpmyadmin_config.install_dir }}"
+        file_type: directory
+        patterns: "*"
+        use_regex: false
+      register: phpmyadmin_dirs
+
+    - name: Delete outdated phpmyadmin extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ phpmyadmin_dirs.files }}"
+      when: "phpmyadmin_config.version not in item.path"
+
+    - name: Apply PhpMyadmin configuration
+      ansible.builtin.template:
+        src: config.inc.php.j2
+        dest: "{{ phpmyadmin_config.link_dir }}/config.inc.php"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Set proper permissions
+      ansible.builtin.shell: |
+        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type d -exec chmod 0755 {} +
+        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type f -exec chmod 0644 {} +

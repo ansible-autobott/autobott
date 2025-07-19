@@ -1,0 +1,43 @@
+---
+#============================================================================================================
+# Borg Backup Configuration
+#============================================================================================================
+
+# Main role control
+run_role_borg: false
+
+# User overrides - these will be combined with borg_defaults
+borg: {}
+# Default configuration structure
+borg_defaults:
+  version: "1.4.1" # check borg_checksums below
+
+  # Server configuration
+  server:
+    enabled: false
+
+    # where the backups will be stored
+    data_directory: /var/borg_backups
+    # Create symlink to ease the access and not expose internal storage structure
+    # Set to empty string to disable symlink creation
+    data_symlink: /backup
+
+    user:
+      name: borg
+      uid:
+      group: borg
+      gid:
+      home: /home/borg
+
+    repos: []
+    # Example access structure:
+    # - name: test
+    #   public_key: "ssh-rsa AAAAB..."
+    #   append_only: true
+# Supported Borg versions and checksums
+borg_checksums:
+  "1.4.1": "b3ee1ce7454aacc0312c814e470df38132b1f6a71ae4164bea2b7d5033cb2480"
+  "2.0.0b14": "4c7222e5324f907f53331dee6783c5c4cd99cee1dfdff4893c839f798d2f3e2b"
+  "2.0.0b13": "35b50867cef2049b44970824da731e29894a493049c1441451bbf318741d5bbb"
+  "2.0.0b12": "35b50867cef2049b44970824da731e29894a493049c1441451bbf318741d5bbb"
+  "2.0.0b11": "9f72afb2f5fadfd4c15c4200e6078fe6361aa9e05f9a28cf6500d3b06c5caacc"

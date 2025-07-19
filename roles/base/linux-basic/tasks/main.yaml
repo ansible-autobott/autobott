@@ -1,0 +1,174 @@
+---
+# Basic system setup and configuration
+# This role handles basic Linux system configuration including:
+# - Package management
+# - Hostname configuration
+# - System locale and timezone
+# - User and group management
+# - SSH and SFTP configuration
+
+- name: Configure basic Linux system
+  tags:
+    - "linux-basic"
+    - "untagged"
+  when:
+    - run_role_linux_basic is defined
+    - run_role_linux_basic
+  block:
+    - name: Set merged linux_basic facts
+      ansible.builtin.set_fact:
+        linux_basic: "{{ linux_basic_defaults | combine(linux_basic, recursive=True) }}"
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name: "{{ linux_basic.packages.default | union(linux_basic.packages.group_defined) | union(linux_basic.packages.host_defined) }}"
+        state: present
+        install_recommends: false
+        update_cache: true
+
+    - name: Remove unnecessary packages
+      ansible.builtin.apt:
+        name: "{{ linux_basic.packages.absent_group_defined | union(linux_basic.packages.absent_host_defined) }}"
+        state: absent
+        purge: true
+
+    - name: Clean up unused packages
+      ansible.builtin.apt:
+        autoremove: true
+        autoclean: true
+
+    # Hostname Configuration
+    - name: Configure system hostname
+      when: linux_basic.hostname | default('') | length > 0
+      block:
+        - name: Set system hostname
+          ansible.builtin.hostname:
+            name: "{{ linux_basic.hostname }}"
+          register: hostname_change
+
+        - name: Reboot system if hostname changed
+          ansible.builtin.reboot:
+            reboot_timeout: 3600
+            msg: "Rebooting to apply hostname change"
+          when: hostname_change.changed
+
+    - name: Update /etc/hosts entries
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        create: true
+        mode: "0644"
+        block: |
+          127.0.1.1 {% if linux_basic.fqdn | default('') | length > 0 %}{{ linux_basic.fqdn }}{% else %}{{ ansible_fqdn }}{% endif %} {% if linux_basic.hostname | default('') | length > 0 %}{{ linux_basic.hostname }}{% else %}{{ ansible_hostname }}{% endif %}
+
+          # Additional hosts
+          {% for host in linux_basic.etc_host_entries | default([]) %}
+          {{ host }}
+          {% endfor %}
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - HOSTS"
+
+    - name: Remove legacy hostname entries
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        state: absent
+        regexp: "debian.example.com"
+
+    # Cron Configuration
+    - name: Check if cron is installed
+      ansible.builtin.package_facts:
+
+    - name: Set cron_installed fact if any cron alternative is installed
+      ansible.builtin.set_fact:
+        cron_installed: >-
+          {{ ('cron' in ansible_facts.packages) or
+             ('anacron' in ansible_facts.packages) or
+             ('cronie' in ansible_facts.packages) }}
+
+    - name: Install cron if no cron alternative is installed
+      ansible.builtin.package:
+        name: cron
+        state: present
+      when: not cron_installed
+
+    - name: Configure cron email notifications
+      ansible.builtin.cron:
+        name: MAILTO
+        env: true
+        value: "{{ linux_basic.cron_email }}"
+        state: "{{ 'present' if linux_basic.cron_email | default('') | length > 0 else 'absent' }}"
+
+    # Locale Configuration
+    - name: Configure system locales
+      block:
+        - name: Ensure locales package is installed
+          ansible.builtin.apt:
+            name: locales
+            state: present
+
+        - name: Configure locale.gen
+          ansible.builtin.template:
+            src: locale.gen.j2
+            dest: /etc/locale.gen
+            mode: "0644"
+          register: locale_gen_updated
+
+        - name: Set system default locale
+          ansible.builtin.template:
+            src: default.locale.j2
+            dest: /etc/default/locale
+            mode: "0644"
+
+        - name: Generate locales
+          ansible.builtin.command:
+            cmd: locale-gen
+          when: locale_gen_updated.changed
+          changed_when: true
+
+    # SSH hardening
+    - name: Include SSH configuration tasks
+      ansible.builtin.include_tasks: ssh.yaml
+
+    # sftp jails
+    - name: Include SFTP configuration tasks
+      ansible.builtin.include_tasks: sftp.yaml
+
+    # Timezone Configuration
+    - name: Set system timezone
+      community.general.timezone:
+        name: "{{ linux_basic.timezone }}"
+      when:
+        - linux_basic.timezone is defined
+        - linux_basic.timezone | length > 0
+
+    - name: Configure timezone file
+      ansible.builtin.template:
+        src: timezone
+        dest: /etc/timezone
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - linux_basic.timezone is defined
+        - linux_basic.timezone | length > 0
+
+    - name: Configure hardware clock
+      community.general.timezone:
+        hwclock: "{{ linux_basic.time_rtc }}"
+      when: linux_basic.time_rtc | default('') | length > 0
+
+    # User Management
+    - name: Include user management tasks
+      ansible.builtin.include_tasks: users.yaml
+
+    - name: Configure sudo behavior
+      ansible.builtin.template:
+        src: sudo_config
+        dest: /etc/sudoers.d/00_autobott
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
+    - name: Final package cleanup
+      ansible.builtin.apt:
+        clean: true
+      changed_when: false

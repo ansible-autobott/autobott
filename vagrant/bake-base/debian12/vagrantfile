@@ -1,0 +1,37 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# boxes at https://vagrantcloud.com/search.
+# https://app.vagrantup.com/debian/boxes/bullseye64
+VAGRANT_VM_BASE = "debian/bookworm64"
+# when updating the version, the header files need to be updates in install-guest.sh as well
+VAGRANT_VM_VERSION = "12.20230723.1"
+
+Vagrant.configure("2") do |config|
+
+    config.vm.box = "#{VAGRANT_VM_BASE}"
+    config.vm.box_version = "#{VAGRANT_VM_VERSION}"
+    #item.vm.hostname = "#{VAGRANT_VM_NAME}"
+    config.disksize.size = '50GB' # <- ADD THIS LINE
+
+    config.vm.provider "virtualbox" do |v|
+        # set the name of the VM
+        v.name = "autobott-debian-12-base"
+
+        # use a linked clone of the imported machine
+        v.linked_clone = true
+    end
+
+    config.ssh.insert_key = false
+
+    config.vm.provision "shell", inline: <<-SHELL
+      sudo growpart /dev/sda 1
+      sudo resize2fs /dev/sda1
+    SHELL
+
+    config.vm.provision "shell", inline: "echo 'vagrant:vagrant' | sudo chpasswd"
+    config.vm.provision "shell", path: "install-guest.sh"
+
+end
+
+

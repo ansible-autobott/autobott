@@ -1,0 +1,18 @@
+[Unit]
+Description=Kavita Server
+After=syslog.target network.target
+
+[Service]
+Type=simple
+User={{ kavita_config.user.name }}
+Group={{ kavita_config.user.group }}
+WorkingDirectory={{ kavita_config.paths.base_dir }}/install/latest/Kavita
+ExecStart={{ kavita_config.paths.base_dir }}/install/latest/Kavita/Kavita
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Xbvr  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_xbvr: false
+
+# User overrides - will be combined with xbvr_defaults
+xbvr: {}
+# Default configuration structure
+xbvr_defaults:
+  version: 0.4.34
+
+  # User and group configuration
+  user:
+    name: xbvr
+    uid: # Let system assign UID
+    group: xbvr
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/xbvr
+    data_dir: /opt/xbvr/data # where the DB, config and other data is stored
+  # Service configuration
+  service:
+    web_port: 9997
+    websocket_addr: "127.0.0.1:9996"
+
+# Supported xbvr versions and checksums
+xbvr_checksums:
+  "0.4.33": "467ffb0f7b5c8814d2a285f6246a4172cc5ed00932c60073a964789fdf349115"
+  "0.4.34": "8f875a10bcf599b70b30b7fca1bc3c68fd192e4282e7517d00ec35b796cfecd8"

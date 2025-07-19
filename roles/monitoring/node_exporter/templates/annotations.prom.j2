@@ -1,0 +1,10 @@
+{% for item in node_exporter_config.static_annotations %}
+# HELP {{ item.name | replace(" ", "_") }} {{ item.desc }}
+# TYPE {{ item.name | replace(" ", "_") }} gauge
+{% for vl in item.metric_values %}
+{{ item.name | replace(" ", "_") }}{% raw %}{{% endraw %}{% for lb  in vl.labels %}{{ lb.name }}="{{lb.value}}"{% if not loop.last %},{% endif %}{% endfor %}{% raw %}}{% endraw %} {{ vl.value }}
+{% endfor %}
+{% endfor %}
+
+
+

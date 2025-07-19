@@ -1,0 +1,32 @@
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/info-widgets/
+
+
+- search:
+    provider: duckduckgo
+    target: _blank
+
+- openmeteo:
+    cache: 20
+    format:
+      maximumFractionDigits: 1
+    label: Basel
+    latitude: 47.559601
+    longitude: 7.588576
+    timezone: Europe/Zurich
+    units: metric
+
+- resources:
+    cpu: true
+    cputemp: true
+    memory: true
+    network: true
+    refresh: 3000
+    tempmax: 100
+    tempmin: 0
+    units: metric
+    uptime: true
+
+- resources:
+    disk: /
+    label: Storage

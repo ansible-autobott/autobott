@@ -1,0 +1,149 @@
+---
+#============================================================================================================
+# Firewall Role
+#============================================================================================================
+
+- name: Main Firewall installation and configuration
+  tags:
+    - firewall
+    - untagged
+  when: run_role_firewall | bool
+  block:
+    - name: Set merged firewall configuration
+      ansible.builtin.set_fact:
+        firewall_config: "{{ firewall_defaults | combine(firewall, recursive=true) }}"
+
+    - name: Ensure UFW is installed
+      apt:
+        name: ufw
+        state: present
+        update_cache: yes
+
+    - name: Add required ports to config
+      ansible.builtin.set_fact:
+        firewall_config: >-
+          {{
+            {
+              "allow_inbound_tcp": (firewall_config.allow_inbound_tcp + firewall_required.allow_inbound_tcp) | unique,
+              "allow_inbound_udp": (firewall_config.allow_inbound_udp + firewall_required.allow_inbound_udp) | unique,
+              "allowed_outbound_tcp": (firewall_config.allowed_outbound_tcp + firewall_required.allowed_outbound_tcp) | unique,
+              "allowed_outbound_udp": (firewall_config.allowed_outbound_udp + firewall_required.allowed_outbound_udp) | unique,
+              "allow_docker": firewall_config.allow_docker 
+            }
+          }}
+          
+
+    - name: Compute hash of merged firewall config
+      ansible.builtin.set_fact:
+        firewall_config_hash: '{{ firewall_config | to_json | hash("sha1") }}'
+        firewall_hash_path: "/etc/ufw/.ansible_firewall_config_hash.sha1"
+
+    - name: Check if firewall hash file exists
+      ansible.builtin.stat:
+        path: "{{ firewall_hash_path }}"
+      register: firewall_hash_file_stat
+
+    - name: Read existing firewall hash if present
+      ansible.builtin.slurp:
+        path: "{{ firewall_hash_path }}"
+      register: existing_firewall_hash_file
+      when: firewall_hash_file_stat.stat.exists
+
+    - name: Set existing firewall hash fact
+      ansible.builtin.set_fact:
+        existing_firewall_hash: "{{ existing_firewall_hash_file.content | b64decode }}"
+      when: firewall_hash_file_stat.stat.exists
+
+    - name: Apply firewall configuration if changed
+      when: existing_firewall_hash is not defined or existing_firewall_hash != firewall_config_hash
+      block:
+
+        - name: Reset UFW to default
+          community.general.ufw:
+            state: reset
+
+        - name: Set default policy to deny incoming
+          community.general.ufw:
+            direction: incoming
+            policy: deny
+
+        - name: Set default policy to deny outgoing
+          community.general.ufw:
+            direction: outgoing
+            policy: deny
+
+        - name: Allow Inbound traffic to Docker subnet
+          ufw:
+            rule: allow
+            from_ip: 172.16.0.0/12
+            direction: in
+          when: firewall_config.allow_docker
+
+        - name: Allow Outbound traffic to Docker subnet
+          ufw:
+            rule: allow
+            from_ip: 172.16.0.0/12
+            direction: out
+          when: firewall_config.allow_docker
+
+        - name: Allow inbound TCP on specified ports
+          ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: tcp
+            direction: in
+          loop: "{{ firewall_config.allow_inbound_tcp  }}"
+
+
+        - name: Allow inbound UDP on specified ports
+          ufw:
+            rule: allow
+            port: "{{ item }}"
+            proto: udp
+            direction: in
+          loop: "{{ firewall_config.allow_inbound_udp }}"
+
+        - name: Allow outbound TCP on specified ports
+          community.general.ufw:
+            rule: allow
+            port: "{{ item }}"
+            direction: out
+            proto: tcp
+          loop: "{{ firewall_config.allowed_outbound_tcp }}"
+
+        - name: Allow outbound UDP on specified ports
+          community.general.ufw:
+            rule: allow
+            port: "{{ item }}"
+            direction: out
+            proto: udp
+          loop: "{{ firewall_config.allowed_outbound_udp }}"
+
+        - name: Enable UFW
+          community.general.ufw:
+            state: enabled
+            logging: on
+
+        - name: Save current firewall config hash to file
+          ansible.builtin.copy:
+            content: "{{ firewall_config_hash }}"
+            dest: "{{ firewall_hash_path }}"
+            owner: root
+            group: root
+            mode: "0644"
+
+    - name: Find UFW backup files with timestamp suffix
+      become: true
+      find:
+        paths: /etc/ufw
+        patterns: '*.20*'
+        file_type: file
+      register: ufw_backup_files
+
+    - name: Delete found UFW backup files
+      become: true
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ ufw_backup_files.files }}"
+      when: ufw_backup_files.matched > 0

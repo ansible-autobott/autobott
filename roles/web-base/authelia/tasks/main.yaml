@@ -1,0 +1,171 @@
+---
+#============================================================================================================
+# Authelia Role - Main Tasks
+#============================================================================================================
+
+- name: Main Authelia block
+  tags:
+    - authelia
+    - untagged
+  when:
+    - run_role_authelia | bool
+  block:
+    - name: Set merged Authelia configuration
+      ansible.builtin.set_fact:
+        authelia_config: "{{ authelia_defaults | combine(authelia, recursive=true) }}"
+
+    - name: Create authelia system group
+      ansible.builtin.group:
+        name: "{{ authelia_config.user.group }}"
+        gid: "{{ authelia_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create authelia system user
+      ansible.builtin.user:
+        name: "{{ authelia_config.user.name }}"
+        uid: "{{ authelia_config.user.uid | default(omit, true) }}"
+        group: "{{ authelia_config.user.group }}"
+        home: "{{ authelia_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create authelia directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ authelia_config.user.name }}"
+        group: "{{ authelia_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ authelia_config.paths.data_dir }}"
+        - "{{ authelia_config.paths.base_dir }}/install/{{ authelia_config.version }}"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Authelia tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/authelia/authelia/releases/download/v{{ authelia_config.version }}/authelia-v{{ authelia_config.version }}-linux-amd64.tar.gz"
+        dest: "{{ authelia_config.paths.base_dir }}/install/authelia-{{ authelia_config.version }}.linux-amd64.tar.gz"
+        owner: "{{ authelia_config.user.name }}"
+        group: "{{ authelia_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ authelia_checksums[authelia_config.version] }}"
+
+    - name: Extract Authelia tarball
+      ansible.builtin.unarchive:
+        src: "{{ authelia_config.paths.base_dir }}/install/authelia-{{ authelia_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ authelia_config.paths.base_dir }}/install/{{ authelia_config.version }}"
+        remote_src: true
+        owner: "{{ authelia_config.user.name }}"
+        group: "{{ authelia_config.user.group }}"
+        mode: "0750"
+        creates: "{{ authelia_config.paths.base_dir }}/install/authelia-{{ authelia_config.version }}.linux-amd64/authelia"
+
+    - name: Link Authelia binary to latest
+      ansible.builtin.file:
+        src: "{{ authelia_config.paths.base_dir }}/install/{{ authelia_config.version }}"
+        dest: "{{ authelia_config.paths.base_dir }}/install/authelia_latest"
+        state: link
+      notify: restart authelia
+
+    - name: Find old Authelia tarballs
+      ansible.builtin.find:
+        paths: "{{ authelia_config.paths.base_dir }}/install"
+        patterns: "authelia-*.linux-amd64.tar.gz"
+        use_regex: false
+      register: authelia_tarballs
+
+    - name: Delete outdated Authelia tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ authelia_tarballs.files }}"
+      when: "'authelia-' ~ authelia_config.version ~ '.linux-amd64.tar.gz' not in item.path"
+
+    - name: Find old Authelia extracted directories
+      ansible.builtin.find:
+        paths: "{{ authelia_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "*"
+        use_regex: false
+      register: authelia_dirs
+
+    - name: Delete outdated Authelia extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ authelia_dirs.files }}"
+      when: "authelia_config.version not in item.path"
+
+    #====================================================
+    # Config
+    #====================================================
+
+    - name: Main authelia configuration
+      ansible.builtin.template:
+        src: config.yaml
+        dest: "{{ authelia_config.paths.data_dir }}/config.yaml"
+        owner: "{{ authelia_config.user.name }}"
+        group: "{{ authelia_config.user.group }}"
+        mode: "0640"
+      #        validate: "{{ authelia_config.paths.base_dir }}/install/authelia_latest/authelia-linux-amd64 config validate -c %s"
+      notify:
+        - restart authelia
+
+    - name: Generate Authelia users file
+      ansible.builtin.template:
+        src: users.yaml
+        dest: "{{ authelia_config.paths.data_dir }}/users.yaml"
+        owner: authelia
+        group: authelia
+        mode: "0640"
+
+    - name: Setup authelia systemd service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/authelia.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - restart authelia
+
+    - name: Enable Authelia service
+      ansible.builtin.systemd:
+        name: authelia
+        state: restarted
+        enabled: true
+        daemon_reload: true
+
+    - name: Restart Authelia
+      ansible.builtin.systemd:
+        name: authelia
+        state: restarted
+
+#============================================================================================================
+# Uninstall
+#============================================================================================================
+- name: Uninstall Authelia block
+  tags:
+    - authelia
+    - untagged
+  when: not run_role_authelia
+  block:
+
+    - name: Check if Authelia service exists
+      ansible.builtin.stat:
+        path: "/lib/systemd/system/authelia.service"
+      register: authelia_service_file
+
+    - name: Stop Authelia service if installed
+      ansible.builtin.service:
+        name: authelia
+        state: stopped
+      when: authelia_service_file.stat.exists
+
+    - name: Remove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true

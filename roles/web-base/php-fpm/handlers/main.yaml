@@ -1,0 +1,25 @@
+---
+#============================================================================================================
+# PHP-FPM Handlers
+#============================================================================================================
+
+- name: Restart php-fpm
+  ansible.builtin.service:
+    name: "php{{ php_version }}-fpm"
+    state: restarted
+    enabled: true
+  listen: restart php-fpm
+
+- name: Reload php-fpm
+  ansible.builtin.service:
+    name: "php{{ php_version }}-fpm"
+    state: reloaded
+    enabled: true
+  listen: reload php-fpm
+
+- name: Stop php-fpm
+  ansible.builtin.service:
+    name: "php{{ php_version }}-fpm"
+    state: stopped
+    enabled: false
+  listen: stop php-fpm

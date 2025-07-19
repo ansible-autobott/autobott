@@ -1,0 +1,26 @@
+---
+#============================================================================================================
+# Authelia Handlers
+#============================================================================================================
+
+- name: Restart authelia
+  ansible.builtin.systemd:
+    name: authelia
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  listen: restart authelia
+
+- name: Reload authelia
+  ansible.builtin.systemd:
+    name: authelia
+    state: reloaded
+    enabled: true
+  listen: reload authelia
+
+- name: Stop authelia
+  ansible.builtin.systemd:
+    name: authelia
+    state: stopped
+    enabled: false
+  listen: stop authelia

@@ -1,0 +1,56 @@
+---
+#============================================================================================================
+# Romm Role Defaults
+#============================================================================================================
+run_role_romm: false
+
+# User overrides - will be combined with romm_defaults
+romm: {}
+# Default configuration structure
+romm_defaults:
+
+  # https://github.com/getromm/romm/releases
+  version: 0.21.0@sha256:7b69c758d1b3286eaa5ba961fcc1b263bc5768124f29b097ce39fff5e48c073f
+  app_url: localhost:8080
+  # change, only the characters `A-Za-z0-9`, without special characters or spaces
+  db_pass: ""
+  # needs to be at least 32 chars generate with openssl rand -hex 32
+  app_secret: ""
+
+  # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#igdb
+  # https://docs.romm.app/latest/Getting-Started/Quick-Start-Guide/
+  integration:
+    igdb_client_id: ""
+    igdb_client_secret: ""
+
+    # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#mobygames
+    mobygames_api_key: ""
+    # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#steamgriddb
+    steamgridd_api_key: ""
+
+    # Use your ScreenScraper username and password
+    # https://docs.romm.app/latest/Getting-Started/Generate-API-Keys/#screenscraper
+    screenscraper_user: ""
+    screenscraper_pw: ""
+
+    # https://api-docs.retroachievements.org/#api-access
+    retroachievements_api_key: ""
+
+  # User and group configuration
+  user:
+    name: romm
+    uid: # Let system assign UID
+    group: romm
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/romm
+    config_dir: /opt/romm/config
+    data_dir: /opt/romm/data
+    # Check https://github.com/rommapp/romm?tab=readme-ov-file#folder-structure for more details.
+    library_dir: /opt/romm/library
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 3040

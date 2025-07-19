@@ -1,0 +1,16 @@
+---
+#============================================================================================================
+# Lynis audit
+#============================================================================================================
+# Main role control variable
+run_role_lynis: false
+
+# list of tests to be skipped
+# e.g.
+#  - SSH-7408
+#  - SSH-7408:permitrootlogin
+lynis_skip_tests:
+  - BANN-7126 # Add a legal banner to /etc/issue, to warn unauthorized users
+  - BANN-7130 # Add legal banner to /etc/issue.net, to warn unauthorized users
+
+lynis_machine_role: server #(personal, workstation or server)

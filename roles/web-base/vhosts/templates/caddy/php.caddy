@@ -1,0 +1,21 @@
+# templates/caddy/php.caddy
+{% include 'parts/servername.j2' %} {
+
+    {% include 'parts/basicauth.j2' %}
+    {% include  'parts/authelia.j2' %}
+
+    {% set doc_root =
+        (server.document_root is not defined or server.document_root == 'default') and (vhosts_root ~ '/' ~ webservice.name ~ '/home_dir/public_html')
+        or (server.document_root is defined and server.document_root.startswith('/') and server.document_root)
+        or (server.document_root is defined and (vhosts_root ~ '/' ~ webservice.name ~ '/home_dir/' ~ server.document_root))
+    %}
+
+    root * {{ doc_root }}
+
+    # Enable PHP processing using php-fpm
+    php_fastcgi unix//var/run/{{ webservice.name  }}-php-fpm.sock
+
+    # serve files
+    file_server
+
+}

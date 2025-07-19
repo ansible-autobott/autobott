@@ -1,0 +1,17 @@
+---
+#============================================================================================================
+# MariaBD Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_mariadb: false
+
+# User configuration override (will be merged with mariadb_defaults)
+mariadb: {}
+# Default configuration structure
+mariadb_defaults:
+  port: 3306
+  # overwrite the sql_mode values eg,
+  # "ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION"
+  # see: https://mariadb.com/kb/en/sql-mode/
+  sql_mode: ""

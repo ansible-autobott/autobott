@@ -1,0 +1,315 @@
+#============================================================================================================
+# Main webservices
+#============================================================================================================
+
+# Role execution control
+run_role_vhosts: true
+
+vhosts_config: {}
+
+vhosts:
+
+
+  # DEMO ========================
+  # this server demonstrates some features of the vhost role
+
+  # generate a info page about the services
+  - name: infopage
+    enabled: true
+    comment: "autobot info page"
+    sample_content: "info_page"
+    servers:
+      - enabled: true
+        domains:
+          - "http://info.localhost:8080"
+        type: "redirect"
+        redirect_target: "https://info.localhost:8443"
+        redirect_code: "304" # default is 308, possible values 303, 304, 308
+
+      - enabled: true
+        domains:
+          - "https://info.localhost:8443"
+        type: "static"
+
+  # Generate a scaffolding to serve static content, protected with basicauth
+  - name: demo_html
+    enabled: true
+    comment: "sample static html with protected content"
+    sample_content: "html"
+    servers:
+      - enabled: true
+        domains:
+          - "http://static.localhost:8080"
+        type: "redirect"
+        redirect_target: "https://localhost:8443"
+        redirect_code: "304" # default is 308, possible values 303, 304, 308
+
+      - enabled: true
+        domains:
+          - "https://static.localhost:8443"
+        type: "static"
+        authentication: true
+        htpasswd_file_users:
+          - user: user1
+            pass: "1234"
+            enabled: true
+          - user: user2
+            pass: "1234"
+            enabled: true
+
+  # Generate a scaffolding to serve php/mysql content
+  - name: demo_php
+    enabled: true
+    comment: "php execution"
+    sample_content: "php"
+    servers:
+      - enabled: true
+        domains:
+          - "http://php.localhost:8080"
+          - "https://php.localhost:8443"
+        type: "php"
+    php:
+      enabled: yes
+    mariadb:
+      enabled: true
+      password: "CHANGEME"
+
+  # Other services ========================
+
+  - name: mainproxy
+    enabled: true
+    comment: "main proxied services"
+    servers:
+      # if you use standard ports (80|443) you don't need to explicitly add the https redirect, caddy will do it for you
+      - enabled: true
+        domains:
+          - "http://localhost:8080"
+        type: "redirect"
+        redirect_target: "https://localhost:8443"
+
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "https://localhost:8443"
+        proxy_url: "http://127.0.0.1:3003"
+
+      # FE 26 ============================
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://fe26.localhost:8080"
+          - "https://fe26.localhost:8443"
+        proxy_url: "http://127.0.0.1:7070"
+
+      # Radicale ============================
+      - enabled: true
+        domains:
+          - "http://radicale.localhost:8080"
+          - "https://radicale.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:5232"
+        # Radicale requires the header X-Remote-User
+        proxy_lines:
+          - 'header_up X-Remote-User "{http.auth.user.id}"'
+
+        authentication: true
+        htpasswd_file_users:
+          - user: demo
+            pass: "demo"
+            enabled: true
+          - user: admin
+            pass: "admin"
+            enabled: true
+
+      # Immich ============================
+      - enabled: true
+        domains:
+          - "http://immich.localhost:8080"
+          - "https://immich.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:2283"
+
+      # Docmost ============================
+      - enabled: true
+        domains:
+          - "http://docmost.localhost:8080"
+          - "https://docmost.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:3030"
+
+      # Mealie ============================
+      - enabled: true
+        domains:
+          - "http://mealie.localhost:8080"
+          - "https://mealie.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:9925"
+
+  - name: phpmyadmin
+    enabled: true
+    comment: "mysql database management in php"
+    servers:
+      - enabled: true
+        domains:
+          - "http://pma.localhost:8080"
+          - "https://pma.localhost:8443"
+        type: "php"
+        document_root: "/opt/phpmyadmin/latest"
+    php:
+      enabled: yes
+      open_basedir:
+        - "/opt/phpmyadmin/latest"
+
+  - name: mediawiki
+    enabled: true
+    comment: "wiki powered by mediawiki"
+    servers:
+      - enabled: true
+        domains:
+          - "http://wiki.localhost:8080"
+          - "https://wiki.localhost:8443"
+        type: "php"
+        document_root: "/opt/mediawiki/public"
+    php:
+      enabled: yes
+      open_basedir:
+        - "/opt/mediawiki/data"
+        - "/opt/mediawiki/install"
+    mariadb:
+      enabled: true
+      password: "mediawiki"
+
+  - name: servarr
+    enabled: true
+    comment: "servarr services"
+    servers:
+      # Jellyfin ============================
+      - enabled: true
+        domains:
+          - "http://jellyfin.localhost:8080"
+          - "https://jellyfin.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:8096"
+
+      # Kavita =============================
+      - enabled: true
+        domains:
+          - "http://kavita.localhost:8080"
+          - "https://kavita.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:5000"
+
+      # Transmission =======================
+      - enabled: true
+        domains:
+          - "http://transmission.localhost:8080"
+          - "https://transmission.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:9091"
+
+      # Prowlarr ===========================
+      - enabled: true
+        domains:
+          - "http://prowlarr.localhost:8080"
+          - "https://prowlarr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:9696"
+
+      # Lidarr =============================
+      - enabled: true
+        domains:
+          - "http://lidarr.localhost:8080"
+          - "https://lidarr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:8686"
+
+      # Radarr =============================
+      - enabled: true
+        domains:
+          - "http://radarr.localhost:8080"
+          - "https://radarr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:7878"
+
+      # Readarr ============================
+      - enabled: true
+        domains:
+          - "http://readarr.localhost:8080"
+          - "https://readarr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:8787"
+
+      # Sonarr =============================
+      - enabled: true
+        domains:
+          - "http://sonarr.localhost:8080"
+          - "https://sonarr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:8989"
+
+      # Romm =============================
+      - enabled: true
+        domains:
+          - "http://romm.localhost:8080"
+          - "https://romm.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:3040"
+
+      # Whisparr ===========================
+      - enabled: true
+        domains:
+          - "http://whisparr.localhost:8080"
+          - "https://whisparr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:6969"
+
+      # Stash ==============================
+      - enabled: true
+        domains:
+          - "http://stash.localhost:8080"
+          - "https://stash.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:9999"
+
+      # Xbvr ===============================
+      - enabled: true
+        domains:
+          - "http://xbvr.localhost:8080"
+          - "https://xbvr.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:9997"
+
+  - name: monitoring
+    enabled: true
+    comment: "monitoring services"
+    servers:
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://prometheus.localhost:8080"
+          - "https://prometheus.localhost:8443"
+        proxy_url: "http://127.0.0.1:9090"
+
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://alertmanager.localhost:8080"
+          - "https://alertmanager.localhost:8443"
+        proxy_url: "http://127.0.0.1:9093"
+
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://node-exporter.localhost:8080"
+          - "https://node-exporter.localhost:8443"
+        proxy_url: "http://127.0.0.1:9100"
+
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://grafana.localhost:8080"
+          - "https://grafana.localhost:8443"
+        proxy_url: "http://127.0.0.1:3000"
+
+
+

@@ -1,0 +1,39 @@
+---
+#============================================================================================================
+# Immich Role Defaults
+#============================================================================================================
+run_role_immich: false
+
+# User overrides - will be combined with immich_defaults
+immich: {}
+# Default configuration structure
+immich_defaults:
+
+  # https://github.com/getimmich/immich/releases
+  version: v1.135.3
+  allowed_host: localhost:8080
+  # User and group configuration
+  user:
+    name: immich
+    uid: # Let system assign UID
+    group: immich
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/immich
+    uploads_dir: /opt/immich/uploads
+    db_dir: /opt/immich/db
+
+  # change, only the characters `A-Za-z0-9`, without special characters or spaces
+  db_pass: "changeMe"
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 2283
+    # set an identifier from this list: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
+    timezone: Etc/UTC
+    # Mount local folders into a targe withing the docker container
+    # the tarted will be /media/<name> -> the target, e.g.
+    #  piratecove: "/media/piratecove"
+    mounts: []

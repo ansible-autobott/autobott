@@ -1,0 +1,34 @@
+---
+- name: Restart caddy
+  ansible.builtin.service:
+    name: caddy
+    state: restarted
+  listen:
+    - "restart web server"
+
+- name: Reload caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: reloaded
+    enabled: true
+  listen: reload caddy
+
+- name: Restart php-fpm
+  ansible.builtin.service:
+    name: "php{{ php_vers }}-fpm"
+    state: restarted
+  when: php_vers != ""
+  listen:
+    - "restart web server"
+
+- name: Restart php-fpm
+  ansible.builtin.service:
+    name: "php{{ php_version }}-fpm"
+    state: restarted
+  listen:
+    - "restart php-fpm"
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd

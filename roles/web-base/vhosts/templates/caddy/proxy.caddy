@@ -1,0 +1,35 @@
+# templates/caddy/proxy.caddy
+{% include  'parts/servername.j2' %} {
+
+    {% include  'parts/basicauth.j2' %}
+    {% include  'parts/authelia.j2' %}
+
+    {% if server.path is defined and server.path %}
+        {% for p in server.path %}
+
+        @{{ p.name }} {
+            {{ p.matcher }}
+        }
+        handle @{{ p.name }} {
+            {% if p.location %}
+
+            root * {{ p.location }}
+            try_files {path} /index.html
+            file_server
+            {% endif %}
+
+        }
+
+        {% endfor %}
+    {% endif %}
+
+
+    reverse_proxy {{ server.proxy_url }} {% if server.proxy_lines is defined and server.proxy_lines %} {
+        # add custom proxy directives
+        {% for line in server.proxy_lines %}
+        {{ line }}
+        {% endfor %}
+    }
+    {% endif %}
+
+}

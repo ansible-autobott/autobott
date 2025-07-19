@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Sonarr  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_sonarr: false
+
+# User overrides - will be combined with sonarr_defaults
+sonarr: {}
+# Default configuration structure
+sonarr_defaults:
+  download_url: "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64"
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: sonarr
+    uid: # Let system assign UID
+    group: sonarr
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/sonarr
+    data_dir: /opt/sonarr/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 8989
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
+    auth_method: "External" # Basic | Forms | External | None

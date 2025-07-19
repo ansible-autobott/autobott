@@ -1,0 +1,61 @@
+
+source_directories:
+{% for dir in item.dirs %}
+  - {{ dir.root }}
+{% endfor %}
+
+repositories:
+
+{% for repo in item.destination %}
+  - path: {{ repo.path }}
+    # on init create dirs if they dont exist
+    make_parent_directories: true
+{% if repo.label is defined %}
+    label: {{ repo.label }}
+{% endif %}
+    encryption: {{ repo.encryption | default( "none" ) }}
+
+{% endfor %}
+
+{% if item.mariadb is defined %}
+mariadb_databases:
+{% for db in item.mariadb %}
+  - name:   {{ db }}
+{% endfor %}
+{% endif %}
+
+
+archive_name_format: '{{item.name}}-{hostname}-{now}'
+{% if item.ssh_key is defined %}
+ssh_command: ssh -i /etc/borgmatic.d/{{ item.name }}.pkey
+{% endif %}
+
+{% if item.encryption_passphrase is defined %}
+encryption_passphrase: "{{ item.encryption_passphrase }}"
+{% endif %}
+
+
+exclude_if_present:
+  - .nobackup
+
+# keep_within: 3H, uncomment to keep all in the last 3H, used for debug
+{% if item.retentio is defined and item.retention == "medium" %}
+keep_hourly: 6
+keep_daily: 2
+keep_weekly: 2
+keep_monthly: 2
+keep_yearly: 1
+{% elif item.retentio is defined and item.retention == "aggressive" %}
+keep_hourly: 24
+keep_daily: 7
+keep_weekly: 4
+keep_monthly: 6
+keep_yearly: 1
+  {% else %}
+{#  Default or fallback policy => minimal #}
+keep_hourly: 1
+keep_daily: 1
+keep_weekly: 1
+keep_monthly: 1
+keep_yearly: 0
+{% endif %}

@@ -1,0 +1,9 @@
+{% if server.authentication | default(false) %}
+basicauth {{ server.authentication_path | default("") }} {
+{% for user in server.htpasswd_file_users | default([]) %}
+    {% if user.enabled %}
+    {{ user.user }} {{ user.pass | password_hash('bcrypt') }}
+    {% endif %}
+    {% endfor %}
+}
+{% endif %}

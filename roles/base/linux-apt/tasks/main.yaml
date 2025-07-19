@@ -1,0 +1,74 @@
+---
+#============================================================================================================
+# Linux apt
+#============================================================================================================
+- name: Linux apt
+  tags:
+    - "linux-apt"
+    - "linux-upgrade"
+    - "untagged"
+  when:
+    - run_role_linux_apt is defined
+    - run_role_linux_apt | bool
+  block:
+    - name: Set merged linux_apt facts
+      ansible.builtin.set_fact:
+        linux_apt_data: "{{ linux_apt_defaults | combine(linux_apt, recursive=True) }}"
+
+    - name: "Configure APT package sources"
+      ansible.builtin.include_tasks:
+        file: sources.yaml
+
+    - name: "Perform system updates"
+      ansible.builtin.include_tasks:
+        file: upgrade.yaml
+      when: "'linux-upgrade' in ansible_run_tags"
+
+    - name: "Handle distribution upgrade if needed"
+      ansible.builtin.include_tasks:
+        file: distupgrade.yaml
+
+      when:
+        - linux_apt_data.release | default('') | string
+        - ansible_distribution_release != linux_apt_data.release
+        - "'linux-upgrade' in ansible_run_tags"
+
+    - name: "Configure automatic updates"
+      block:
+        - name: "Install automatic update packages"
+          ansible.builtin.apt:
+            name:
+              - unattended-upgrades
+              - apt-listchanges
+            state: present
+            install_recommends: false
+          when: linux_apt_data.automatic_updates | bool
+
+        - name: "Trigger initial unattended upgrade"
+          ansible.builtin.command:
+            cmd: unattended-upgrade -d
+          register: upgrade_result
+          changed_when: "'No packages found that can be upgraded unattended' not in upgrade_result.stderr"
+          when: linux_apt_data.automatic_updates | bool
+
+        - name: "Remove automatic update packages if disabled"
+          ansible.builtin.apt:
+            name:
+              - unattended-upgrades
+              - apt-listchanges
+            state: absent
+            purge: true # Ensure complete removal
+          when: not linux_apt_data.automatic_updates | bool
+
+    - name: "Clean up deprecated configurations"
+      ansible.builtin.file:
+        state: absent
+        path: "{{ item }}"
+      loop:
+        - /etc/cron.d/apt-automatic-updates
+        - /etc/apt/sources.list.d/ftp_debian_org_debian.list
+
+    - name: "Clean APT cache"
+      ansible.builtin.apt:
+        autoclean: true
+        cache_valid_time: 3600

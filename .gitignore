@@ -1,0 +1,34 @@
+.directory
+log
+logs/*.log
+node_backups/*
+node_tests/*
+*.retry
+
+# Ignore Ansible vault password file
+vault_password
+vault_pass.txt
+.vault_pass.txt
+venv
+
+# ignore borg keys
+inventory/files/borg/*
+
+# build process
+vagrant/bake-base/**/*.box
+
+# ignore default pybackup output
+remote_backup
+***/__pycache__/
+
+# Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and Webstorm
+# Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
+
+# User-specific stuff:
+.idea/
+*.iml
+.vagrant
+vagrant/*.log
+
+host_secrets/common.yaml
+reports/lynis_audit/*.dat

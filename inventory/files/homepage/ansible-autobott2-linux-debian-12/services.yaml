@@ -1,0 +1,112 @@
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/services/
+
+- Vhost Demo:
+    - vhosts Info:
+        description: Info page about configured Vhosts
+        href: https://info.localhost:8443
+    - static html:
+        description: Basic auth (user1:1234) protected static content
+        href: https://static.localhost:8443
+    - demo php:
+        description: skafolding for an php/mysql app
+        href: https://php.localhost:8443
+
+- Web Services (local proxy):
+    - fe26:
+        description: Simple File manager
+        href: https://fe26.localhost:8443
+        icon: /icons/fe26.jpg
+    - radicale:
+        description: Radicale CarDav and CalDav
+        href: https://radicale.localhost:8443
+        icon: radicale.png
+
+- Web Services (docker):
+      - immich:
+            description: Replace Google Photos
+            href: https://immich.localhost:8443
+            icon: immich.png
+
+      - docmost:
+            description: Collaborative Wiki
+            href: https://docmost.localhost:8443
+            icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/docmost.png
+
+      - mealie:
+            description: Meal recipes
+            href: https://mealie.localhost:8443
+            icon: mealie.png
+
+- Web Services (PHP based):
+      - mediawiki:
+            description: The original WIKI
+            href: https://wiki.localhost:8443
+            icon: mediawiki.png
+
+      - phpMyAdmin:
+            description: PHP interface to manage mysql
+            href: https://pma.localhost:8443
+            icon: phpmyadmin.png
+
+- Servarr (local proxy):
+    - Transmission:
+        description: Torrent
+        href: https://transmission.localhost:8443
+        icon: transmission.png
+
+    - Sonarr:
+        description: TV Shows
+        href: https://sonarr.localhost:8443
+        icon: sonarr.png
+
+    - Radarr:
+        description: Movies
+        href: https://radarr.localhost:8443
+        icon: radarr.png
+
+    - Lidarr:
+        description: Music
+        href: https://lidarr.localhost:8443
+        icon: lidarr.png
+
+    - Readarr:
+        description: Audiobooks / eBooks
+        href: https://readarr.localhost:8443
+        icon: readarr.png
+
+    - Prowlarr:
+        description: Indexer manager
+        href: https://prowlarr.localhost:8443
+        icon: prowlarr.png
+
+    - Jellyfin:
+        description: Media server
+        href: https://jellyfin.localhost:8443
+        icon: jellyfin.png
+
+    - Kavita:
+        description: Book reader
+        href: https://kavita.localhost:8443
+        icon: kavita.png
+
+    - Romm:
+        description: Classic games (Runs in docker)
+        href: https://romm.localhost:8443
+        icon: romm.png
+
+- Monitoring:
+    - Prometheus:
+        description: Metrics
+        href: https://prometheus.localhost:8443
+        icon: prometheus.png
+
+    - grafana:
+        description: Dashboard
+        href: https://grafana.localhost:8443
+        icon: grafana.png
+
+    - AlertManager:
+        description: Alerts
+        href: https://alertmanager.localhost:8443
+        icon: alertmanager.png

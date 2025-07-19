@@ -1,0 +1,37 @@
+---
+#============================================================================================================
+# Stash  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_stash: false
+
+# User overrides - will be combined with stash_defaults
+stash: {}
+# Default configuration structure
+stash_defaults:
+  version: 0.28.1
+
+  # User and group configuration
+  user:
+    name: stash
+    uid: # Let system assign UID
+    group: stash
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/stash
+    data_dir: /opt/stash/data # where the DB, config and other data is stored
+    cache: /opt/stash/data/cache # where cached data is stored
+    generated: /opt/stash/data/generated # where generated data is generated
+    blobs: /opt/stash/data/blobs # where thumbnails and so on are stored
+    scrapers: /opt/stash/data/scrapers # where scrapers are stored
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9999
+
+# Supported stash versions and checksums
+stash_checksums:
+  "0.27.2": "9ff1a979c7d61cf263cf7b3c1ce0d80dafc4ae8a"
+  "0.28.1": "6ae0ac8792fd83defaf35e9dc2c0ea039d4ead79"

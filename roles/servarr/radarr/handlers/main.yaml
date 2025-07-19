@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# radarr Daemon Role Handlers
+#============================================================================================================
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart radarr
+  ansible.builtin.service:
+    name: radarr
+    state: restarted
+  listen: restart radarr

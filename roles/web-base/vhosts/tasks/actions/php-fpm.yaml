@@ -1,0 +1,33 @@
+---
+# Configure PHP FPM
+
+- name: Ensure user php sessions dir exists
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/php_sessions"
+    state: directory
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0750"
+  when:
+    - php_vers != ""
+    - webservice.enabled | default(true)
+    - webservice.php.enabled | default(false)
+
+- name: Create php pool file
+  ansible.builtin.template:
+    src: "php-fpm-pool.ini.j2"
+    dest: "/etc/php/{{ php_vers }}/fpm/pool.d/{{ webservice.name }}.conf"
+  notify: restart web server
+  when:
+    - php_vers != ""
+    - webservice.enabled | default(true)
+    - webservice.php.enabled | default(false)
+
+- name: Remove php pool file for disabled webservice {{ webservice.name }}
+  ansible.builtin.file:
+    path: "/etc/php/{{ php_vers }}/fpm/pool.d/{{ webservice.name }}.conf"
+    state: absent
+  notify: restart web server
+  when:
+    - php_vers != ""
+    - not (webservice.enabled | default(true)) or not (webservice.php.enabled | default(false))

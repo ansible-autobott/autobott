@@ -1,0 +1,128 @@
+---
+#============================================================================================================
+# Caddy Role - Main Tasks
+#============================================================================================================
+
+- name: Main Caddy block
+  tags:
+    - caddy
+    - untagged
+  when:
+    - run_role_caddy | bool
+  block:
+    - name: Set merged Caddy configuration
+      ansible.builtin.set_fact:
+        caddy_config: "{{ caddy_defaults | combine(caddy, recursive=true) }}"
+
+    - name: Install Caddy web server
+      ansible.builtin.apt:
+        name: caddy
+        state: present
+        update_cache: true
+        install_recommends: false
+
+    - name: Enable and start Caddy service
+      ansible.builtin.systemd:
+        name: caddy
+        state: started
+        enabled: true
+        daemon_reload: true
+
+    - name: Clean package cache
+      ansible.builtin.apt:
+        clean: true
+      changed_when: false
+
+    - name: Set proper permissions on /etc/caddy/
+      ansible.builtin.file:
+        path: "/etc/caddy/"
+        state: directory
+        mode: "0755"
+
+    - name: Create sites-available and sites-enabled directories
+      ansible.builtin.file:
+        path: "/etc/caddy/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - sites-available
+        - sites-enabled
+
+    - name: Add main Caddyfile
+      ansible.builtin.template:
+        src: Caddyfile.j2
+        dest: /etc/caddy/Caddyfile
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Add utility scrip
+      ansible.builtin.template:
+        src: cert_expirtaion.sh
+        dest: /usr/local/sbin/caddy.certinfo.sh
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Create site config in sites-available
+      ansible.builtin.copy:
+        dest: "/etc/caddy/sites-available/default"
+        content: |
+          # Refer to the Caddy docs for more information:
+          # https://caddyserver.com/docs/caddyfile
+          :80 {
+            # Set this path to your site's directory.
+            root * /usr/share/caddy
+
+            # Enable the static file server.
+              file_server
+
+            # Another common task is to set up a reverse proxy:
+            # reverse_proxy localhost:8080
+
+            # Or serve a PHP site through php-fpm:
+            # php_fastcgi localhost:9000
+          }
+        mode: "0644"
+
+    - name: Enable site by creating symlink
+      ansible.builtin.file:
+        src: "/etc/caddy/sites-available/default"
+        dest: "/etc/caddy/sites-enabled/default"
+        state: link
+
+    - name: Restart Caddy
+      ansible.builtin.systemd:
+        name: caddy
+        state: restarted
+
+#============================================================================================================
+# Uninstall
+#============================================================================================================
+- name: Uninstall Caddy block
+  tags:
+    - caddy
+    - untagged
+  when: not run_role_caddy
+  block:
+
+    - name: Check if Caddy service exists
+      ansible.builtin.stat:
+        path: "/lib/systemd/system/php{{ php_version }}-fpm.service"
+      register: caddy_service_file
+
+    - name: Stop Caddy service if installed
+      ansible.builtin.service:
+        name: caddy
+        state: stopped
+      when: caddy_service_file.stat.exists
+
+    - name: Uninstall Caddy
+      ansible.builtin.apt:
+        name: caddy
+        state: absent
+        purge: true
+
+    - name: Remove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true

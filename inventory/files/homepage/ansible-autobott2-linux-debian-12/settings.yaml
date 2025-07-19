@@ -1,0 +1,30 @@
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings/
+
+background: /images/bg.jpg
+layout:
+  Vhost Demo:
+    columns: 3
+    style: row
+
+  Web Services (local proxy):
+    columns: 2
+    style: row
+
+  Web Services (docker):
+    columns: 3
+    style: row
+
+  Web Services (PHP based):
+    columns: 2
+    style: row
+
+  Servarr (local proxy):
+    columns: 3
+    style: row
+
+  Monitoring:
+    columns: 3
+    style: row
+
+title: Autobott Demo

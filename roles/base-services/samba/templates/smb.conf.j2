@@ -1,0 +1,116 @@
+# NOTE: Whenever you modify this file you should run the command
+# "testparm" to check that you have not made any basic syntactic
+# errors.
+
+#======================= Global Settings =======================
+
+[global]
+
+## Browsing/Identification ###
+
+# Change this to the workgroup/NT-domain name your Samba server will part of
+    workgroup = {{ samba_config.global.workgroup }}
+
+    server string = {{ samba_config.global.server_string }}
+    {% if samba_config.global.netbios_name %}
+    netbios name = {{ samba_config.global.netbios_name }}
+    {% endif %}
+
+#### Debugging/Accounting ####
+
+    # Log to syslog (which goes to journal on systemd systems)
+    # log level = {{ samba_config.global.log_level }}
+    # syslog only = yes
+    # note the new syntax overrides the old one
+    logging = syslog@{{ samba_config.global.log_level }}
+
+    # Do something sensible when Samba crashes: mail the admin a backtrace
+    panic action = /usr/share/samba/panic-action %d
+
+####### Authentication #######
+
+    # Server role. Defines in which mode Samba will operate. Possible
+    # values are "standalone server", "member server", "classic primary
+    # domain controller", "classic backup domain controller", "active
+    # directory domain controller".
+    #
+    # Most people will want "standalone server" or "member server".
+    # Running as "active directory domain controller" will require first
+    # running "samba-tool domain provision" to wipe databases and create a
+    # new domain.
+
+    server role = standalone server
+
+    # password storage - some are the default values
+    passdb backend = tdbsam
+    encrypt passwords = true
+
+    # guest account = nobody
+    obey pam restrictions = no
+
+# This boolean parameter controls whether Samba attempts to sync the Unix
+# password with the SMB password when the encrypted SMB password in the
+# passdb is changed.
+   unix password sync = no
+
+
+# This boolean controls whether PAM will be used for password changes
+# when requested by an SMB client instead of the program listed in
+# 'passwd program'. The default is 'no'.
+#   pam password change = yes
+
+# This option controls how unsuccessful authentication attempts are mapped
+# to anonymous connections
+   map to guest = bad user
+
+####### case sensitive handling #######
+
+case sensitive = {{ samba_config.global.case_sensitive | title }}
+default case = {{ samba_config.global.default_case }}
+preserve case = {{ samba_config.global.preserve_case | lower }}
+short preserve case = {{ samba_config.global.short_preserve_case | lower }}
+
+# ===================================================================================================
+# SHARES
+# ===================================================================================================
+{% if samba_config.shares | length > 0 %}
+
+{% for share in samba_config.shares %}
+[{{ share.name }}]
+{% if share.comment is defined %}
+  comment = "{{ share.comment }}"
+{% endif %}
+
+  path = {{ share.path | default([samba_config.shares_root,share.name] | join('/') ) }}
+
+{% if share.valid_users is defined and share.valid_users | length > 0 %}
+  valid users = {{ share.valid_users | join(' ') }}
+{% endif %}
+
+{% if share.write_list is defined and share.write_list | length > 0 %}
+  write list = {{ share.write_list | join(' ') }}
+{% endif %}
+
+  guest ok = {{ share.guest_ok | default(samba_config.share_defaults.guest_ok) | lower }}
+  browseable = {{ share.browseable | default(samba_config.share_defaults.browseable) | lower }}
+  read only = {{ share.read_only | default(samba_config.share_defaults.read_only) | lower }}
+
+  create mode = {{ share.create_mode | default(samba_config.share_defaults.create_mode) }}
+  force create mode = {{ share.force_create_mode | default(samba_config.share_defaults.force_create_mode) }}
+  directory mode = {{ share.directory_mode | default(samba_config.share_defaults.directory_mode) }}
+  force directory mode = {{ share.force_directory_mode | default(samba_config.share_defaults.force_directory_mode) }}
+  force user = {{ share.force_user | default(samba_config.share_defaults.force_user) }}
+  force group = {{ share.force_group | default(samba_config.share_defaults.force_group) }}
+
+  # hide sockets and so on
+  hide special files = {{ share.hide_special_files | default(samba_config.share_defaults.hide_special_files) | lower }}
+
+  # .dot files are treated as hidden
+  hide dot files = {{ share.hide_dot_files | default(samba_config.share_defaults.hide_dot_files) | lower }}
+
+  # try to read DOS values, uno usefull for non DOS FS
+  store dos attributes = {{ share.store_dos_attributes | default(samba_config.share_defaults.store_dos_attributes) | lower }}
+  follow symlinks = {{ share.follow_symlinks | default(samba_config.share_defaults.follow_symlinks) | lower }}
+
+{% endfor %}
+{% endif %}

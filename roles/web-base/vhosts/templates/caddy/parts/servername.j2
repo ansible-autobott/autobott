@@ -1,0 +1,5 @@
+{% set domains = [] %}
+{% for domain in server.domains %}
+  {% set _ = domains.append( domain ) %}
+{% endfor %}
+{{ domains | join(", ") }}

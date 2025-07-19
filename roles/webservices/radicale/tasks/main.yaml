@@ -1,0 +1,167 @@
+---
+#============================================================================================================
+# Radicale Role
+#============================================================================================================
+
+- name: Main Radicale installation and configuration
+  tags:
+    - radicale
+    - untagged
+  when: run_role_radicale | bool
+  block:
+    - name: Set merged radicale configuration
+      ansible.builtin.set_fact:
+        radicale_config: "{{ radicale_defaults | combine(radicale, recursive=true) }}"
+
+    - name: Ensure required packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-venv
+          - python3-setuptools
+          - git
+          - acl
+        state: present
+        update_cache: true
+
+    - name: Create radicale system group
+      ansible.builtin.group:
+        name: "{{ radicale_config.user.group }}"
+        gid: "{{ radicale_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create radicale system user
+      ansible.builtin.user:
+        name: "{{ radicale_config.user.name }}"
+        uid: "{{ radicale_config.user.uid | default(omit, true) }}"
+        group: "{{ radicale_config.user.group }}"
+        home: "{{ radicale_config.paths.base_dir }}"
+        create_home: true
+        system: true
+        state: present
+
+    - name: Create radicale directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+      loop:
+        - "{{ radicale_config.paths.data_dir }}/collections"
+        - "{{ radicale_config.paths.base_dir }}"
+
+    - name: Get current Python 3 version
+      ansible.builtin.shell: "python3 -c 'import sys; print(\".\".join(map(str, sys.version_info[:3])))'"
+      register: py3_version
+      changed_when: false
+
+    - name: Check if Python venv exists
+      ansible.builtin.stat:
+        path: "{{ radicale_config.paths.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/python"
+      register: radicale_venv
+
+    - name: Remove old venvs if current one does not exist
+      ansible.builtin.file:
+        path: "{{ radicale_config.paths.base_dir }}/py3_venv"
+        state: absent
+      when: not radicale_venv.stat.exists
+
+    - name: Create Python3 virtualenv and install Radicale
+      ansible.builtin.pip:
+        name: radicale
+        version: "{{ radicale_config.version }}"
+        virtualenv: "{{ radicale_config.paths.base_dir }}/py3_venv/{{ py3_version.stdout }}"
+        virtualenv_command: /usr/bin/python3 -m venv
+      notify: restart radicale
+
+    - name: Ensure correct ownership of venv
+      ansible.builtin.file:
+        path: "{{ radicale_config.paths.base_dir }}/py3_venv"
+        state: directory
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+        recurse: true
+
+    - name: Deploy Radicale config file
+      ansible.builtin.template:
+        src: radicale3.conf.j2
+        dest: "{{ radicale_config.paths.base_dir }}/radicale3.config"
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+        mode: "0600"
+      notify: restart radicale
+
+    - name: Remove legacy logging directory
+      ansible.builtin.file:
+        path: "/var/log/radicale"
+        state: absent
+
+    - name: Remove legacy config files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ radicale_config.paths.base_dir }}/radicale2.config"
+        - "{{ radicale_config.paths.base_dir }}/radicale2.log.config"
+
+    - name: Configure systemd service
+      ansible.builtin.template:
+        src: radicale.service.j2
+        dest: /lib/systemd/system/radicale.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart radicale
+
+    - name: Enable and start Radicale systemd service
+      ansible.builtin.systemd:
+        name: radicale
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart radicale
+
+    #============================================================================================================
+    # Git Integration for Collections
+    #============================================================================================================
+
+    - name: Initialize Git repository in collections directory
+      ansible.builtin.command: "git init {{ radicale_config.paths.data_dir }}/collections"
+      args:
+        creates: "{{ radicale_config.paths.data_dir }}/collections/.git"
+      become_user: "{{ radicale_config.user.name }}"
+      vars:
+        ansible_ssh_pipelining: true
+
+    - name: Apply .gitconfig
+      ansible.builtin.template:
+        src: gitconfig.j2
+        dest: "{{ radicale_config.paths.base_dir }}/.gitconfig"
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+        mode: "0700"
+
+    - name: Deploy .gitignore
+      ansible.builtin.template:
+        src: gitignore.j2
+        dest: "{{ radicale_config.paths.data_dir }}/collections/.gitignore"
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+        mode: "0640"
+
+    #============================================================================================================
+    # Final File Permission Checks
+    #============================================================================================================
+
+    - name: Ensure correct permissions for data directory
+      ansible.builtin.file:
+        path: "{{ radicale_config.paths.data_dir }}"
+        owner: "{{ radicale_config.user.name }}"
+        group: "{{ radicale_config.user.group }}"
+        mode: u=rwX,g=rX,o=
+        recurse: true

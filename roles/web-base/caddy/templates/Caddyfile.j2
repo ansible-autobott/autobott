@@ -1,0 +1,18 @@
+{
+    admin {{ caddy_config.admin }}
+    email {{ caddy_config.email }}
+
+{% if caddy_config.email | bool %}
+metrics
+{% endif %}
+{% if caddy_config.http_port is defined and caddy_config.http_port != 80 %}
+    http_port {{ caddy_config.http_port }}
+{% endif %}
+{% if caddy_config.https_port is defined and caddy_config.https_port != 443 %}
+    https_port {{ caddy_config.https_port }}
+{% endif %}
+
+}
+import /etc/caddy/sites-enabled/*
+
+

@@ -1,0 +1,92 @@
+---
+#============================================================================================================
+# Minecraft Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_minecraft: false
+
+# User-provided override (merged with minecraft_defaults)
+minecraft: {}
+minecraft_defaults:
+  # get the jar here: https://www.minecraft.net/en-us/download/server
+  #minecraft_jar: https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
+  #minecraft_version: 1.19.2
+  # https://papermc.io/downloads
+  jar_url: "https://api.papermc.io/v2/projects/paper/versions/1.19.2/builds/224/downloads/paper-1.19.2-224.jar"
+  version: "paper-1.19.2-224"
+
+  # set to true to delete all minecraft related data when disabled
+  delete_data: false
+
+  user:
+    name: minecraft
+    uid:
+    group: minecraft
+    gid:
+
+  paths:
+    base: /opt/minecraft
+    universe: /opt/minecraft/data
+
+  server:
+    port: 25565
+    xms: "512M"
+    xmx: "600M"
+    name: "hello world"
+    motd: "an apple a day, drains your money away"
+    seed: -4172144997902289642
+    max_players: 2
+    view_distance: 9
+    simulation_distance: 9
+    # only allow whitelisted users
+    whitelist: true
+    # list of whitelisted users
+    whitelist_users:
+      - name: strawberry
+        uuid: bf227583-56cb-45c0-bdca-d8beb2603738
+      - name: banana
+        uuid: ec89d0b8-6d13-48a7-8101-ebb3cf7a02e1
+    # list of admins
+    admins:
+      - name: strawberry
+        uuid: bf227583-56cb-45c0-bdca-d8beb2603738
+
+  # check available plugins in the var plugin_data
+  plugins:
+    enable: []
+    remove:
+      - InfoHUD
+
+  overviewer:
+    enabled: false
+    version: 0.19.9
+    texture_url: "https://overviewer.org/textures/1.19"
+    # stop minecraft server during overviewer render
+    cron:
+      enabled: true
+      expression: "0 3 * * *"
+      stop_minecraft: false
+
+    output: "/opt/minecraft/overviewer/output"
+    # enable to show on the map signs that contain "POI" in the first
+    pois: true
+    renders:
+    # all values are omitted if emtpy
+    # extra render modes added: lit_cave,biome_overlay, better_nether
+    # extra world dictionary created with location <name>_nether and <name>_the_end
+      - name: day # mandatory
+        title: "day" # mandatory
+        dimension: "overworld"
+        rendermode: "smooth_lighting"
+        world: ""
+        northdirection: "upper-left"
+
+# internal data about available plugins
+minecraft_plugin_data:
+  InfoHUD:
+    file: InfoHUD-1.5.1.jar
+    folder: InfoHUD
+  CoordinatesHud:
+    file: CoordinatesHud.jar
+    folder: CoordinatesHud

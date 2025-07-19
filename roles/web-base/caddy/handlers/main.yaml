@@ -1,0 +1,26 @@
+---
+#============================================================================================================
+# Caddy Handlers
+#============================================================================================================
+
+- name: Restart caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: restarted
+    enabled: true
+    daemon_reload: true
+  listen: restart caddy
+
+- name: Reload caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: reloaded
+    enabled: true
+  listen: reload caddy
+
+- name: Stop caddy
+  ansible.builtin.systemd:
+    name: caddy
+    state: stopped
+    enabled: false
+  listen: stop caddy

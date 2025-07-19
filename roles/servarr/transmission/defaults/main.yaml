@@ -1,0 +1,32 @@
+---
+#============================================================================================================
+# Transmission Daemon Role Defaults
+# Documentation: https://wiki.debian.org/Transmission
+#============================================================================================================
+
+# Role execution flag
+run_role_transmission: false
+
+# User overrides - will be combined with transmission_defaults
+transmission: {}
+# Default configuration structure
+transmission_defaults:
+  # User and group configuration
+  groups: []
+  daemon_umask: ""
+
+  # Remote access configuration
+  remote_bind_address: "127.0.0.1"
+  remote_bind_port: 9091
+  remote_user: "torrent"
+  remote_password: "torrent"
+  remote_whitelist_enabled: false
+
+  # File permissions
+  umask: 18 # decimal notation: 18=022 (644), 2=002 (664), 7=007 (660)
+
+  # Download paths
+  download_path: "/var/download"
+
+  # Uninstall behavior
+  delete_data_on_uninstall: false

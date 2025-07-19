@@ -1,0 +1,18 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:{{ homepage_config.version }}
+    container_name: homepage
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: {{ homepage_config.allowed_host }} # required, may need port. See gethomepage.dev/installation/#homepage_allowed_hosts
+      PUID: {{ homepage_uid }} # optional, your user id
+      PGID: {{ homepage_gid }} # optional, your group id
+      HOSTNAME: {{ homepage_config.service.bind_ip }}
+      PORT: {{ homepage_config.service.port }}
+    volumes:
+      - {{ homepage_config.paths.base_dir }}/config:/app/config # Make sure your local config directory exists
+      - {{ homepage_config.paths.base_dir }}/images:/app/public/images
+      - {{ homepage_config.paths.base_dir }}/icons:/app/public/icons
+#      - /var/run/docker.sock:/var/run/docker.sock:ro # optional, for docker integrations
+    network_mode: host
+    restart: unless-stopped
+

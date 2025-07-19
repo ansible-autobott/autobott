@@ -1,0 +1,133 @@
+---
+#============================================================================================================
+# Stash Role
+#============================================================================================================
+
+- name: Main Stash installation
+  tags:
+    - stash
+    - stash
+    - untagged
+  when: run_role_stash | bool
+  block:
+    - name: Set merged stash configuration
+      ansible.builtin.set_fact:
+        stash_config: "{{ stash_defaults | combine(stash, recursive=true) }}"
+
+    - name: Create stash system group
+      ansible.builtin.group:
+        name: "{{ stash_config.user.group }}"
+        gid: "{{ stash_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create stash system user
+      ansible.builtin.user:
+        name: "{{ stash_config.user.name }}"
+        uid: "{{ stash_config.user.uid | default(omit, true) }}"
+        group: "{{ stash_config.user.group }}"
+        create_home: false
+        state: present
+
+    - name: Create stash directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ stash_config.user.name }}"
+        group: "{{ stash_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ stash_config.paths.base_dir }}/binaries"
+        - "{{ stash_config.paths.cache }}"
+        - "{{ stash_config.paths.generated }}"
+        - "{{ stash_config.paths.blobs }}"
+        - "{{ stash_config.paths.data_dir }}"
+        - "{{ stash_config.paths.scrapers }}"
+
+    - name: Download stash binary
+      ansible.builtin.get_url:
+        url: "https://github.com/stashapp/stash/releases/download/v{{ stash_config.version }}/stash-linux"
+        dest: "{{ stash_config.paths.base_dir }}/binaries/stash-{{ stash_config.version }}"
+        owner: "{{ stash_config.user.name }}"
+        group: "{{ stash_config.user.group }}"
+        mode: "0750"
+        checksum: "sha1:{{ stash_checksums[stash_config.version] }}"
+        timeout: 300
+      notify: restart stash
+
+    - name: Clean up old stash binaries
+      ansible.builtin.find:
+        paths: "{{ stash_config.paths.base_dir }}/binaries"
+        patterns: "stash-*"
+        file_type: file
+      register: old_binaries
+
+    - name: Remove old stash binaries (except current version)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_binaries.files }}"
+      when:
+        - item.path != stash_config.paths.base_dir + '/binaries/stash-' + stash_config.version
+        - item.path != stash_config.paths.base_dir + '/binaries/stash-latest'
+      notify: restart stash
+
+    # --------------------------------------------------------------------------------------------------------
+    # CONFIGURATION
+    # --------------------------------------------------------------------------------------------------------
+
+    - name: Check if stash config exists
+      ansible.builtin.stat:
+        path: "{{ stash_config.paths.data_dir }}/config.yaml"
+      register: config_status
+
+    - name: Create initial stash config if missing
+      ansible.builtin.template:
+        src: config.yaml
+        dest: "{{ stash_config.paths.data_dir }}/config.yaml"
+        owner: "{{ stash_config.user.name }}"
+        group: "{{ stash_config.user.group }}"
+        mode: "0640"
+      when: not config_status.stat.exists
+      notify: Restart stash
+
+    - name: Configure stash parameters
+      ansible.builtin.lineinfile:
+        path: "{{ stash_config.paths.data_dir }}/config.yaml"
+        regexp: "^\\\\s*{{ item.property | regex_escape() }}:"
+        line: "{{ item.property }}: {{ item.value }}"
+      loop:
+        - { property: "host", value: "{{ stash_config.service.bind_ip }}" }
+        - { property: "port", value: "{{ stash_config.service.port }}" }
+      when: config_status.stat.exists
+      notify: Restart stash
+
+    - name: Create stash binary symlink
+      ansible.builtin.file:
+        src: "{{ stash_config.paths.base_dir }}/binaries/stash-{{ stash_config.version }}"
+        dest: "{{ stash_config.paths.base_dir }}/binaries/stash-latest"
+        state: link
+        owner: "{{ stash_config.user.name }}"
+        group: "{{ stash_config.user.group }}"
+      notify: restart stash
+
+    - name: Create systemd service for stash
+      ansible.builtin.template:
+        src: stash.service.j2
+        dest: "/lib/systemd/system/stash.service"
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart stash
+
+    - name: Enable and start stash service
+      ansible.builtin.systemd:
+        name: "stash"
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart stash

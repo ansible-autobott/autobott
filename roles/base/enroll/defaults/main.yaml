@@ -1,0 +1,31 @@
+---
+#============================================================================================================
+# Enroll system
+#============================================================================================================
+# flag that allows to disable the role
+run_role_autobott_enroll: true
+
+# Default values that will be used if not set in inventory
+autobott_enroll_defaults:
+  # Ansible login user for system management
+  user: "ans"
+  # Password for the ansible user, used by ansible to escalate to root once logged in
+  # This should be defined when enrolling the system, typically as {{ ansible_become_pass }}
+  passwd: ""
+  # System user configuration
+  uid: 900
+  # Group name for ansible login user
+  group: "ans"
+  # Group ID for ansible login user
+  gid: 900
+  # Home directory for ansible login user
+  home: "/home/ans"
+  # Whether to create a custom .bashrc for root user
+  root_bashrc: true
+  # User keys allowed to log in as ansible admin, thus run ansible playbook
+  # @example:
+  #  - "ssh-rsa AAAAA.... john@laptop"
+  #  - "ssh-rsa AAAAA.... mary@laptop"
+  ssh_keys: []
+  # User keys that are no longer allowed to login as ansible admin
+  ssh_keys_revoked: []

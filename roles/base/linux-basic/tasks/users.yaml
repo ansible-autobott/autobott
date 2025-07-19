@@ -1,0 +1,143 @@
+---
+# User and Group Management
+# This file manages system users, groups, and their configurations
+
+- name: Configure users and groups
+  tags:
+    - "linux-basic"
+    - "untagged"
+  block:
+    # Group Management
+    - name: Create system groups
+      ansible.builtin.group:
+        name: "{{ item.name }}"
+        gid: "{{ item.gid | default(omit) }}"
+        state: present
+      loop: "{{ linux_basic.groups | default([]) }}"
+
+    # System Users Management
+    - name: Manage system users and their groups
+      block:
+        - name: Create system user groups
+          ansible.builtin.group:
+            name: "{{ item.username }}"
+            gid: "{{ item.gid | default(omit) }}"
+            state: present
+          loop: "{{ linux_basic.system_users | default([]) }}"
+          when: item.enabled | default(false)
+
+        - name: Create system users
+          ansible.builtin.user:
+            name: "{{ item.username }}"
+            group: "{{ item.username }}"
+            groups: "{{ item.groups | default([]) | join(',') }}"
+            comment: "{{ item.name | default('') }}"
+            uid: "{{ item.uid | default(omit) }}"
+            create_home: false
+            system: true
+            state: present
+          loop: "{{ linux_basic.system_users | default([]) }}"
+          when: item.enabled | default(false)
+
+        - name: Remove disabled system users
+          ansible.builtin.user:
+            name: "{{ item.username }}"
+            state: absent
+            remove: true
+          loop: "{{ linux_basic.system_users | default([]) }}"
+          when: not item.enabled | default(false)
+
+        - name: Remove disabled system user groups
+          ansible.builtin.group:
+            name: "{{ item.username }}"
+            state: absent
+          loop: "{{ linux_basic.system_users | default([]) }}"
+          when: not item.enabled | default(false)
+
+    # Regular Users Management
+    - name: Manage regular users
+      block:
+        - name: Create and configure regular users
+          ansible.builtin.user:
+            name: "{{ item.username }}"
+            uid: "{{ item.uid | default(omit) }}"
+            system: false
+            comment: "{{ item.name | default('') }}"
+            group: "{{ item.primary_group | default('users') }}"
+            groups: "{{ item.groups | default([]) | join(',') }}"
+            append: "{{ not item.enforce_groups | default(false) }}"
+            shell: "{{ item.shell | default('/bin/bash') }}"
+            password: "{{ item.password | default('') | password_hash('sha512', 65534 | random(seed=inventory_hostname) | string) if item.password | default('') else
+              '!' }}"
+            state: present
+            create_home: true
+            home: "/home/{{ item.username }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
+          #          no_log: true
+          when: item.enabled | default(false)
+
+        - name: Configure SSH authorized keys
+          ansible.posix.authorized_key:
+            user: "{{ item.0.username }}"
+            key: "{{ item.1 }}"
+            state: present
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) | subelements('ssh_key', skip_missing=True) }}"
+          when: item.0.enabled | default(false)
+
+        - name: Remove revoked SSH keys
+          ansible.posix.authorized_key:
+            user: "{{ item.0.username }}"
+            key: "{{ item.1 }}"
+            state: absent
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  | subelements('ssh_key_revoked', skip_missing=True)  }}"
+          when: item.0.enabled | default(false)
+
+        - name: Configure user shell environment
+          ansible.builtin.template:
+            src: bashrc.j2
+            dest: "/home/{{ item.username }}/.bashrc"
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0600"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          when: item.enabled | default(false)
+
+        - name: Create user shell configuration directory
+          ansible.builtin.file:
+            path: "/home/{{ item.username }}/.bashrc.d"
+            state: directory
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0750"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          when: item.enabled | default(false)
+
+        - name: Set correct home directory permissions
+          ansible.builtin.file:
+            path: "/home/{{ item.username }}"
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0750"
+            state: directory
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          when: item.enabled | default(false)
+
+    # User Cleanup
+    - name: Clean up disabled users
+      block:
+        - name: Remove disabled users
+          ansible.builtin.user:
+            name: "{{ item.username }}"
+            state: absent
+            remove: "{{ item.delete_home | default(false) }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          when: not item.enabled | default(false)
+
+        - name: Remove home directories of disabled users
+          ansible.builtin.file:
+            path: "/home/{{ item.username }}"
+            state: absent
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          when:
+            - not item.enabled | default(false)
+            - item.delete_home | default(false)

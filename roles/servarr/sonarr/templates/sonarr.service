@@ -1,0 +1,21 @@
+[Unit]
+Description=Sonarr Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+{% if sonarr_config.daemon.umask is defined and sonarr_config.daemon.umask | length %}
+UMask={{ sonarr4_config.daemon.umask }}
+{% endif %}
+
+User={{ sonarr_config.user.name }}
+Group={{ sonarr_config.user.group }}
+ExecStart={{ sonarr_config.paths.base_dir }}/install/Sonarr/Sonarr -nobrowser -data={{ sonarr_config.paths.data_dir }}
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

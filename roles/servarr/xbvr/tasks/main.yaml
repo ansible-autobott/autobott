@@ -1,0 +1,111 @@
+---
+#============================================================================================================
+# Xbvr Role
+#============================================================================================================
+
+- name: Main Xbvr installation
+  tags:
+    - xbvr
+    - xbvr
+    - untagged
+  when: run_role_xbvr | bool
+  block:
+    - name: Set merged xbvr configuration
+      ansible.builtin.set_fact:
+        xbvr_config: "{{ xbvr_defaults | combine(xbvr, recursive=true) }}"
+
+    - name: Create xbvr system group
+      ansible.builtin.group:
+        name: "{{ xbvr_config.user.group }}"
+        gid: "{{ xbvr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create xbvr system user
+      ansible.builtin.user:
+        name: "{{ xbvr_config.user.name }}"
+        uid: "{{ xbvr_config.user.uid | default(omit, true) }}"
+        group: "{{ xbvr_config.user.group }}"
+        create_home: false
+        state: present
+
+    - name: Create xbvr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ xbvr_config.user.name }}"
+        group: "{{ xbvr_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}"
+        - "{{ xbvr_config.paths.data_dir }}"
+
+    - name: Download xbvr binary
+      ansible.builtin.get_url:
+        url: "https://github.com/xbapps/xbvr/releases/download/{{ xbvr_config.version }}/xbvr_{{ xbvr_config.version }}_linux_x86_64.tar.gz"
+        dest: "{{ xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}/xbvr.tar.gz"
+        owner: "{{ xbvr_config.user.name }}"
+        group: "{{ xbvr_config.user.group }}"
+        mode: "0750"
+        checksum: "sha256:{{ xbvr_checksums[xbvr_config.version] }}"
+        timeout: 300
+      notify: restart xbvr
+
+    - name: "Extract"
+      ansible.builtin.unarchive:
+        src: "{{ xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}/xbvr.tar.gz"
+        dest: "{{  xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}"
+        owner: "{{ xbvr_config.user.name }}"
+        group: "{{ xbvr_config.user.group }}"
+        remote_src: true
+        mode: "0755"
+      args:
+        creates: "{{ xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}/README.md"
+      notify: "Restart xbvr"
+
+    - name: Clean up old xbvr binaries
+      ansible.builtin.find:
+        paths: "{{ xbvr_config.paths.base_dir }}/binaries"
+        patterns: "*"
+        file_type: directory
+      register: old_binaries
+
+    - name: Remove old xbvr binaries (except current version)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_binaries.files }}"
+      when:
+        - item.path != xbvr_config.paths.base_dir + '/binaries/' + xbvr_config.version
+        - item.path != xbvr_config.paths.base_dir + '/binaries/latest'
+      notify: restart xbvr
+
+    - name: Create xbvr binary symlink
+      ansible.builtin.file:
+        src: "{{ xbvr_config.paths.base_dir }}/binaries/{{ xbvr_config.version }}"
+        dest: "{{ xbvr_config.paths.base_dir }}/binaries/latest"
+        state: link
+        owner: "{{ xbvr_config.user.name }}"
+        group: "{{ xbvr_config.user.group }}"
+      notify: restart xbvr
+
+    - name: Create systemd service for xbvr
+      ansible.builtin.template:
+        src: xbvr.service
+        dest: "/lib/systemd/system/xbvr.service"
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart xbvr
+
+    - name: Enable and start xbvr service
+      ansible.builtin.systemd:
+        name: "xbvr"
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart xbvr

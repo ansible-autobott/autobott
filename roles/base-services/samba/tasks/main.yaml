@@ -1,0 +1,140 @@
+---
+#============================================================================================================
+# Samba server
+#============================================================================================================
+- name: Main Samba block
+  tags:
+    - samba
+    - untagged
+  when:
+    - run_role_samba | bool
+  block:
+    - name: Set merged samba configuration
+      ansible.builtin.set_fact:
+        samba_config: "{{ samba_defaults | combine(samba, recursive=true) }}"
+
+    - name: Install Samba packages
+      ansible.builtin.apt:
+        name:
+          - samba
+        state: present
+        update_cache: true
+
+    - name: Configure system limits
+      ansible.builtin.lineinfile:
+        path: /etc/security/limits.conf
+        regexp: "^\\s*root\\s+soft\\s+nofile\\s+\\d*"
+        line: "root soft nofile {{ samba_config.root_soft_nofile }}"
+        state: present
+
+    - name: Enable Samba services
+      ansible.builtin.service:
+        name: "smbd"
+        enabled: true
+        state: started
+
+    - name: Configure Samba main configuration
+      ansible.builtin.template:
+        src: smb.conf.j2
+        dest: /etc/samba/smb.conf
+        mode: "0644"
+        validate: "testparm -s %s"
+
+    #====================================================
+    # Users
+    #====================================================
+    - name: Create Samba group
+      ansible.builtin.group:
+        name: "{{ samba_config.samba_group }}"
+        state: present
+
+    - name: Check existing users
+      ansible.builtin.shell: "id {{ item.name }}"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: user_exists
+      changed_when: false
+      failed_when: false # Do not fail yet, we will fail explicitly later
+
+    - name: Fail if any users do not exist
+      ansible.builtin.fail:
+        msg: "User {{ item.item.name }} does not exist. It needs to be created before."
+      loop: "{{ user_exists.results }}"
+      when: item.rc != 0
+
+    - name: Create Samba users directory
+      ansible.builtin.file:
+        path: "{{ samba_config.users_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Create Samba user hash
+      # we create a hash to keep track when a password changed in the inventory
+      ansible.builtin.copy:
+        content: "{{ item.password | hash('sha1') }}"
+        dest: "{{ samba_config.users_dir }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: "0400"
+      loop: "{{ samba_config.users }}"
+      no_log: true
+      register: user_changed
+
+    - name: Create Samba users
+      ansible.builtin.shell: "(echo {{ item.password }}; echo {{ item.password }}) | smbpasswd -s -a {{ item.name }}"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: create_user_output
+      changed_when: "'Added user' in create_user_output.stdout"
+      no_log: true
+      when: user_changed.changed
+
+    - name: Remove existing Samba users
+      ansible.builtin.shell: "smbpasswd -x {{ item.name }} || true"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: delete_user_output
+      changed_when: "'delete unix user' in delete_user_output.stdout"
+      no_log: true
+      when: user_changed.changed
+
+    - name: Add users to Samba group
+      ansible.builtin.user:
+        name: "{{ item.name }}"
+        groups: "{{ samba_config.samba_group }}"
+        append: true
+      loop: "{{ samba_config.users }}"
+
+    #====================================================
+    # Shares
+    #====================================================
+
+    - name: Create samba system user
+      ansible.builtin.user:
+        name: "{{ samba_config.samba_user }}"
+        shell: /usr/sbin/nologin
+        system: true
+        create_home: false
+        state: present
+
+    - name: Create Samba shares root directory
+      ansible.builtin.file:
+        state: directory
+        path: "{{ samba_config.shares_root }}"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Create share directories
+      ansible.builtin.file:
+        state: directory
+        path: "{{ share.path | default([samba_config.shares_root, item.name] | join('/')) }}"
+        owner: "{{ item.share_owner | default(samba_config.samba_user) }}"
+        group: "{{ item.share_group | default(samba_config.samba_group) }}"
+        mode: "{{ item.share_mode | default(samba_config.share_defaults.share_mode) }}"
+      loop: "{{ samba_config.shares }}"

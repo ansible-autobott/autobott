@@ -1,0 +1,283 @@
+---
+#============================================================================================================
+# Minecraft Role
+#============================================================================================================
+
+- name: Main Minecraft installation and configuration
+  tags:
+    - minecraft
+    - untagged
+  when: run_role_minecraft | bool
+  block:
+    - name: Set merged Minecraft defaults with user overrides
+      ansible.builtin.set_fact:
+        minecraft_config: "{{ minecraft_defaults | combine(minecraft, recursive=True) }}"
+
+    - name: Check if Java is installed
+      ansible.builtin.command: java -version
+      register: java_result
+      ignore_errors: true
+      changed_when: false
+
+    - name: Workaround JRE install bug
+      when: java_result is failed
+      block:
+        - ansible.builtin.apt:
+            name: openjdk-17-jre
+            state: present
+            update_cache: yes
+
+        - ansible.builtin.apt:
+            name: openjdk-17-jre
+            state: absent
+
+    - name: Install headless JRE
+      ansible.builtin.apt:
+        name: openjdk-17-jre-headless
+        state: present
+        update_cache: yes
+
+    - name: Remove unnecessary packages
+      ansible.builtin.apt:
+        autoremove: yes
+
+    - name: Create Minecraft group
+      ansible.builtin.group:
+        name: "{{ minecraft_config.user.group }}"
+        gid: "{{ minecraft_config.user.gid | default(omit, true) }}"
+
+    - name: Create Minecraft user
+      ansible.builtin.user:
+        name: "{{ minecraft_config.user.name }}"
+        uid: "{{ minecraft_config.user.uid | default(omit, true) }}"
+        group: "{{ minecraft_config.user.group }}"
+        create_home: false
+        system: true
+
+    - name: Create Minecraft directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0750'
+      loop:
+        - "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
+        - "{{ minecraft_config.paths.base }}/active"
+        - "{{ minecraft_config.paths.universe }}"
+
+    - name: Download Minecraft server jar
+      ansible.builtin.get_url:
+        url: "{{ minecraft_config.jar_url }}"
+        dest: "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0750'
+        force: false
+      notify: restart minecraft
+
+    - name: Find downloaded JAR file
+      ansible.builtin.find:
+        paths: "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
+        patterns: '*.jar'
+      register: minecraft_jar
+
+    - name: Link active server.jar
+      ansible.builtin.file:
+        src: "{{ minecraft_jar.files[0].path }}"
+        dest: "{{ minecraft_config.paths.base }}/active/server.jar"
+        state: link
+      notify: restart minecraft
+
+    #============================================================================================================
+    # Configuration
+    #============================================================================================================
+
+    - name: Create EULA file
+      ansible.builtin.copy:
+        dest: "{{ minecraft_config.paths.base }}/active/eula.txt"
+        content: |
+          #By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).
+          eula=true
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0640'
+
+    - name: Generate Minecraft config files
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ minecraft_config.paths.base }}/active/{{ item }}"
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0640'
+      loop:
+        - server.properties
+        - whitelist.json
+        - ops.json
+      changed_when: false
+
+    # the server will modify the files above uppon start, forcing a restart on every role execution
+    # this is a workaround to only restart the server if the ansible values change
+    - name: Generate Minecraft config canges
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ minecraft_config.paths.base }}/active/{{ item }}.orig"
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0640'
+      loop:
+        - server.properties
+        - whitelist.json
+        - ops.json
+      notify: restart minecraft
+
+    #============================================================================================================
+    # Clean Old Versions
+    #============================================================================================================
+
+    - name: Find non-active Minecraft installs
+      ansible.builtin.find:
+        paths: "{{ minecraft_config.paths.base }}"
+        recurse: false
+        file_type: directory
+        excludes:
+          - "{{ minecraft_config.version }}"
+          - "active"
+          - "{{ minecraft_config.paths.universe | basename }}"
+          - "overviewer"
+      register: minecraft_installs
+
+    - name: Delete old versions
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ minecraft_installs.files }}"
+
+    #============================================================================================================
+    # Plugin Management
+    #============================================================================================================
+
+    - name: Install plugins
+      ansible.builtin.copy:
+        src: "files/plugins/{{ minecraft_plugin_data[item].file }}"
+        dest: "{{ minecraft_config.paths.base }}/active/plugins/{{ minecraft_plugin_data[item].file }}"
+        owner: "{{ minecraft_config.user.name }}"
+        group: "{{ minecraft_config.user.group }}"
+        mode: '0640'
+      loop: "{{ minecraft_config.plugins.enable }}"
+      notify: restart minecraft
+
+    - name: Remove plugin files
+      ansible.builtin.file:
+        path: "{{ minecraft_config.paths.base }}/active/plugins/{{ minecraft_plugin_data[item].file }}"
+        state: absent
+      loop: "{{ minecraft_config.plugins.remove }}"
+      notify: restart minecraft
+
+    - name: Remove plugin data directories
+      ansible.builtin.file:
+        path: "{{ minecraft_config.paths.base }}/active/plugins/{{ minecraft_plugin_data[item].folder }}"
+        state: absent
+      loop: "{{ minecraft_config.plugins.remove }}"
+      notify: restart minecraft
+
+    #============================================================================================================
+    # Minecraft overviewer
+    #============================================================================================================
+
+    - name: Minecraft overviewer block
+      ansible.builtin.import_tasks: overviewer.yaml
+      when:
+        - minecraft_config.overviewer.enabled is defined
+        - minecraft_config.overviewer.enabled
+
+    #============================================================================================================
+    # Systemd Service
+    #============================================================================================================
+
+    - name: Setup Minecraft systemd service
+      ansible.builtin.template:
+        src: "minecraft.service.j2"
+        dest: /lib/systemd/system/minecraft.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - reload systemd
+        - restart minecraft
+
+    - name: Enable Minecraft service
+      ansible.builtin.systemd:
+        name: minecraft
+        enabled: true
+        daemon_reload: true
+      notify: restart minecraft
+
+    - name: Minecraft overviewer block
+      ansible.builtin.import_tasks: overviewer.yaml
+      when:
+        - minecraft_config.overviewer.enabled is defined
+        - minecraft_config.overviewer.enabled
+
+#============================================================================================================
+# remove
+#============================================================================================================
+- name: Manage Minecraft service and cron
+  tags:
+    - minecraft
+    - untagged
+  when: not run_role_minecraft
+  block:
+    - name: Set merged Minecraft defaults with user overrides
+      ansible.builtin.set_fact:
+        minecraft_config: "{{ minecraft_defaults | combine(minecraft, recursive=True) }}"
+
+    - name: Check if Minecraft systemd service exists and its status
+      ansible.builtin.command: systemctl is-active minecraft
+      register: minecraft_status
+      failed_when: false
+      changed_when: false
+
+    - name: Stop and disable Minecraft service if running
+      ansible.builtin.systemd:
+        name: minecraft
+        state: stopped
+        enabled: false
+      when: minecraft_status.stdout in ["active", "activating", "deactivating"]
+
+#    - name: Remove overviewer cron job
+#      ansible.builtin.cron:
+#        name: minecraft_overviewer_render
+#        state: absent
+#        cron_file: minecraft_overviewer_render
+#
+
+    - name: Minecraft data cleanup
+      when: minecraft_config.delete_data | default(false)
+      block:
+        - name: Remove Minecraft systemd service file
+          ansible.builtin.file:
+            path: /lib/systemd/system/minecraft.service
+            state: absent
+          notify: Reload systemd
+
+        - name: Delete Minecraft install directory
+          ansible.builtin.file:
+            path: "{{ minecraft_config.paths.base }}"
+            state: absent
+
+        - name: Delete Minecraft universe directory
+          ansible.builtin.file:
+            path: "{{ minecraft_config.paths.universe }}"
+            state: absent
+
+        - name: Remove Minecraft user
+          ansible.builtin.user:
+            name: "{{ minecraft_config.user.name }}"
+            state: absent
+            remove: true
+
+        - name: Remove Minecraft group
+          ansible.builtin.group:
+            name: "{{ minecraft_config.user.group }}"
+            state: absent

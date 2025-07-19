@@ -1,0 +1,19 @@
+[Unit]
+Description=alertmanager
+After=syslog.target,getty.target
+Wants=getty.target
+
+[Service]
+User={{ alertmanager_config.user.name }}
+ExecStart={{ alertmanager_config.paths.base_dir }}/install/alertmanager_latest/alertmanager \
+   --web.listen-address={{ alertmanager_config.service.bind_ip }}:{{ alertmanager_config.service.port }} \
+    --cluster.listen-address=""
+Restart=on-failure
+WorkingDirectory={{ alertmanager_config.paths.base_dir }}/install/alertmanager_latest
+
+
+
+
+
+
+

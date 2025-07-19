@@ -1,0 +1,11 @@
+#
+# Allow the ansible user to run sudo for admin purposes
+
+# always ask for sudo password
+Defaults:{{ autobott_enroll.user }}  timestamp_timeout=0
+{{ autobott_enroll.user }}  ALL=(ALL:ALL) ALL
+
+# skip password verification for enrolled  user: disabled
+# {{ autobott_enroll.user }}   ALL=(ALL:ALL) NOPASSWD:ALL
+
+

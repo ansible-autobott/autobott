@@ -1,0 +1,156 @@
+---
+#============================================================================================================
+# MariaDB Role
+#============================================================================================================
+
+- name: Main MariaDB installation and configuration
+  tags:
+    - mariadb
+    - untagged
+  when:
+    - run_role_mariadb is defined
+    - run_role_mariadb | bool
+  block:
+    - name: Set merged mariadb configuration
+      ansible.builtin.set_fact:
+        mariadb_config: "{{ mariadb_defaults | combine(mariadb, recursive=true) }}"
+
+    - name: Set MariaDB package list (Debian/Ubuntu specific)
+      ansible.builtin.set_fact:
+        mariadb_packages:
+          - mariadb-common
+          - mariadb-server
+          - python3-mysqldb
+      when: ansible_distribution_release in ['bullseye', 'bookworm']
+
+    - name: Ensure MariaDB packages are installed
+      ansible.builtin.apt:
+        pkg: "{{ mariadb_packages }}"
+        state: latest
+        update_cache: true
+
+    - name: Install MariaDB memory usage script
+      ansible.builtin.copy:
+        src: mariadb-mem.sh
+        dest: /usr/sbin/mariadb-mem.sh
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Apply Ansible-managed MariaDB configuration
+      ansible.builtin.template:
+        src: mariadb.cnf
+        dest: /etc/mysql/mariadb.conf.d/90-ansible.cnf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart mariadb
+
+    #============================================================================================================
+    # MariaDB Secure Configuration
+    #============================================================================================================
+
+    - name: Check current root authentication plugin
+      ansible.builtin.command: >
+        mysql -NBe "SELECT plugin FROM mysql.user WHERE user='root' AND host='localhost';"
+      register: current_plugin
+      changed_when: false
+      check_mode: false
+
+    - name: Configure root user to use unix_socket authentication
+      ansible.builtin.command: >
+        mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED VIA unix_socket;"
+      when: current_plugin.stdout != "unix_socket"
+      changed_when: true
+
+    - name: Disallow remote root login
+      ansible.builtin.command: >
+        mysql -NBe "{{ item }}"
+      with_items:
+        - DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1')
+      changed_when: false
+
+    - name: Remove unwanted users
+      block:
+        - name: Define unwanted MariaDB users list
+          ansible.builtin.set_fact:
+            unwanted_mariadb_users:
+              - ""
+              - "mysql"
+
+        - name: Check if user '{{ item }}'@'%' exists
+          ansible.builtin.command: >
+            mysql -NBe "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user='{{ item }}' AND host='%');"
+          register: user_exists_percent
+          changed_when: false
+          loop: "{{ unwanted_mariadb_users }}"
+          loop_control:
+            label: "{{ item }}@%"
+
+        - name: Remove user '{{ item.item }}'@'%'
+          ansible.builtin.command: >
+            mysql -e "DROP USER IF EXISTS '{{ item.item }}'@'%';"
+          when: item.stdout == "1"
+          loop: "{{ user_exists_percent.results }}"
+          changed_when: true
+          loop_control:
+            label: "{{ item.item }}@%"
+
+        - name: Check if user '{{ item }}'@'localhost' exists
+          ansible.builtin.command: >
+            mysql -NBe "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user='{{ item }}' AND host='localhost');"
+          register: user_exists_local
+          changed_when: false
+          loop: "{{ unwanted_mariadb_users }}"
+          loop_control:
+            label: "{{ item }}@localhost"
+
+        - name: Remove user '{{ item.item }}'@'localhost'
+          ansible.builtin.command: >
+            mysql -e "DROP USER IF EXISTS '{{ item.item }}'@'localhost';"
+          when: item.stdout == "1"
+          loop: "{{ user_exists_local.results }}"
+          changed_when: true
+          loop_control:
+            label: "{{ item.item }}@localhost"
+
+    - name: Check if test database exists
+      ansible.builtin.command: >
+        mysql -NBe "SHOW DATABASES LIKE 'test';"
+      register: test_db
+      changed_when: false
+
+    - name: Remove default test database if exists
+      ansible.builtin.command: >
+        mysql -e "DROP DATABASE test;"
+      when: test_db.stdout == "test"
+      changed_when: true
+
+    - ansible.builtin.include_tasks: pentest.yaml
+- name: Main MariaDB removal block
+  tags:
+    - mariadb
+    - untagged
+  when: not run_role_mariadb | bool
+  block:
+    - name: Set MariaDB package list (Debian/Ubuntu specific)
+      ansible.builtin.set_fact:
+        mariadb_packages:
+          - mariadb-common
+          - mariadb-server
+          - python3-mysqldb
+      when: ansible_distribution_release in ['bullseye', 'bookworm']
+
+    - name: Ensure MariaDB packages are removed
+      ansible.builtin.apt:
+        pkg: "{{ mariadb_packages }}"
+        state: absent
+        update_cache: true
+
+    - name: Remove root MySQL client configuration files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /root/.my.cnf
+        - /root/.my.cnf.old

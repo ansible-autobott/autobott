@@ -1,0 +1,9 @@
+# Lynis profile template
+# https://raw.githubusercontent.com/CISOfy/lynis/master/default.prf
+
+# specific tests skipped
+{% for test in lynis_skip_tests %}
+skip-test={{ test }}
+{% endfor %}
+
+machine-role={{ lynis_machine_role }}

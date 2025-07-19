@@ -1,0 +1,34 @@
+---
+# caddy config
+
+- name: Check if public_html is a symlink
+  ansible.builtin.stat:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
+  register: public_html_link_stat
+
+- name: Create public_html directory if not a symlink
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
+    state: directory
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0750"
+  when:
+    - not public_html_link_stat.stat.exists or (public_html_link_stat.stat.islnk is defined and not public_html_link_stat.stat.islnk)
+
+- name: Generate main Caddy site config from template
+  ansible.builtin.template:
+    src: "caddy/main.caddy"
+    dest: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
+    owner: root
+    group: www-data
+    mode: "0640"
+  notify: restart caddy
+
+- name: Enable Caddy site by creating a symlink
+  ansible.builtin.file:
+    src: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
+    dest: "/etc/caddy/sites-enabled/{{ webservice.name }}.caddy"
+    state: link
+    force: true
+  notify: restart caddy

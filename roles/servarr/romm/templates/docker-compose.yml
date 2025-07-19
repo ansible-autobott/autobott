@@ -1,0 +1,82 @@
+version: "3"
+
+services:
+  romm:
+    image: rommapp/romm:latest
+    container_name: romm
+    restart: unless-stopped
+    environment:
+      - DB_HOST=romm-db
+      - DB_NAME=romm
+      - DB_USER=romm-user
+      - DB_PASSWD={{ romm_config.db_pass }}
+      - ROMM_AUTH_SECRET_KEY={{ romm_config.app_secret }}
+
+{% if romm_config.integration.igdb_client_id is defined
+    and romm_config.integration.igdb_client_id
+    and romm_config.integration.igdb_client_secret is defined
+    and romm_config.integration.igdb_client_secret | length > 0 %}
+      - IGDB_CLIENT_ID={{ romm_config.integration.igdb_client_id }}
+      - IGDB_CLIENT_SECRET={{ romm_config.integration.igdb_client_secret }}
+{% endif %}
+
+{% if romm_config.integration.mobygames_api_key is defined and romm_config.integration.mobygames_api_key | length > 0 %}
+      - MOBYGAMES_API_KEY={{ romm_config.integration.mobygames_api_key }}
+{% endif %}
+
+{% if romm_config.integration.steamgridd_api_key is defined and romm_config.integration.steamgridd_api_key | length > 0 %}
+      - STEAMGRIDDB_API_KEY={{ romm_config.integration.steamgridd_api_key }}
+{% endif %}
+
+
+{% if romm_config.integration.screenscraper_user is defined
+    and romm_config.integration.screenscraper_user
+    and romm_config.integration.screenscraper_pw is defined
+    and romm_config.integration.screenscraper_pw | length > 0 %}
+      - SCREENSCRAPER_USER={{ romm_config.integration.screenscraper_user }}
+      - SCREENSCRAPER_PASSWORD={{ romm_config.integration.screenscraper_pw }}
+{% endif %}
+
+{% if romm_config.integration.retroachievements_api_key is defined and romm_config.integration.retroachievements_api_key | length > 0 %}
+      - RETROACHIEVEMENTS_API_KEY={{ romm_config.integration.retroachievements_api_key }}
+{% endif %}
+
+    volumes:
+      - {{ romm_config.paths.data_dir }}/redis:/redis-data # Cached data for background tasks
+      - {{ romm_config.paths.library_dir }}:/romm/library # Your game library.
+      - {{ romm_config.paths.data_dir }}/assets:/romm/assets # Uploaded saves, states, etc.
+      - {{ romm_config.paths.data_dir }}/resources:/romm/resources # Resources fetched from IGDB (covers, screenshots, etc.)
+      - {{ romm_config.paths.config_dir }}:/romm/config # Path where config.yml is stored
+    user: "{{ romm_uid }}:{{ romm_gid }}"
+    ports:
+      - {{ romm_config.service.bind_ip }}:{{ romm_config.service.port }}:8080
+    depends_on:
+      romm-db:
+        condition: service_healthy
+        restart: true
+
+  romm-db:
+    image: mariadb:latest
+    container_name: romm-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD={{ romm_config.db_pass }}
+      - MARIADB_DATABASE=romm
+      - MARIADB_USER=romm-user
+      - MARIADB_PASSWORD={{ romm_config.db_pass }}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 30s
+      start_interval: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  mysql_data:
+  romm_redis_data:
+
+

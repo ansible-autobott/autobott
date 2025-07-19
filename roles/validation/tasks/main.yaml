@@ -1,0 +1,25 @@
+---
+#============================================================================================================
+# Validations
+#============================================================================================================
+- name: Run validations
+  when: run_role_validation
+  tags:
+    - validation
+    - untagged
+  block:
+
+
+#============================================================================================================
+## Deprecation
+##============================================================================================================
+#- name: Run deprecations and cleanup
+#  when: run_role_deprecations
+#  tags:
+#    - deprecation
+#  block:
+#
+#    - include_tasks: deprecations/send2slack.yaml
+#    - include_tasks: deprecations/monit.yaml
+#    - include_tasks: deprecations/pybackup.yaml
+#    - include_tasks: deprecations/files-moved.yaml

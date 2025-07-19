@@ -1,0 +1,48 @@
+---
+- name: Check if index.html exists
+  ansible.builtin.stat:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html/index.html"
+  register: webservice_html_stat
+
+- name: Create sample html content
+  ansible.builtin.template:
+    src: "sample_content/sample_content.html"
+    dest: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html/index.html"
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0644"
+  when:
+    - not webservice_html_stat.stat.exists
+    - webservice.enabled
+    - webservice.sample_content is defined
+    - webservice.sample_content == "html"
+
+- name: Create autobott info html page
+  ansible.builtin.template:
+    src: "sample_content/info_page.html"
+    dest: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html/index.html"
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0644"
+  when:
+    - webservice.enabled
+    - webservice.sample_content is defined
+    - webservice.sample_content == "info_page"
+
+- name: Check if index.php exists
+  ansible.builtin.stat:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html/index.php"
+  register: php_stat_result
+
+- name: Create sample php content
+  ansible.builtin.template:
+    src: "sample_content/sample_content.php"
+    dest: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html/index.php"
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0644"
+  when:
+    - not webservice_html_stat.stat.exists
+    - webservice.enabled
+    - webservice.sample_content is defined
+    - webservice.sample_content == "php"

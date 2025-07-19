@@ -1,0 +1,145 @@
+---
+#============================================================================================================
+# Sonarr Role
+#============================================================================================================
+
+- name: Main Sonarr 4 installation and configuration
+  tags:
+    - sonarr
+    - servarr
+    - untagged
+  when: run_role_sonarr | bool
+  block:
+    - name: Set merged sonarr configuration
+      ansible.builtin.set_fact:
+        sonarr_config: "{{ sonarr_defaults | combine(sonarr, recursive=true) }}"
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3-lxml # needed to change xml configs
+        state: present
+        update_cache: true
+
+    - name: Create sonarr system group
+      ansible.builtin.group:
+        name: "{{ sonarr_config.user.group }}"
+        gid: "{{ sonarr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create sonarr system user
+      ansible.builtin.user:
+        name: "{{ sonarr_config.user.name }}"
+        uid: "{{ sonarr_config.user.uid | default(omit, true) }}"
+        group: "{{ sonarr_config.user.group }}"
+        home: "{{ sonarr_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create Sonarr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ sonarr_config.user.name }}"
+        group: "{{ sonarr_config.user.group }}"
+      loop:
+        - "{{ sonarr_config.paths.base_dir }}/install"
+        - "{{ sonarr_config.paths.data_dir }}"
+
+    - name: Unarchive Sonarr release
+      ansible.builtin.unarchive:
+        src: "{{ sonarr_config.download_url }}"
+        dest: "{{ sonarr_config.paths.base_dir }}/install"
+        owner: "{{ sonarr_config.user.name }}"
+        group: "{{ sonarr_config.user.group }}"
+        remote_src: true
+        creates: "{{ sonarr_config.paths.base_dir }}/install/Sonarr/LICENSE.md"
+
+    - name: Ensure correct permissions on Sonarr directory
+      ansible.builtin.file:
+        path: "{{ sonarr_config.paths.base_dir }}/install"
+        state: directory
+        owner: "{{ sonarr_config.user.name }}"
+        group: "{{ sonarr_config.user.group }}"
+        recurse: true
+
+    - name: Configure systemd service for Sonarr
+      ansible.builtin.template:
+        src: sonarr.service
+        dest: /lib/systemd/system/sonarr.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart sonarr
+
+    - name: Enable and start Sonarr service
+      ansible.builtin.systemd:
+        name: sonarr
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart sonarr
+
+    #============================================================================================================
+    # Sonarr Configuration
+    #============================================================================================================
+
+    - name: Check for existing config.xml
+      ansible.builtin.stat:
+        path: "{{ sonarr_config.paths.data_dir }}/config.xml"
+      register: sonarr_config_file
+
+    - name: Start Sonarr to generate config.xml
+      ansible.builtin.service:
+        name: sonarr
+        state: restarted
+      when: not sonarr_config_file.stat.exists
+
+    - name: Pause to allow Sonarr startup and config creation
+      ansible.builtin.pause:
+        seconds: 10
+      when: not sonarr_config_file.stat.exists
+
+    - name: Stop Sonarr before applying config
+      ansible.builtin.service:
+        name: sonarr
+        state: stopped
+      when: not sonarr_config_file.stat.exists
+
+    - name: Set Sonarr bind address in config.xml
+      community.general.xml:
+        path: "{{ sonarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/BindAddress
+        value: "{{ sonarr_config.service.bind_ip | string }}"
+      notify: restart sonarr
+
+    - name: Set Sonarr port in config.xml
+      community.general.xml:
+        path: "{{ sonarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/Port
+        value: "{{ sonarr_config.service.port | int }}"
+      notify: restart sonarr
+
+    - name: Set AuthenticationRequired false in config.xml
+      community.general.xml:
+        path: "{{ sonarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationRequired
+        value: "Enabled"
+      notify: restart prowlarr
+
+    - name: Set AuthenticationMethod to in config.xml
+      community.general.xml:
+        path: "{{ sonarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationMethod
+        value: "{{ sonarr_config.service.auth_method }}"
+      notify: restart prowlarr
+
+    - name: Ensure Sonarr is running
+      ansible.builtin.service:
+        name: sonarr
+        state: started

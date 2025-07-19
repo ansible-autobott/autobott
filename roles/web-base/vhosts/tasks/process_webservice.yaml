@@ -1,0 +1,59 @@
+---
+#============================================================================================================
+# Process vhosts
+#============================================================================================================
+
+# This "fucntion" will check (based on a hash of the configuration) if there has been a change in the config
+# or if we can skip a specific web service all together. this speeds up role execution considerably
+
+- name: "Compute hash of webservice {{ webservice.name }}"
+  ansible.builtin.set_fact:
+    webservice_hash: "{{ webservice | to_json | hash('sha1') }}"
+    webservice_hash_path: "{{ vhosts_root }}/{{ webservice.name }}/.ansible_config_hash.sha1"
+
+- name: Delete the hash file
+  ansible.builtin.file:
+    path: "{{ webservice_hash_path }}"
+    state: absent
+  when: "'vhosts-redo' in ansible_run_tags or 'vhosts-force' in ansible_run_tags"
+
+- name: Check if hash file exists
+  ansible.builtin.stat:
+    path: "{{ webservice_hash_path }}"
+  register: hash_file_stat
+
+- name: Read existing hash if file exists
+  ansible.builtin.slurp:
+    path: "{{ webservice_hash_path }}"
+  register: existing_hash_file
+  when: hash_file_stat.stat.exists
+
+- name: Set existing hash fact
+  ansible.builtin.set_fact:
+    existing_webservice_hash: "{{ existing_hash_file.content | b64decode }}"
+  when: hash_file_stat.stat.exists
+
+#==================================
+# Users
+#==================================
+- name: "Perform changes on  {{ webservice.name }}"
+  when: existing_webservice_hash is not defined or existing_webservice_hash != webservice_hash
+  block:
+    - name: "Include user tasks for {{ webservice.name }}"
+      ansible.builtin.include_tasks: actions/users.yaml
+    - name: "Configure PHP-FPM for {{ webservice.name }}"
+      ansible.builtin.include_tasks: actions/php-fpm.yaml
+    - name: "Configure MariaDb for {{ webservice.name }}"
+      ansible.builtin.include_tasks: actions/mariadb.yaml
+    - name: "Configure caddy for {{ webservice.name }}"
+      ansible.builtin.include_tasks: actions/caddy.yaml
+    - name: "Create sample content for {{ webservice.name }}"
+      ansible.builtin.include_tasks: actions/sample_content.yaml
+- name: Save current hash to file
+  ansible.builtin.copy:
+    content: "{{ webservice_hash }}"
+    dest: "{{ webservice_hash_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: existing_webservice_hash is not defined or existing_webservice_hash != webservice_hash

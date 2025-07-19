@@ -1,0 +1,21 @@
+[Unit]
+Description=Lidarr Daemon
+After=syslog.target network.target
+
+[Service]
+Type=simple
+{% if lidarr_config.daemon.umask is defined and lidarr_config.daemon.umask | length %}
+UMask={{ lidarr4_config.daemon.umask }}
+{% endif %}
+
+User={{ lidarr_config.user.name }}
+Group={{ lidarr_config.user.group }}
+ExecStart={{ lidarr_config.paths.base_dir }}/install/Lidarr/Lidarr -nobrowser -data={{ lidarr_config.paths.data_dir }}
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

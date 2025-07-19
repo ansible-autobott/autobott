@@ -1,0 +1,100 @@
+---
+#============================================================================================================
+# Fe26 Role
+#============================================================================================================
+
+- name: Main Fe26 installation and configuration
+  tags:
+    - fe26
+    - untagged
+  when: run_role_fe26 | bool
+  block:
+    - name: Set merged fe26 configuration
+      ansible.builtin.set_fact:
+        fe26_config: "{{ fe26_defaults | combine(fe26, recursive=true) }}"
+
+    - name: Create fe26 system group
+      ansible.builtin.group:
+        name: "{{ fe26_config.user.group }}"
+        gid: "{{ fe26_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create fe26 system user
+      ansible.builtin.user:
+        name: "{{ fe26_config.user.name }}"
+        uid: "{{ fe26_config.user.uid | default(omit, true) }}"
+        group: "{{ fe26_config.user.group }}"
+        home: "{{ fe26_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create fe26 directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ fe26_config.user.name }}"
+        group: "{{ fe26_config.user.group }}"
+        mode: 0750
+      loop:
+        - "{{ fe26_config.paths.base_dir }}"
+        - "{{ fe26_config.paths.data_dir }}"
+        - "{{ fe26_config.paths.binaries_dir }}"
+
+    - name: Download fe26 binary
+      ansible.builtin.get_url:
+        url: "https://github.com/AndresBott/Fe26/releases/download/{{ fe26_config.version }}/fe26-linux-amd64"
+        dest: "{{ fe26_config.paths.binaries_dir }}/fe26-{{ fe26_config.version }}"
+        owner: "{{ fe26_config.user.name }}"
+        group: "{{ fe26_config.user.group }}"
+        mode: 0750
+        checksum: "sha256:{{ fe26_checksums[fe26_config.version] }}"
+        timeout: 300
+      notify: restart fe26
+
+    - name: Clean up old fe26 binaries
+      ansible.builtin.find:
+        paths: "{{ fe26_config.paths.binaries_dir }}"
+        patterns: "fe26-*"
+        file_type: file
+      register: old_binaries
+
+    - name: Remove old fe26 binaries (except current version)
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ old_binaries.files }}"
+      when:
+        - item.path != fe26_config.paths.binaries_dir + '/fe26-' + fe26_config.version
+        - item.path != fe26_config.paths.binaries_dir + '/fe26-latest'
+      notify: restart fe26
+
+    - name: Create fe26 binary symlink
+      ansible.builtin.file:
+        src: "{{ fe26_config.paths.binaries_dir }}/fe26-{{ fe26_config.version }}"
+        dest: "{{ fe26_config.paths.binaries_dir }}/fe26-latest"
+        state: link
+        owner: "{{ fe26_config.user.name }}"
+        group: "{{ fe26_config.user.group }}"
+      notify: restart fe26
+
+    - name: Configure systemd service
+      ansible.builtin.template:
+        src: fe26.service.j2
+        dest: /lib/systemd/system/fe26.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart fe26
+
+    - name: Enable and start fe26 service
+      ansible.builtin.systemd:
+        name: fe26
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart fe26

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NetworkConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <BaseUrl />
+    <EnableHttps>false</EnableHttps>
+    <RequireHttps>false</RequireHttps>
+    <InternalHttpPort>{{ jellyfin_config.port }}</InternalHttpPort>
+    <InternalHttpsPort>8920</InternalHttpsPort>
+    <PublicHttpPort>{{ jellyfin_config.port }}</PublicHttpPort>
+    <PublicHttpsPort>8920</PublicHttpsPort>
+    <AutoDiscovery>true</AutoDiscovery>
+    <EnableUPnP>false</EnableUPnP>
+    <EnableIPv4>true</EnableIPv4>
+    <EnableIPv6>false</EnableIPv6>
+    <EnableRemoteAccess>{{ 'true' if jellyfin_config.enable_remote else 'false' }}</EnableRemoteAccess>
+    <LocalNetworkSubnets />
+    <LocalNetworkAddresses />
+    <KnownProxies />
+    <IgnoreVirtualInterfaces>true</IgnoreVirtualInterfaces>
+    <VirtualInterfaceNames>
+        <string>veth</string>
+    </VirtualInterfaceNames>
+    <EnablePublishedServerUriByRequest>false</EnablePublishedServerUriByRequest>
+    <PublishedServerUriBySubnet />
+    <RemoteIPFilter>
+        <string>127.0.0.1</string>
+    </RemoteIPFilter>
+    <IsRemoteIPFilterBlacklist>false</IsRemoteIPFilterBlacklist>
+</NetworkConfiguration>

@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Readarr  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_readarr: false
+
+# User overrides - will be combined with readarr_defaults
+readarr: {}
+# Default configuration structure
+readarr_defaults:
+  download_url: "http://readarr.servarr.com/v1/update/develop/updatefile?os=linux&runtime=netcore&arch=x64"
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: readarr
+    uid: # Let system assign UID
+    group: readarr
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/readarr
+    data_dir: /opt/readarr/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 8787
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
+    auth_method: "External" # Basic | Forms | External | None

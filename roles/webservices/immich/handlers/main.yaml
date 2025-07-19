@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart immich
+  ansible.builtin.systemd:
+    name: immich
+    state: restarted
+  listen: restart immich

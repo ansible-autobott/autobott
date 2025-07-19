@@ -1,0 +1,23 @@
+---
+#============================================================================================================
+# Phpmyadmin Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_phpmyadmin: false
+
+# User configuration override (will be merged with phpmyadmin_defaults)
+phpmyadmin: {}
+# Default configuration structure
+phpmyadmin_defaults:
+  version: 5.2.2
+  # Installation path
+  install_dir: /opt/phpmyadmin/install
+  link_dir: /opt/phpmyadmin/latest
+
+  blowfish_secret: ""
+  auth_type: "cookie" # cookie | http
+
+# Supported phpmyadmin versions and checksums
+phpmyadmin_checksums:
+  "5.2.2": "6b99534f72ffb1d7275f50d23ca4141e1495c97d7cadb73a41d6dc580ed5ce29"

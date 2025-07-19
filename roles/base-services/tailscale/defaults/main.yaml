@@ -1,0 +1,10 @@
+---
+#============================================================================================================
+# tailscale
+#============================================================================================================
+# flag that allows to disable the role
+run_role_tailscale: false
+
+## empty defaults for compatibility
+tailscale: {}
+tailscale_defaults: []

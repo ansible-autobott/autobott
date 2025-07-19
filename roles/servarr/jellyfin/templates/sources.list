@@ -1,0 +1,2 @@
+# jellyfin
+deb [signed-by=/etc/apt/keyrings/jellyfin.asc arch=amd64] https://repo.jellyfin.org/debian {{ ansible_distribution_release }} main

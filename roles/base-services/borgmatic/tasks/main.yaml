@@ -1,0 +1,228 @@
+---
+#============================================================================================================
+# Borgmatic Backup
+#============================================================================================================
+
+- name: Main Borgmatic block
+  tags:
+    - borgmatic
+    - untagged
+  when:
+    - run_role_borgmatic is defined
+    - run_role_borgmatic
+  block:
+    - name: Set merged borgmatic configuration
+      ansible.builtin.set_fact:
+        borgmatic_config: "{{ borgmatic_defaults | combine(borgmatic, recursive=true) }}"
+
+    - name: Install system dependencies for python3-venv and pip
+      ansible.builtin.apt:
+        name:
+          - python3-venv
+          - python3-pip
+        state: present
+        update_cache: true
+
+    - name: Get current Python 3 version
+      ansible.builtin.shell: "python3 -c 'import sys; print(\".\".join(map(str, sys.version_info[:3])))'"
+      register: py3_version
+      changed_when: false
+
+    - name: Check if Python venv exists
+      ansible.builtin.stat:
+        path: "{{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/python"
+      register: borgmatic_venv
+
+    - name: Remove old venvs if current one does not exist
+      ansible.builtin.file:
+        path: "{{ borgmatic_config.base_dir }}/py3_venv"
+        state: absent
+      when: not borgmatic_venv.stat.exists
+
+    - name: Create Python3 virtualenv and install borgmatic
+      ansible.builtin.pip:
+        name: borgmatic
+        version: "{{ borgmatic_config.version }}"
+        virtualenv: "{{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}"
+        virtualenv_command: /usr/bin/python3 -m venv
+
+    - name: Create borgmatic wrapper script in /usr/local/sbin
+      ansible.builtin.copy:
+        dest: /usr/local/sbin/borgmatic
+        content: |
+          #!/bin/bash
+          exec {{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/borgmatic "$@"
+        mode: "0755"
+
+    - name: Ensure /etc/borgmatic.d directory exists
+      ansible.builtin.file:
+        path: /etc/borgmatic.d
+        state: directory
+        mode: "0755"
+        owner: root
+        group: root
+
+    - name: Create SSH private key file for borgmatic
+      ansible.builtin.copy:
+        content: "{{ item.ssh_key }}"
+        dest: "/etc/borgmatic.d/{{ item.name }}.pkey"
+        mode: "0600"
+        owner: root
+        group: root
+      no_log: true TODO
+      loop: "{{ borgmatic_backups }}"
+      when:
+        - item.enabled | default(true)
+        - item.ssh_key is defined
+        - item.ssh_key | length > 0
+
+    - name: Generate borgmatic configs for each backup job
+      ansible.builtin.template:
+        src: backup.yaml
+        dest: "/etc/borgmatic.d/{{ item.name }}.yaml"
+        mode: "0600"
+      no_log: true TODO
+      loop: "{{ borgmatic_backups }}"
+      when: item.enabled | default(true)
+
+    - name: Validate rendered borgmatic config
+      command: borgmatic config validate
+      register: borgmatic_validation
+      changed_when: false
+      failed_when: borgmatic_validation.rc != 0
+
+    #============================================================================================================
+    # init
+    #============================================================================================================
+    - name: Get Borg version
+      command: borg --version
+      register: borg_version_output
+      changed_when: false
+
+    - name: Extract Borg major version
+      set_fact:
+        borg_major_version: "{{ borg_version_output.stdout.split()[1].split('.')[0] }}"
+
+    - name: Extract SSH hosts from destination paths
+      set_fact:
+        borg_ssh_hosts: "{{ borg_ssh_hosts | default([]) + [(_host_match | default(''))] }}"
+      vars:
+        _host_match: "{{ item.1.path | regex_search('^ssh://[^@]+@([^:/]+)', '\\1') if item.1.path is match('^ssh://[^@]+@[^:/]+') else None }}"
+      when:
+        - item.0.enabled | default(true)
+        - item.1.path is defined
+        - _host_match is not none
+      with_subelements:
+        - "{{ borgmatic_backups }}"
+        - destination
+
+    - name: Remove duplicate hosts
+      set_fact:
+        borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
+      when: borg_ssh_hosts is defined
+
+    - name: Ensure Borg SSH hosts are in known_hosts
+      known_hosts:
+        name: "{{ item }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ item) }}"
+        path: "/root/.ssh/known_hosts"
+      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
+      when: borg_ssh_hosts is defined
+
+    - name: Ensure local repo paths
+      file:
+        path: "{{ item.1.path }}"
+        state: directory
+        mode: '0755'
+      with_subelements:
+        - "{{ borgmatic_backups }}"
+        - destination
+      when:
+        - item.1.path is defined
+        - not (item.1.path is match('^ssh:'))
+
+    - name: init repos for borg 1.x
+      command: borgmatic init
+      when: borg_major_version == "1"
+      register: borgmatic_init_result
+      changed_when: borgmatic_init_result.stdout != ""
+
+    - name: init repos for borg 2.x
+      command: borgmatic repo-create
+      when: borg_major_version == "2"
+
+    - name: Ensure export directory exists on remote host
+      file:
+        path: "/tmp/borg_key_exports"
+        state: directory
+        mode: '0700'
+      become: yes
+
+    - name: Export Borg keys from each destination
+      command: >      
+        borg key export {{ item.1.path }}
+        /tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key
+        --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
+      with_subelements:
+        - "{{ borgmatic_backups }}"
+        - destination
+      when:
+        - item.0.enabled | default(true)
+        - item.1.path is defined
+        - item.1.encryption is defined
+        - item.1.encryption != 'none'
+      become: yes
+      changed_when: false
+      register: borg_export_results
+
+    - name: Fetch exported Borg keys to control node
+      fetch:
+        src:  /tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key
+        dest: "{{ inventory_file | dirname }}/files/borg/{{ inventory_hostname }}/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key "
+        flat: yes
+      changed_when: false
+      with_subelements:
+        - "{{ borgmatic_backups }}"
+        - destination
+      when:
+        - item.0.enabled | default(true)
+        - item.1.path is defined
+        - item.1.encryption is defined
+        - item.1.encryption != 'none'
+
+    - name: Remove exported key from remote host (cleanup)
+      file:
+        path: "/tmp/borg_key_exports/"
+        state: absent
+      changed_when: false
+      become: yes
+
+
+    #============================================================================================================
+    # Schedule
+    #============================================================================================================
+#    - name: Ensure systemd override directory exists
+#      ansible.builtin.file:
+#        path:  /etc/systemd/system/borgmatic.timer.d/
+#        state: directory
+#        owner: root
+#        group: root
+#        mode: "0755"
+#
+#    - name: Override borgmatic.timer to run weekly (Sunday at 2:00 AM)
+#      copy:
+#        dest: /etc/systemd/system/borgmatic.timer.d/override.conf
+#        content: |
+#          [Timer]
+#          OnCalendar=
+#          OnCalendar=Sun *-*-* 02:00:00
+#          RandomizedDelaySec=0
+#      notify:
+#        - reload systemd
+#        - restart borgmatic.timer
+#
+#    - name: Enable and start borgmatic.timer
+#      systemd:
+#        name: borgmatic.timer
+#        enabled: yes
+#        state: started

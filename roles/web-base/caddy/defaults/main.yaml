@@ -1,0 +1,17 @@
+---
+#============================================================================================================
+# Caddy Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_caddy: false
+
+# User override variable - will be combined with defaults
+caddy: {}
+# Default Caddy configuration structure
+caddy_defaults:
+  email: "email@example.com"
+  admin: "127.0.0.1:2019"
+  metrics: true
+  http_port: 80
+  https_port: 443

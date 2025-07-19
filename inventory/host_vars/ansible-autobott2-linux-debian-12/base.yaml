@@ -1,0 +1,98 @@
+---
+#============================================================================================================
+# Ansible internal
+#============================================================================================================
+# This are ansible specific variables that need to be present
+ansible_become_pass:  "{{ secrets.ans_sudo_pw }}"
+ansible_user: "{{ autobott_enroll.user }}"
+
+#============================================================================================================
+# Enroll system
+#============================================================================================================
+autobott_enroll:
+  # IMPORTANT: for vagrant ONLY these variables contain duplicated values in the vagrant file during enroll phase
+
+  # Ansible login user
+  user: ans
+  # used by ansible to escalate to root once logged in this is defined when we enroll the system
+  passwd: "{{ secrets.ans_sudo_pw }}"
+  # User keys allowed to login as ansible admin, thus run ansible playbook
+  ssh_keys:
+    - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDv0lp74sCQJIrreeyRIFsghhH5696soRK3A0tVs3ZzC ans@autobott"
+
+#============================================================================================================
+# Linux apt
+#============================================================================================================
+run_role_linux_apt: true
+linux_apt:
+  release: "bookworm"
+  automatic_updates: false # setting this to yes will make the vagrant task to fail because of lock on dpkg
+
+#============================================================================================================
+# Linux Basics
+#============================================================================================================
+run_role_linux_basic: true
+linux_basic:
+  packages:
+    host_defined:
+      - htop
+  hostname: "ansible-autobott2-linux-debian-12"
+  locale:
+    generate:
+      - en_US.UTF-8 UTF-8
+      - es_ES.UTF-8 UTF-8
+      - de_CH.UTF-8 UTF-8
+    set:
+      lang: en_US.UTF-8
+      all: en_US.UTF-8
+
+  ssh:
+    sftp_jails:
+      - group_name: sftp
+        allow_password: true
+        jail_dir: "/home"
+        # remove: false
+
+  groups:
+    - name: gallifrey
+      gid: 403
+    - name: trenzalore
+
+  system_users:
+    - username: "tardis"
+      enabled: true
+      name: "that blue box"
+      groups: ["trenzalore", "gallifrey"]
+      uid: 2001
+      gid: 2001
+
+  users:
+    - username: jsmith
+      enabled: true
+      delete_home: false
+      uid: 2002
+      name: "The Doctor"
+      primary_group: "users" # group needs to exist, default "users"
+      groups: ["sudo", "trenzalore", "gallifrey"] # empty string removes user from all secondary groups
+      password: "{{ secrets.users.jsmith.passwd }}" # encrypted
+      shell: /bin/bash # optional
+      ssh_key:
+        - "ssh-rsa AAAAA.... john@laptop"
+        - "ssh-rsa AAAAB2.... doctor@desktop"
+      ssh_key_revoked:
+        - "ssh-rsa AAAAB.... doctor@desktop"
+#============================================================================================================
+# Nullmailer
+#============================================================================================================
+run_role_nullmailer: yes
+nullmailer:
+  email_to: "root@localhost,me@example.com"
+  email_from: "autbott-debian"
+  smtp_server: ""
+  smtp_user: ""
+  smtp_pass: ""
+#============================================================================================================
+# ZFS
+#============================================================================================================
+run_role_zfs: true
+

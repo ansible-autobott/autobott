@@ -1,0 +1,118 @@
+---
+# Create group for user
+- name: "Create group for {{ webservice.name }}"
+  ansible.builtin.group:
+    name: "{{ webservice.name }}"
+    gid: "{{ webservice.gid | default(omit) }}"
+    state: present
+
+# Create user for webservice
+- name: "Create user {{ webservice.name }}"
+  ansible.builtin.user:
+    name: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    groups: >-
+      {{
+        (webservice.groups | join(',') if webservice.groups is defined else '')
+      }}
+    shell: "{{ webservice.shell | default('/bin/false') }}"
+    password: >-
+      {{
+        webservice.password | default('!') | password_hash('sha512', (65534 | random(seed=inventory_hostname)) | string)
+        if webservice.password is defined and webservice.password not in ['', false]
+        else '!'
+      }}
+    uid: "{{ webservice.uid if webservice.uid is defined and webservice.uid is not none else omit }}"
+    createhome: false
+
+# Add to vhosts group
+- name: "Add {{ webservice.name }} to {{ vhosts_cfg_data.group }}"
+  ansible.builtin.user:
+    name: "{{ vhosts_cfg_data.group }}"
+    groups: "{{ webservice.name }}"
+    append: true
+
+# Create root directory
+- name: "Create root directory for {{ webservice.name }}"
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Create home directory
+- name: "Create home directory for {{ webservice.name }}"
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir"
+    state: directory
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0750"
+
+# Create subdirectories (.ssh, tmp)
+- name: "Create subdirectories for {{ webservice.name }}"
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/{{ item }}"
+    state: directory
+    owner: "{{ webservice.name }}"
+    group: "{{ webservice.name }}"
+    mode: "0750"
+  loop:
+    - .ssh
+    - tmp
+
+# Setup SSH keys
+- name: "Setup authorized_keys for {{ webservice.name }}"
+  ansible.posix.authorized_key:
+    user: "{{ webservice.name }}"
+    key: "{{ item }}"
+    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/.ssh/authorized_keys"
+  loop: "{{ webservice.ssh_key | default([]) }}"
+
+# Check if user exists
+- name: "Check if user {{ webservice.name }} exists"
+  ansible.builtin.command: "id {{ webservice.name }}"
+  register: user_check
+  failed_when: false
+  changed_when: false
+
+# Stop PHP service if needed
+- name: "Stop PHP-FPM if {{ webservice.name }} is disabled"
+  ansible.builtin.service:
+    name: "php{{ php_vers }}-fpm"
+    state: stopped
+  when:
+    - php_vers | length > 0
+    - not webservice.enabled | default(true)
+    - user_check.rc == 0
+
+# Delete user if disabled
+- name: "Delete user {{ webservice.name }} if disabled"
+  ansible.builtin.user:
+    name: "{{ webservice.name }}"
+    state: absent
+  notify: "restart web server"
+  when:
+    - not webservice.enabled | default(true)
+    - user_check.rc == 0
+
+# Delete group
+- name: "Delete group {{ webservice.name }} if disabled"
+  ansible.builtin.group:
+    name: "{{ webservice.name }}"
+    state: absent
+  notify: "restart web server"
+  when:
+    - not webservice.enabled | default(true)
+    - user_check.rc == 0
+
+# Delete directories
+- name: "Delete root directory for {{ webservice.name }} if disabled"
+  ansible.builtin.file:
+    path: "{{ vhosts_root }}/{{ webservice.name }}"
+    state: absent
+  notify: "restart web server"
+  when:
+    - not webservice.enabled | default(true)
+    - user_check.rc == 0

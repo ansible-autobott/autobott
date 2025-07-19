@@ -1,0 +1,186 @@
+---
+#============================================================================================================
+# Grafana Role
+#============================================================================================================
+
+- name: Main Grafana installation and configuration
+  tags:
+    - grafana
+    - monitoring
+    - untagged
+  when: run_role_grafana | bool
+  block:
+    - name: Set merged grafana configuration
+      ansible.builtin.set_fact:
+        grafana_config: "{{ grafana_defaults | combine(grafana, recursive=true) }}"
+
+    - name: Create grafana system group
+      ansible.builtin.group:
+        name: "{{ grafana_config.user.group }}"
+        gid: "{{ grafana_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create grafana system user
+      ansible.builtin.user:
+        name: "{{ grafana_config.user.name }}"
+        uid: "{{ grafana_config.user.uid | default(omit, true) }}"
+        group: "{{ grafana_config.user.group }}"
+        home: "{{ grafana_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create grafana directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ grafana_config.paths.data_dir }}/dashboards"
+        - "{{ grafana_config.paths.base_dir }}/install"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Grafana tarball
+      ansible.builtin.get_url:
+        url: "https://dl.grafana.com/oss/release/grafana-{{ grafana_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ grafana_config.paths.base_dir }}/install/grafana-{{ grafana_config.version }}.linux-amd64.tar.gz"
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ grafana_checksums[grafana_config.version] }}"
+
+    - name: Extract Grafana tarball
+      ansible.builtin.unarchive:
+        src: "{{ grafana_config.paths.base_dir }}/install/grafana-{{ grafana_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ grafana_config.paths.base_dir }}/install"
+        remote_src: true
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+        creates: "{{ grafana_config.paths.base_dir }}/install/grafana-v{{ grafana_config.version }}/README.md"
+
+    - name: Link Grafana binary to latest
+      ansible.builtin.file:
+        src: "{{ grafana_config.paths.base_dir }}/install/grafana-v{{ grafana_config.version }}"
+        dest: "{{ grafana_config.paths.base_dir }}/install/latest"
+        state: link
+      notify: restart grafana
+
+    - name: Find old Grafana tarballs
+      ansible.builtin.find:
+        paths: "{{ grafana_config.paths.base_dir }}/install"
+        patterns: "grafana-*.linux-amd64.tar.gz"
+        use_regex: false
+      register: grafana_tarballs
+
+    - name: Delete outdated Grafana tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ grafana_tarballs.files }}"
+      when: "'grafana-' ~ grafana_config.version ~ '.linux-amd64.tar.gz' not in item.path"
+
+    - name: Find old Grafana extracted directories
+      ansible.builtin.find:
+        paths: "{{ grafana_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "grafana-*"
+        use_regex: false
+      register: grafana_dirs
+
+    - name: Delete outdated Grafana extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ grafana_dirs.files }}"
+      when: "'grafana-v' ~ grafana_config.version ~ '' not in item.path"
+
+    #====================================================
+    # Config
+    #====================================================
+    - name: Create custom.ini
+      ansible.builtin.template:
+        src: custom.ini
+        dest: "{{ grafana_config.paths.base_dir }}/install/latest/conf/custom.ini"
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+      notify: restart grafana
+
+    - name: Create datasource provisioners
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ grafana_config.paths.base_dir }}/install/latest/conf/provisioning/datasources/{{ item }}"
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+      loop:
+        - prometheus_datasource.yaml
+      notify: restart grafana
+
+    - name: Create dashboard provisioner config
+      ansible.builtin.template:
+        src: dashboard.yaml
+        dest: "{{ grafana_config.paths.base_dir }}/install/latest/conf/provisioning/dashboards/opt_data.yaml"
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+      register: provision_change
+
+    - name: Create dashboards
+      ansible.builtin.copy:
+        src: "{{ lookup('first_found', params) }}"
+        dest: "{{ grafana_config.paths.data_dir }}/dashboards/{{ item }}"
+        owner: "{{ grafana_config.user.name }}"
+        group: "{{ grafana_config.user.group }}"
+        mode: "0750"
+      vars:
+        params:
+          files:
+            - "{{ item }}"
+          paths:
+            - "{{ role_path }}/files/dashboards"
+            - "{{ inventory_dir }}/files/grafana_dashboards"
+      loop: "{{ grafana_config.dashboards }}"
+      register: provision_change
+
+    - name: Find obsolete dashboards
+      ansible.builtin.find:
+        paths: "{{ grafana_config.paths.data_dir }}/dashboards/"
+        recurse: false
+        excludes: "{{ grafana_config.dashboards }}"
+      register: obsolete_dashboards
+
+    - name: Delete obsolete dashboards
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ obsolete_dashboards.files }}"
+
+    #====================================================
+    # Service
+    #====================================================
+
+    - name: Setup Grafana systemd service
+      ansible.builtin.template:
+        src: grafana.service.j2
+        dest: /lib/systemd/system/grafana.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - restart grafana
+
+    - name: Enable and reload Grafana systemd service
+      ansible.builtin.systemd:
+        name: grafana
+        enabled: true
+        daemon_reload: true
+      notify:
+        - Reload systemd
+        - restart grafana

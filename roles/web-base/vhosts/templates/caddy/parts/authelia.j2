@@ -1,0 +1,8 @@
+{% if server.authelia | default(false) %}
+
+    forward_auth 127.0.0.1:{{ server.authelia_port | default(9031) }} {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+    }
+
+{% endif %}

@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Radarr  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_radarr: false
+
+# User overrides - will be combined with radarr_defaults
+radarr: {}
+# Default configuration structure
+radarr_defaults:
+  download_url: "http://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: radarr
+    uid: # Let system assign UID
+    group: radarr
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/radarr
+    data_dir: /opt/radarr/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 7878
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
+    auth_method: "External" # Basic | Forms | External | None

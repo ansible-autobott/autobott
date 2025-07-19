@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# Alertmanager Role Handlers
+#============================================================================================================
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart alertmanager
+  ansible.builtin.systemd:
+    name: alertmanager
+    state: restarted
+  listen: restart alertmanager

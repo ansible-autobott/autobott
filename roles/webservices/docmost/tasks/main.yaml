@@ -1,0 +1,93 @@
+---
+#============================================================================================================
+# docmost
+#============================================================================================================
+
+- name: Main docmost block
+  tags:
+    - docmost
+    - untagged
+  when:
+    - run_role_docmost is defined
+    - run_role_docmost
+  block:
+    - name: Set merged docmost configuration
+      ansible.builtin.set_fact:
+        docmost_config: "{{ docmost_defaults | combine(docmost, recursive=true) }}"
+
+    - name: Create docmost system group
+      ansible.builtin.group:
+        name: "{{ docmost_config.user.group }}"
+        gid: "{{ docmost_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create docmost system user
+      ansible.builtin.user:
+        name: "{{ docmost_config.user.name }}"
+        uid: "{{ docmost_config.user.uid | default(omit, true) }}"
+        group: "{{ docmost_config.user.group }}"
+        home: "{{ docmost_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Get UID of docmost user
+      ansible.builtin.command: id -u {{ docmost_config.user.name }}
+      register: docmost_uid_cmd
+      changed_when: false
+
+    - name: Set docmost_uid fact
+      ansible.builtin.set_fact:
+        docmost_uid: "{{ docmost_uid_cmd.stdout }}"
+
+    - name: Get GID of docmost group
+      ansible.builtin.command: id -g {{ docmost_config.user.group }}
+      register: docmost_gid_cmd
+      changed_when: false
+
+    - name: Set docmost_gid fact
+      ansible.builtin.set_fact:
+        docmost_gid: "{{ docmost_gid_cmd.stdout }}"
+
+    - name: Create Docmost directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ docmost_config.user.name }}"
+        group: "{{ docmost_config.user.group }}"
+      loop:
+        - "{{ docmost_config.paths.base_dir }}"
+        - "{{ docmost_config.paths.data_dir }}"
+        - "{{ docmost_config.paths.db_dir }}"
+
+    - name: Create files needed for run docker
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ docmost_config.paths.base_dir }}/{{ item }}"
+        owner: "{{ docmost_config.user.name }}"
+        group: "{{ docmost_config.user.group }}"
+        mode: "0644"
+      with_items:
+        - "docker-compose.yml"
+      notify:
+        - restart docmost
+
+    - name: Configure systemd wrapper service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/docmost.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart docmost
+
+    - name: Enable and start the service
+      ansible.builtin.systemd:
+        name: docmost
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd

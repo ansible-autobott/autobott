@@ -1,0 +1,56 @@
+; Pool name
+; the variable $pool can be used in any directive and will be replaced by the pool name
+[{{ webservice.name }}]
+
+; socket config
+listen = /var/run/$pool-php-fpm.sock
+listen.owner = $pool
+listen.group = {{ vhosts_cfg_data.group }}
+listen.mode = 0660
+
+; process management
+user = $pool
+group = $pool
+
+; Process Manager
+; pm can be: static | dynamic | ondemand
+; Formula: Total Max Processes = (Total RAM - (Used RAM + Buffer)) / (Memory per PHP process)
+pm = {{ webservice.php.pm | default(vhosts_cfg_data.php.pm) }}
+pm.max_children = {{ webservice.php.pm_max_children | default(vhosts_cfg_data.php.pm_max_children) }}
+
+{# Optional only for dynamic/ondemand — set them conditionally if desired #}
+pm.start_servers = {{ webservice.php.pm_start_servers | default(vhosts_cfg_data.php.pm_start_servers) }}
+pm.min_spare_servers = {{ webservice.php.pm_min_spare_servers | default(vhosts_cfg_data.php.pm_min_spare_servers) }}
+pm.max_spare_servers = {{ webservice.php.pm_max_spare_servers | default(vhosts_cfg_data.php.pm_max_spare_servers) }}
+pm.max_requests = {{ webservice.php.pm_max_requests | default(vhosts_cfg_data.php.pm_max_requests) }}
+pm.process_idle_timeout = {{ webservice.php.pm_process_idle_timeout | default(vhosts_cfg_data.php.pm_process_idle_timeout) }}
+
+; request
+request_terminate_timeout = 60s
+
+; security
+chdir = /
+
+; logging
+php_admin_flag[display_errors] = off
+php_admin_flag[display_startup_errors] = off
+php_admin_flag[log_errors] = on
+php_admin_value[error_log] = syslog
+php_admin_value[syslog.ident] = "php-fpm-$pool"
+php_admin_value[error_reporting] = {{ webservice.php.error_reporting | default(vhosts_cfg_data.php.error_reporting) }}
+
+
+; session
+php_admin_value[session.save_path] = "{{ vhosts_root }}/{{ webservice.name }}/home_dir/php_sessions"
+
+; open_basedir
+{% set basedir_paths = [vhosts_root ~ '/' ~ webservice.name ~ '/home_dir'] %}
+{% if webservice.php.open_basedir is defined and webservice.php.open_basedir != "default" %}
+{% set basedir_paths = basedir_paths + webservice.php.open_basedir %}
+{% endif %}
+php_admin_value[open_basedir] = "{{ basedir_paths | join(':') }}"
+
+; environment variables
+env[TMPDIR] = "{{ vhosts_root }}/{{ webservice.name }}/home_dir/tmp"
+env[TMP] = "{{ vhosts_root }}/{{ webservice.name }}/home_dir/tmp"
+env[TEMP] = "{{ vhosts_root }}/{{ webservice.name }}/home_dir/tmp"

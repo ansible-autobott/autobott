@@ -1,0 +1,34 @@
+# {{ ansible_managed }}
+
+{% if linux_apt_data.preference |length>0 %}
+# 500 <= P < 990: causes a version to be installed unless there is a
+# version available belonging to the target release or the installed
+# version is more recent
+
+Package: *
+Pin: release a=stable
+Pin-Priority: 900
+{% endif %}
+
+{% if "testing" in linux_apt_data.preference %}
+# 100 <= P < 500: causes a version to be installed unless there is a
+# version available belonging to some other distribution or the installed
+# version is more recent
+
+Package: *
+Pin: release a=testing
+Pin-Priority: 400
+{% endif %}
+
+{% if "unstable" in linux_apt_data.preference %}
+# 0 < P < 100: causes a version to be installed only if there is no
+# installed version of the package
+
+Package: *
+Pin: release a=unstable
+Pin-Priority: 50
+{% endif %}
+
+
+
+

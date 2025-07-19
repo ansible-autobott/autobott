@@ -1,0 +1,32 @@
+---
+#============================================================================================================
+# Borgmatic Backup Configuration
+#============================================================================================================
+
+# Main role control
+run_role_borgmatic: false
+
+# User overrides - these will be combined with borgmatic_defaults
+borgmatic: {}
+# Default configuration structure
+borgmatic_defaults:
+  version: 2.0.6
+  base_dir: /opt/borgmatic
+
+borgmatic_backups: []
+backups_sample:
+  - name: test_php
+    enabled: true
+    # Important the destination needs to be an initialized repo
+    # destination can also be remote e.g. ssh://abd@def.repo.borgbase.com/./repo
+    destination: /vhosts/php/backups
+    ## ssh private key used if the destination is ssh
+    ssh_key: |
+     -----BEGIN OPENSSH PRIVATE KEY-----
+     b3BlbnNzaC1rZXktdjEAAAAABG5vbmUA ...
+    dirs:
+      - root: /vhosts/php/home_dir/public_html
+    mariadb:
+      - php
+      - test
+    retention: "minimal" # "minimal", "medium", "aggressive"

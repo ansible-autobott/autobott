@@ -1,0 +1,92 @@
+---
+#============================================================================================================
+# immich
+#============================================================================================================
+
+- name: Main immich block
+  tags:
+    - immich
+    - untagged
+  when:
+    - run_role_immich is defined
+    - run_role_immich
+  block:
+    - name: Set merged immich configuration
+      ansible.builtin.set_fact:
+        immich_config: "{{ immich_defaults | combine(immich, recursive=true) }}"
+
+    - name: Create immich system group
+      ansible.builtin.group:
+        name: "{{ immich_config.user.group }}"
+        gid: "{{ immich_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create immich system user
+      ansible.builtin.user:
+        name: "{{ immich_config.user.name }}"
+        uid: "{{ immich_config.user.uid | default(omit, true) }}"
+        group: "{{ immich_config.user.group }}"
+        home: "{{ immich_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Get UID of immich user
+      ansible.builtin.command: id -u {{ immich_config.user.name }}
+      register: immich_uid_cmd
+      changed_when: false
+
+    - name: Set immich_uid fact
+      ansible.builtin.set_fact:
+        immich_uid: "{{ immich_uid_cmd.stdout }}"
+
+    - name: Get GID of immich group
+      ansible.builtin.command: id -g {{ immich_config.user.group }}
+      register: immich_gid_cmd
+      changed_when: false
+
+    - name: Set immich_gid fact
+      ansible.builtin.set_fact:
+        immich_gid: "{{ immich_gid_cmd.stdout }}"
+
+    - name: Create Immich directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ immich_config.user.name }}"
+        group: "{{ immich_config.user.group }}"
+      loop:
+        - "{{ immich_config.paths.base_dir }}"
+        - "{{ immich_config.paths.uploads_dir }}"
+        - "{{ immich_config.paths.db_dir }}"
+
+    - name: Create files needed for run docker
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ immich_config.paths.base_dir }}/{{ item }}"
+        owner: "{{ immich_config.user.name }}"
+        group: "{{ immich_config.user.group }}"
+        mode: "0644"
+      with_items:
+        - ".env"
+        - "docker-compose.yml"
+
+    - name: Configure systemd wrapper service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/immich.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart immich
+
+    - name: Enable and start the service
+      ansible.builtin.systemd:
+        name: immich
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd

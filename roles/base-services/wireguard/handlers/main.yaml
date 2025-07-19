@@ -1,0 +1,10 @@
+---
+- name: Restart wireguard
+  ansible.builtin.service: name=wg-quick@wg0 state=restarted
+  listen:
+    - restart wireguard interface
+    - restart wireguard
+
+
+- name: "Reload systemd"
+  ansible.builtin.command: "systemctl daemon-reload"

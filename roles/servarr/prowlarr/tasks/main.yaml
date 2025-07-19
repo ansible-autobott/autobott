@@ -1,0 +1,145 @@
+---
+#============================================================================================================
+# Prowlarr Role
+#============================================================================================================
+
+- name: Main Prowlarr installation and configuration
+  tags:
+    - prowlarr
+    - servarr
+    - untagged
+  when: run_role_prowlarr | bool
+  block:
+    - name: Set merged prowlarr configuration
+      ansible.builtin.set_fact:
+        prowlarr_config: "{{ prowlarr_defaults | combine(prowlarr, recursive=true) }}"
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3-lxml # needed to change xml configs
+        state: present
+        update_cache: true
+
+    - name: Create prowlarr system group
+      ansible.builtin.group:
+        name: "{{ prowlarr_config.user.group }}"
+        gid: "{{ prowlarr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create prowlarr system user
+      ansible.builtin.user:
+        name: "{{ prowlarr_config.user.name }}"
+        uid: "{{ prowlarr_config.user.uid | default(omit, true) }}"
+        group: "{{ prowlarr_config.user.group }}"
+        home: "{{ prowlarr_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create Prowlarr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ prowlarr_config.user.name }}"
+        group: "{{ prowlarr_config.user.group }}"
+      loop:
+        - "{{ prowlarr_config.paths.base_dir }}/install"
+        - "{{ prowlarr_config.paths.data_dir }}"
+
+    - name: Unarchive Prowlarr release
+      ansible.builtin.unarchive:
+        src: "{{ prowlarr_config.download_url }}"
+        dest: "{{ prowlarr_config.paths.base_dir }}/install"
+        owner: "{{ prowlarr_config.user.name }}"
+        group: "{{ prowlarr_config.user.group }}"
+        remote_src: true
+        creates: "{{ prowlarr_config.paths.base_dir }}/install/Prowlarr/LICENSE"
+
+    - name: Ensure correct permissions on Prowlarr directory
+      ansible.builtin.file:
+        path: "{{ prowlarr_config.paths.base_dir }}/install"
+        state: directory
+        owner: "{{ prowlarr_config.user.name }}"
+        group: "{{ prowlarr_config.user.group }}"
+        recurse: true
+
+    - name: Configure systemd service for Prowlarr
+      ansible.builtin.template:
+        src: prowlarr.service
+        dest: /lib/systemd/system/prowlarr.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart prowlarr
+
+    - name: Enable and start Prowlarr  service
+      ansible.builtin.systemd:
+        name: prowlarr
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart prowlarr
+
+    #============================================================================================================
+    # Prowlarr Configuration
+    #============================================================================================================
+
+    - name: Check for existing config.xml
+      ansible.builtin.stat:
+        path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
+      register: prowlarr_config_file
+
+    - name: Start Prowlarr to generate config.xml
+      ansible.builtin.service:
+        name: prowlarr
+        state: restarted
+      when: not prowlarr_config_file.stat.exists
+
+    - name: Pause to allow Prowlarr startup and config creation
+      ansible.builtin.pause:
+        seconds: 10
+      when: not prowlarr_config_file.stat.exists
+
+    - name: Stop Prowlarr before applying config
+      ansible.builtin.service:
+        name: prowlarr
+        state: stopped
+      when: not prowlarr_config_file.stat.exists
+
+    - name: Set Prowlarr bind address in config.xml
+      community.general.xml:
+        path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/BindAddress
+        value: "{{ prowlarr_config.service.bind_ip | string }}"
+      notify: restart prowlarr
+
+    - name: Set Prowlarr port in config.xml
+      community.general.xml:
+        path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/Port
+        value: "{{ prowlarr_config.service.port | int }}"
+      notify: restart prowlarr
+
+    - name: Set AuthenticationRequired false in config.xml
+      community.general.xml:
+        path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationRequired
+        value: "Enabled"
+      notify: restart prowlarr
+
+    - name: Set AuthenticationMethod to in config.xml
+      community.general.xml:
+        path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationMethod
+        value: "{{ prowlarr_config.service.auth_method }}"
+      notify: restart prowlarr
+
+    - name: Ensure Prowlarr is running
+      ansible.builtin.service:
+        name: prowlarr
+        state: started

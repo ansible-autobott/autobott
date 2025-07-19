@@ -1,0 +1,42 @@
+---
+#============================================================================================================
+# Grafana Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_grafana: false
+
+# User configuration override (will be merged with grafana_defaults)
+grafana: {}
+# Default configuration structure
+grafana_defaults:
+  version: 12.0.2
+  # User and group configuration
+  user:
+    name: grafana
+    uid: # Let system assign UID
+    group: grafana
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/grafana
+    data_dir: /opt/grafana/data
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 3000
+    loglevel: info
+
+  # url of the prometheus instance
+  datasource_url: "http://localhost:9090"
+
+  # a list of dashboards to provision on the instance
+  # files to search in <role>/files/dashboards and <inventory>/files/grafana_dashboards
+  #  - node-exporter-full.json
+  dashboards: []
+# Supported grafana versions and checksums
+grafana_checksums:
+  "11.4.0": "3550c73f4455435642976e82cc89aa354f076a75b766a408781107f4f5d4744c."
+  "12.0.2": "c1755b4da918edfd298d5c8d5f1ffce35982ad10e1640ec356570cfb8c34b3e8.."

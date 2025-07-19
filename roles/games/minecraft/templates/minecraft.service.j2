@@ -1,0 +1,16 @@
+[Unit]
+Description=Minecraft Server
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ minecraft_config.user.name }}
+ExecStart=java -Xms{{ minecraft_config.server.xms }} -Xmx{{ minecraft_config.server.xmx }} -XX:+UseG1GC -jar {{ minecraft_config.paths.base }}/active/server.jar --nogui --universe {{ minecraft_config.paths.universe }}
+Restart=on-failure
+TimeoutSec=300
+WorkingDirectory={{ minecraft_config.paths.base }}/active
+#Environment="JAVA_OPTS="
+
+[Install]
+WantedBy=multi-user.target

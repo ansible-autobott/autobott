@@ -1,0 +1,145 @@
+---
+#============================================================================================================
+# Whisparr Role
+#============================================================================================================
+
+- name: Main Whisparr installation and configuration
+  tags:
+    - whisparr
+    - servarr
+    - untagged
+  when: run_role_whisparr | bool
+  block:
+    - name: Set merged whisparr configuration
+      ansible.builtin.set_fact:
+        whisparr_config: "{{ whisparr_defaults | combine(whisparr, recursive=true) }}"
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - python3-lxml # needed to change xml configs
+        state: present
+        update_cache: true
+
+    - name: Create whisparr system group
+      ansible.builtin.group:
+        name: "{{ whisparr_config.user.group }}"
+        gid: "{{ whisparr_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create whisparr system user
+      ansible.builtin.user:
+        name: "{{ whisparr_config.user.name }}"
+        uid: "{{ whisparr_config.user.uid | default(omit, true) }}"
+        group: "{{ whisparr_config.user.group }}"
+        home: "{{ whisparr_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create Whisparr directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ whisparr_config.user.name }}"
+        group: "{{ whisparr_config.user.group }}"
+      loop:
+        - "{{ whisparr_config.paths.base_dir }}/install"
+        - "{{ whisparr_config.paths.data_dir }}"
+
+    - name: Unarchive Whisparr release
+      ansible.builtin.unarchive:
+        src: "{{ whisparr_config.download_url }}"
+        dest: "{{ whisparr_config.paths.base_dir }}/install"
+        owner: "{{ whisparr_config.user.name }}"
+        group: "{{ whisparr_config.user.group }}"
+        remote_src: true
+        creates: "{{ whisparr_config.paths.base_dir }}/install/Whisparr/LICENSE.md"
+
+    - name: Ensure correct permissions on Whisparr directory
+      ansible.builtin.file:
+        path: "{{ whisparr_config.paths.base_dir }}/install"
+        state: directory
+        owner: "{{ whisparr_config.user.name }}"
+        group: "{{ whisparr_config.user.group }}"
+        recurse: true
+
+    - name: Configure systemd service for Whisparr
+      ansible.builtin.template:
+        src: whisparr.service
+        dest: /lib/systemd/system/whisparr.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart whisparr
+
+    - name: Enable and start Whisparr  service
+      ansible.builtin.systemd:
+        name: whisparr
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart whisparr
+
+    #============================================================================================================
+    # Whisparr Configuration
+    #============================================================================================================
+
+    - name: Check for existing config.xml
+      ansible.builtin.stat:
+        path: "{{ whisparr_config.paths.data_dir }}/config.xml"
+      register: whisparr_config_file
+
+    - name: Start Whisparr to generate config.xml
+      ansible.builtin.service:
+        name: whisparr
+        state: restarted
+      when: not whisparr_config_file.stat.exists
+
+    - name: Pause to allow Whisparr startup and config creation
+      ansible.builtin.pause:
+        seconds: 10
+      when: not whisparr_config_file.stat.exists
+
+    - name: Stop Whisparr before applying config
+      ansible.builtin.service:
+        name: whisparr
+        state: stopped
+      when: not whisparr_config_file.stat.exists
+
+    - name: Set Whisparr bind address in config.xml
+      community.general.xml:
+        path: "{{ whisparr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/BindAddress
+        value: "{{ whisparr_config.service.bind_ip | string }}"
+      notify: restart whisparr
+
+    - name: Set Whisparr port in config.xml
+      community.general.xml:
+        path: "{{ whisparr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/Port
+        value: "{{ whisparr_config.service.port | int }}"
+      notify: restart whisparr
+
+    - name: Set AuthenticationRequired false in config.xml
+      community.general.xml:
+        path: "{{ whisparr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationRequired
+        value: "Enabled"
+      notify: restart whisparr
+
+    - name: Set AuthenticationMethod to in config.xml
+      community.general.xml:
+        path: "{{ whisparr_config.paths.data_dir }}/config.xml"
+        xpath: /Config/AuthenticationMethod
+        value: "{{ whisparr_config.service.auth_method }}"
+      notify: restart whisparr
+
+    - name: Ensure Whisparr is running
+      ansible.builtin.service:
+        name: whisparr
+        state: started

@@ -1,0 +1,90 @@
+---
+- name: Enroll system
+  tags:
+    - role_enroll
+    - untagged
+    - enroll
+  when:
+    - run_role_autobott_enroll is defined
+    - run_role_autobott_enroll
+  become: true
+  block:
+    - name: Set merged autobott_enroll facts
+      ansible.builtin.set_fact:
+        autobott_enroll_data: "{{ autobott_enroll_defaults | combine(autobott_enroll, recursive=True) }}"
+      no_log: true
+
+    - name: Ensure enroll password is set
+      ansible.builtin.fail:
+        msg: "Value for autobott_enroll_data.passwd is mandatory but is empty"
+      when: autobott_enroll_data.passwd | length == 0
+
+    - name: Create system admin group
+      ansible.builtin.group:
+        name: "{{ autobott_enroll_data.group }}"
+        gid: "{{ autobott_enroll_data.gid | default(omit) }}"
+
+    - name: Create system admin user
+      ansible.builtin.user:
+        name: "{{ autobott_enroll_data.user }}"
+        group: "{{ autobott_enroll_data.group }}"
+        uid: "{{ autobott_enroll_data.uid | default(omit) }}"
+        home: "{{ autobott_enroll_data.home }}"
+        password: "{{ autobott_enroll_data.passwd | password_hash('sha512', 65534 | random(seed=inventory_hostname) | string) }}"
+        system: true
+        shell: /bin/bash
+        create_home: true
+
+    - name: Set authorized SSH keys
+      ansible.posix.authorized_key:
+        user: "{{ autobott_enroll_data.user }}"
+        key: "{{ item }}"
+        path: "{{ autobott_enroll_data.home }}/.ssh/authorized_keys"
+        manage_dir: true
+      loop: "{{ autobott_enroll_data.ssh_keys }}"
+      when: autobott_enroll_data.ssh_keys | length > 0
+
+    - name: Revoke SSH keys
+      ansible.posix.authorized_key:
+        user: "{{ autobott_enroll_data.user }}"
+        key: "{{ item }}"
+        state: absent
+        path: "{{ autobott_enroll_data.home }}/.ssh/authorized_keys"
+      loop: "{{ autobott_enroll_data.ssh_keys_revoked }}"
+      when: autobott_enroll_data.ssh_keys_revoked | length > 0
+
+    - name: Ensure essential packages are installed
+      ansible.builtin.apt:
+        name:
+          - sudo
+          - apt
+          - ca-certificates
+          - openssh-server
+          - openssh-sftp-server
+        state: present
+        update_cache: true
+
+    - name: Add sudo config for Ansible user
+      ansible.builtin.template:
+        src: sudoer_ans.j2
+        dest: /etc/sudoers.d/ansible-admin-sudo
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+
+    - name: Remove root password and lock account
+      ansible.builtin.shell: |
+        passwd -d root && passwd -l root
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Set root .bashrc
+      ansible.builtin.template:
+        src: rootbashrc.j2
+        dest: /root/.bashrc
+        owner: root
+        group: root
+        mode: "0600"
+      when: autobott_enroll_data.root_bashrc

@@ -1,0 +1,16 @@
+---
+all:
+  # this is sample inventory representing the Vagrant machines in this repository
+  # the real inventory file is generated on the fly by vagrant in .vagrant/provisioners/ansible/inventory
+  children:
+    linux_servers:
+      hosts:
+        ansible-autobott2-linux-debian-12:
+          ansible_python_interpreter: /usr/bin/python3.11
+
+    email_server:
+      hosts:
+        ansible-autobott2-linux-debian-12:
+    linux_desktop:
+      hosts:
+        ansible-autobott2-linux-debian-12:

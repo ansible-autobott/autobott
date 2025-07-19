@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart mealie
+  ansible.builtin.systemd:
+    name: mealie
+    state: restarted
+  listen: restart mealie

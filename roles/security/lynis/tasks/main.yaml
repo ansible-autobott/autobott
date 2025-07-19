@@ -1,0 +1,56 @@
+---
+- name: Install Lynis audit
+  tags:
+    - lynis
+    - untagged
+  when:
+    - run_role_lynis | bool
+  block:
+    - name: Download latest Lynis tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/CISOfy/lynis/archive/refs/heads/master.tar.gz"
+        dest: /tmp/lynis.tar.gz
+        mode: "0644"
+
+    - name: Create /opt/lynis directory
+      ansible.builtin.file:
+        path: /opt/lynis
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Extract lynis tarball to /opt/lynis
+      ansible.builtin.unarchive:
+        src: /tmp/lynis.tar.gz
+        dest: /opt/lynis
+        remote_src: true
+        extra_opts: [--strip-components=1]
+
+    - name: Deploy custom Lynis profile
+      ansible.builtin.template:
+        src: lynis.prf.j2
+        dest: /opt/lynis/custom.lynis.prf
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Run Lynis audit
+      ansible.builtin.command: ./lynis audit system -q --profile /opt/lynis/custom.lynis.prf --report-file /opt/lynis/lynis-report.dat
+      args:
+        chdir: /opt/lynis
+
+    - name: Fetch Lynis report
+      ansible.builtin.fetch:
+        src: /opt/lynis/lynis-report.dat
+        dest: "./reports/lynis_audit/{{ inventory_hostname }}_{{ ansible_date_time.date }}.dat"
+        flat: true
+      become: true
+
+    - name: Delete Lynis log files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/log/lynis.log
+        - /var/log/lynis-report.dat

@@ -1,0 +1,29 @@
+---
+#============================================================================================================
+# Homepage Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_homepage: false
+
+# User overrides - will be combined with homepage_defaults
+homepage: {}
+# Default configuration structure
+homepage_defaults:
+
+  # https://github.com/gethomepage/homepage/releases
+  version: v1.3.2
+  allowed_host: localhost:8080
+  # User and group configuration
+  user:
+    name: homepage
+    uid: # Let system assign UID
+    group: homepage
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/homepage
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 3003

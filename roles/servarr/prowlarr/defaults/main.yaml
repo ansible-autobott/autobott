@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Prowlarr  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_prowlarr: false
+
+# User overrides - will be combined with prowlarr_defaults
+prowlarr: {}
+# Default configuration structure
+prowlarr_defaults:
+  download_url: "http://prowlarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: prowlarr
+    uid: # Let system assign UID
+    group: prowlarr
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/prowlarr
+    data_dir: /opt/prowlarr/data
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9696
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
+    auth_method: "External" # Basic | Forms | External | None

@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart kavita
+  ansible.builtin.service:
+    name: kavita
+    state: restarted
+  listen: restart kavita

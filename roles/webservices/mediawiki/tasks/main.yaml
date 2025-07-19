@@ -1,0 +1,226 @@
+---
+#============================================================================================================
+# Main Mediawiki role
+#============================================================================================================
+
+- name: Main mediawiki installation and configuration
+  tags:
+    - mediawiki
+    - untagged
+  when: run_role_mediawiki | bool
+  block:
+    - name: Deprecation warning
+      ansible.builtin.debug:
+        msg: "[DEPRECATED] The role mediawiki will be deprecated and replaced by docmost in the next release"
+      changed_when: true
+
+    - name: Set merged configuration
+      ansible.builtin.set_fact:
+        mediawiki_config: "{{ mediawiki_defaults | combine(mediawiki, recursive=true) }}"
+
+    - name: Fail if any required mediawiki_config variables are missing or empty
+      fail:
+        msg: "The variable 'mediawiki_config.wiki.{{ item }}' is required and cannot be empty."
+      when: mediawiki_config.wiki[item] is not defined or mediawiki_config.wiki[item] | length == 0
+      loop:
+        - admin_user
+        - admin_pass
+        - secret_key
+        - site_upgrade_key
+
+    - name: Make sure needed packages are installed
+      ansible.builtin.apt:
+        name:
+          - php-mbstring
+          - php-mysql
+          - php-sqlite3
+          - php-gd
+          - imagemagick
+          - git
+          - php-intl
+          - acl
+        state: latest
+        update_cache: true
+
+    - name: Ensure system group exists
+      ansible.builtin.group:
+        name: "{{ mediawiki_config.user.group }}"
+        gid: "{{ mediawiki_config.user.gid | default(omit, true) }}"
+
+    - name: Ensure user exists
+      ansible.builtin.user:
+        name: "{{ mediawiki_config.user.name }}"
+        uid: "{{ mediawiki_config.user.uid | default(omit, true) }}"
+        group: "{{ mediawiki_config.user.group }}"
+        create_home: false
+
+    - name: Create MediaWiki install directory
+      ansible.builtin.file:
+        path: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}"
+        state: directory
+        owner: "{{ mediawiki_config.user.name }}"
+        group: "{{ mediawiki_config.user.group }}"
+        mode: "0755"
+
+    - name: Download MediaWiki tarball
+      ansible.builtin.get_url:
+        url: "https://releases.wikimedia.org/mediawiki/{{ mediawiki_config.version | regex_replace('\\.\\d+$', '') }}/mediawiki-{{ mediawiki_config.version }}.tar.gz"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/mediawiki-{{ mediawiki_config.version }}.tar.gz"
+        owner: root
+        group: root
+        mode: "0644"
+        checksum: "sha256:{{ mediawiki_checksums[mediawiki_config.version] }}"
+
+    - name: Extract MediaWiki tarball
+      ansible.builtin.unarchive:
+        src: "{{ mediawiki_config.paths.install_dir }}/install/mediawiki-{{ mediawiki_config.version }}.tar.gz"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+        creates: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/index.php"
+      register: new_mediawiki_install
+
+    - name: Check if public_html exists
+      ansible.builtin.stat:
+        path: "{{ mediawiki_config.paths.public_html }}"
+      register: public_html_link
+
+    - name: Remove public_html if it’s a directory
+      ansible.builtin.file:
+        path: "{{ mediawiki_config.paths.public_html }}"
+        state: absent
+      when: public_html_link.stat.islnk is defined and not public_html_link.stat.islnk
+
+    - name: Link MediaWiki latest
+      ansible.builtin.file:
+        src: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/"
+        dest: "{{ mediawiki_config.paths.public_html }}"
+        state: link
+
+    - name: Find old MediaWiki tarballs
+      ansible.builtin.find:
+        paths: "{{ mediawiki_config.paths.install_dir }}/install"
+        patterns: "mediawiki-*.tar.gz"
+        use_regex: false
+      register: mediawiki_tarballs
+
+    - name: Delete outdated MediaWiki tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ mediawiki_tarballs.files }}"
+      when: "'mediawiki-' ~ mediawiki_config.version ~ '.tar.gz' not in item.path"
+
+    - name: Find old MediaWiki extracted directories
+      ansible.builtin.find:
+        paths: "{{ mediawiki_config.paths.install_dir }}/install"
+        file_type: directory
+        patterns: "*"
+        use_regex: false
+      register: mediawiki_dirs
+
+    - name: Delete outdated MediaWiki extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ mediawiki_dirs.files }}"
+      when: "mediawiki_config.version not in item.path"
+
+    #--------------------------------------------------------------------------------------------------
+    # Config
+    #--------------------------------------------------------------------------------------------------
+
+    - name: Install MediaWiki via install.php
+      ansible.builtin.command: >
+        php {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/maintenance/install.php
+        --dbname {{ mediawiki_config.db.name }}
+        --dbuser {{ mediawiki_config.db.user }}
+        --dbpass {{ mediawiki_config.db.pass }}
+        --dbtype mysql
+        --pass {{ mediawiki_config.wiki.admin_pass }}
+        "{{ mediawiki_config.wiki.name }}" "{{ mediawiki_config.wiki.admin_user }}"
+      args:
+        creates: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/LocalSettings.php"
+
+    - name: Run MediaWiki update script
+      ansible.builtin.shell: >
+        php {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/maintenance/run.php update
+      become: true
+      become_user: "{{ mediawiki_config.user.name }}"
+      when:
+        - new_mediawiki_install is defined
+        - new_mediawiki_install.changed
+
+    - name: Upload wiki icon files
+      ansible.builtin.copy:
+        src: "files/{{ item }}"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/{{ item }}"
+      loop:
+        - my_wiki.png
+        - my_wiki_favicon.png
+
+    - name: Template LocalSettings.php
+      ansible.builtin.template:
+        src: LocalSettings.php
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/LocalSettings.php"
+
+    #--------------------------------------------------------------------------------------------------
+    # File Upload Configuration
+    #--------------------------------------------------------------------------------------------------
+
+    - name: Check if images dir is a symlink
+      ansible.builtin.stat:
+        path: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/images"
+      register: image_links
+
+    - name: Delete images dir if it's not a symlink
+      ansible.builtin.file:
+        path: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/images"
+        state: absent
+      when: image_links.stat.islnk is not defined or not image_links.stat.islnk
+
+    - name: Create mediawiki_files/images directory
+      ansible.builtin.file:
+        path: "{{ mediawiki_config.paths.install_dir }}/data/images"
+        state: directory
+        owner: "{{ mediawiki_config.user.name }}"
+        group: "{{ mediawiki_config.user.group }}"
+        mode: "0750"
+
+    - name: Link images directory to install
+      ansible.builtin.file:
+        src: "{{ mediawiki_config.paths.install_dir }}/data/images"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/images"
+        owner: "{{ mediawiki_config.user.name }}"
+        group: "{{ mediawiki_config.user.group }}"
+        mode: "0750"
+        state: link
+
+    - name: Install Minerva Neue Skin
+      ansible.builtin.unarchive:
+        src: "minervaneue/{{ mediawiki_minerva_skin_file[mediawiki_config.version] }}"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/skins/"
+        creates: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/skins/MinervaNeue/package.json"
+
+    - name: Create custom Minerva CSS
+      ansible.builtin.template:
+        src: custom_Minerva.css
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/skins/MinervaNeue/custom.css"
+
+    - name: Install MobileFrontend extension
+      ansible.builtin.unarchive:
+        src: "mobilefrontend/{{ mediawiki_mobile_frontend_file[mediawiki_config.version] }}"
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/extensions"
+        creates: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/extensions/MobileFrontend/MobileFrontend.alias.php"
+
+    - name: Custom CSS for Vector 2022
+      ansible.builtin.template:
+        src: custom_Vector_2022.css
+        dest: "{{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/mediawiki-{{ mediawiki_config.version }}/skins/Vector/custom-vector-2022.css"
+
+    - name: Set proper permissions
+      ansible.builtin.shell: |
+        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type d -exec chmod 0755 {} +
+        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type f -exec chmod 0644 {} +

@@ -1,0 +1,69 @@
+---
+#============================================================================================================
+# Samba Role Defaults
+#============================================================================================================
+
+# Flag to enable/disable the role
+run_role_samba: false
+
+# User overrides - will be combined with samba_defaults
+samba: {}
+# Default Samba configuration structure
+samba_defaults:
+  # define the root dir for all shared folders
+  shares_root: "/srv/shares"
+  # where user information is stored
+  users_dir: "/etc/samba/users"
+  # samba users are added to this group
+  samba_group: "smbusers"
+  # default owner of samba shares
+  samba_user: "smbuser"
+  # limit of open files
+  root_soft_nofile: "16384"
+
+  # Global settings
+  global:
+    workgroup: "WORKGROUP"
+    netbios_name: ""
+    server_string: "{{ ansible_hostname }}"
+    log_level: "3" # values from 0-10, where 10 is verbose
+    # file name settings
+    case_sensitive: true
+    default_case: "lower"
+    preserve_case: true
+    short_preserve_case: true
+
+  # Default share settings, can be overwritten per share
+  share_defaults:
+    browseable: true
+    read_only: false
+    guest_ok: false
+    force_user: ""
+    force_group: ""
+    create_mode: "0664"
+    force_create_mode: "0664"
+    directory_mode: "0775"
+    force_directory_mode: "0775"
+    share_mode: "0775"
+    hide_special_files: true
+    hide_dot_files: true
+    store_dos_attributes: false
+    follow_symlinks: true
+
+  # list of users that have access to samba
+  # Example share configuration:
+  # users:
+  #   - name: "user1"
+  #     password: "123d" # this should be a variable like "{{ secrets.users.jsmith.passwd }}"
+  users: []
+
+  # Example share configuration:
+  # shares:
+  #   - name: "shared_folder"
+  #     comment: "A shared folder"
+  #     path: "/path/to/shared_folder"
+  #     valid_users: ["@smbusers"] # list of valid users
+  #     write_list: ["@smbusers"]  # list of write users
+  #
+  #     All other settings from share_defaults can be overwritten
+  shares: []

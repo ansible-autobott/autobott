@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# sonarr Daemon Role Handlers
+#============================================================================================================
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart sonarr
+  ansible.builtin.service:
+    name: sonarr
+    state: restarted
+  listen: restart sonarr

@@ -1,0 +1,128 @@
+---
+# APT Sources Configuration
+# Manages APT repository sources and signing keys
+
+- name: "Configure APT package sources"
+  block:
+    - name: "Configure main APT sources"
+      ansible.builtin.template:
+        src: "sources.{{ ansible_distribution_release }}.j2"
+        dest: /etc/apt/sources.list
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+      register: linux_apt_sources_list_changed
+
+    - name: "Configure APT preferences"
+      ansible.builtin.template:
+        src: preferences.j2
+        dest: /etc/apt/preferences
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+
+    - name: "Ensure HTTPS transport support is available"
+      ansible.builtin.apt:
+        name: apt-transport-https
+        state: present
+        update_cache: true
+      register: https_transport_result
+      until: https_transport_result is success
+      retries: 10
+      delay: 30
+
+    - name: "Update APT cache after source changes"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      when: linux_apt_sources_list_changed.changed
+      changed_when: false
+      failed_when: false
+
+    - name: "Manage additional APT repositories"
+      block:
+        - name: "Import repository signing keys"
+          ansible.builtin.apt_key:
+            url: "{{ item.key_url }}"
+            id: "{{ item.key_id | default(omit) }}"
+            state: present
+          loop: "{{ linux_apt_data.sources_d | default([]) }}"
+          loop_control:
+            label: "{{ item.name }}"
+          when:
+            - item.enabled | default(true) | bool
+            - item.key_url is defined
+            - item.key_url | length > 0
+          register: key_import_result
+          until: key_import_result is success
+          retries: 3
+          delay: 5
+
+        - name: "Add enabled repositories"
+          ansible.builtin.apt_repository:
+            repo: "{{ item.repo }}"
+            state: present
+            filename: "{{ item.name }}"
+            update_cache: true
+            mode: "0644"
+          loop: "{{ linux_apt_data.sources_d | default([]) }}"
+          loop_control:
+            label: "{{ item.name }}"
+          when: item.enabled | default(true) | bool
+          register: repo_add_result
+          until: repo_add_result is success
+          retries: 3
+          delay: 5
+
+        - name: "Remove disabled repositories"
+          ansible.builtin.apt_repository:
+            repo: "{{ item.repo }}"
+            state: absent
+            filename: "{{ item.name }}"
+            update_cache: true
+          loop: "{{ linux_apt_data.sources_d | default([]) }}"
+          loop_control:
+            label: "{{ item.name }}"
+          when: not (item.enabled | default(true) | bool)
+
+        - name: "Remove disabled repository keys"
+          ansible.builtin.apt_key:
+            id: "{{ item.key_id | default(omit) }}"
+            state: absent
+          loop: "{{ linux_apt_data.sources_d | default([]) }}"
+          loop_control:
+            label: "{{ item.name }}"
+          when:
+            - not (item.enabled | default(true) | bool)
+            - item.key_id is defined
+
+    - name: "Clean up backup sources"
+      block:
+        - name: "Find backup source files"
+          ansible.builtin.find:
+            paths: /etc/apt/sources.list.d
+            file_type: file
+            patterns:
+              - "*.save"
+              - "*.old"
+              - "*.bak"
+          register: linux_apt_backup_sources_list
+
+        - name: "Remove backup source files"
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ linux_apt_backup_sources_list.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+
+  rescue:
+    - name: "Log APT sources configuration failure"
+      ansible.builtin.debug:
+        msg: "Failed to configure APT sources. Please check repository availability and network connectivity."
+
+    - name: "Fail with clear message"
+      ansible.builtin.fail:
+        msg: "APT sources configuration failed. Manual intervention may be required."

@@ -1,0 +1,45 @@
+---
+#============================================================================================================
+# Firewall  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_firewall: false
+
+# User overrides - will be combined with firewall_defaults
+firewall: {}
+# Default configuration structure
+firewall_defaults:
+
+  allow_inbound_tcp:
+    - 80    # HTTP
+    - 443   # HTTPS
+
+  allow_inbound_udp: []
+
+
+  # Customize allowed outbound ports (e.g., DNS, HTTP/S, APT)
+  allowed_outbound_tcp: []
+
+  allowed_outbound_udp: []
+
+  # allow local network to access docker interfaces
+  allow_docker: True
+
+# this is the bare minimum of ports needed for autobott to work.
+# change at own risk if you know what you are doing.
+# e.g. you can close port 22 if you have a working VPN.
+firewall_required:
+
+  allow_inbound_tcp:
+    - 22    # SSH
+  allow_inbound_udp: []
+
+  allowed_outbound_tcp:
+    - 53    # DNS
+    - 80    # HTTP, needed e.g. for apt-get
+    - 443   # HTTPS, needed e.g. for apt-get
+    - 587   # SMTP STARTTLS (used by nullmailer)
+
+  allowed_outbound_udp:
+    - 53    # DNS

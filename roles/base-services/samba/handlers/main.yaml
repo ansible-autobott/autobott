@@ -1,0 +1,18 @@
+---
+#============================================================================================================
+# Samba Role Handlers
+#============================================================================================================
+
+- name: Restart samba
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  listen: restart samba
+  loop: "{{ samba_config.services | default(['smbd', 'nmbd']) }}"
+
+- name: Reload samba
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: reloaded
+  listen: reload samba
+  loop: "{{ samba_config.services | default(['smbd', 'nmbd']) }}"

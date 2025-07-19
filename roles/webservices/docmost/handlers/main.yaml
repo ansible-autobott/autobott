@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart docmost
+  ansible.builtin.systemd:
+    name: docmost
+    state: restarted
+  listen: restart docmost

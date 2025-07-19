@@ -1,0 +1,4 @@
+# templates/caddy/redirect.caddy
+{% include  'parts/servername.j2' %} {
+    redir {{ server.redirect_target }} {{server.redirect_code | default (308)}}
+}

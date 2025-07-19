@@ -1,0 +1,88 @@
+# ====  {{ ansible_managed }}  ====
+
+# About sources, see https://wiki.debian.org/SourcesList for more information.
+
+# == MAIN ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm main
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm main
+
+# == UPDATES ==
+# to get updates before a point release is made;
+# see https://www.debian.org/doc/manuals/debian-reference/ch02.en.html#_updates_and_backports
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm-updates main
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm-updates main
+
+# == SECURITY ==
+deb http://security.debian.org/debian-security bookworm-security main
+# deb-src http://security.debian.org/debian-security bookworm-security main
+
+
+{% if linux_apt_data.use_contrib is defined and linux_apt_data.use_contrib %}
+# == CONTRIB ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm contrib
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm contrib
+{% endif %}
+
+
+{% if linux_apt_data.use_nonfree is defined and linux_apt_data.use_nonfree %}
+# == NON-FREE ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm non-free
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm non-free-firmware
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ bookworm non-free
+
+deb http://ftp.ch.debian.org/debian/ bookworm-updates non-free-firmware
+#deb-src http://ftp.ch.debian.org/debian/ bookworm-updates non-free-firmware
+
+# Security firmware
+deb http://security.debian.org/debian-security bookworm-security non-free-firmware
+# deb-src http://security.debian.org/debian-security bookworm-security non-free-firmware
+{% endif %}
+
+{% if linux_apt_data.use_backports is defined and linux_apt_data.use_backports %}
+# == BACKPORTS ==
+deb http://deb.debian.org/debian bookworm-backports main contrib non-free non-free-firmware
+{% endif %}
+
+
+{% if "testing" in linux_apt_data.preference %}
+#==========================================================
+# Testing
+#==========================================================
+# == MAIN ==
+deb http://ftp.ch.debian.org/debian/ testing main
+# deb-src http://ftp.ch.debian.org/debian/ testing main
+
+{% if linux_apt_data.use_contrib is defined and linux_apt_data.use_contrib %}
+# == CONTRIB ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ testing contrib
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ testing contrib
+{% endif %}
+
+{% if linux_apt_data.use_nonfree is defined and linux_apt_data.use_nonfree %}
+# == NON-FREE ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ testing non-free
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ testing non-free
+{% endif %}
+
+{% endif %}
+
+{% if "unstable" in linux_apt_data.preference %}
+#==========================================================
+# Unstable
+#==========================================================
+# == MAIN ==
+deb http://ftp.ch.debian.org/debian/ unstable main
+# deb-src http://ftp.ch.debian.org/debian/ unstable main
+
+{% if linux_apt_data.use_contrib is defined and linux_apt_data.use_contrib %}
+# == CONTRIB ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ unstable contrib
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ unstable contrib
+{% endif %}
+
+{% if linux_apt_data.use_nonfree is defined and linux_apt_data.use_nonfree %}
+# == NON-FREE ==
+deb http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ unstable non-free
+# deb-src http://ftp.{{ linux_apt_data.mirror_country }}.debian.org/debian/ unstable non-free
+{% endif %}
+{% endif %}

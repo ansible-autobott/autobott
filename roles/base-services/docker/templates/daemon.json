@@ -1,0 +1,12 @@
+{{
+{
+  "metrics-addr": "127.0.0.1:9323" if docker_data.expose_metrics else None,
+  "experimental": docker_data.experimental if docker_data.experimental is defined else None,
+  "userns-remap": docker_data.userns_remap if docker_data.userns_remap is defined else None,
+  "live-restore": docker_data.live_restore if docker_data.live_restore is defined else None
+}
+| dict2items
+| selectattr("value", "ne", none)
+| items2dict
+| to_nice_json
+}}

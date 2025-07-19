@@ -1,0 +1,29 @@
+---
+# Install openzfs
+
+- name: Configure basic Linux system
+  tags:
+    - "zfs"
+    - "untagged"
+  when:
+    - run_role_zfs | bool
+  block:
+    - name: Install common disk utilities
+      ansible.builtin.package:
+        name:
+          - parted
+          - gdisk
+        state: present
+
+    - name: Check if contrib repository is enabled
+      ansible.builtin.command: apt-cache policy
+      register: apt_cache_policy
+      changed_when: false
+
+    - name: Fail if contrib repository is not enabled
+      ansible.builtin.fail:
+        msg: "The contrib repository is not enabled. ZFS packages require the contrib repository to be enabled. Please enable it with: sudo apt-add-repository contrib"
+      when: "'contrib' not in apt_cache_policy.stdout"
+
+    - name: Include distribution-specific ZFS installation tasks
+      ansible.builtin.include_tasks: "distro/{{ ansible_distribution_release }}.yaml"

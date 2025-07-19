@@ -1,0 +1,35 @@
+---
+#============================================================================================================
+# Docmost Role Defaults
+#============================================================================================================
+run_role_docmost: false
+
+# User overrides - will be combined with docmost_defaults
+docmost: {}
+# Default configuration structure
+docmost_defaults:
+
+  # https://github.com/getdocmost/docmost/releases
+  version: 0.21.0@sha256:7b69c758d1b3286eaa5ba961fcc1b263bc5768124f29b097ce39fff5e48c073f
+  app_url: localhost:8080
+  # change, only the characters `A-Za-z0-9`, without special characters or spaces
+  db_pass: "changeMe"
+  # needs to be at least 32 chars
+  app_secret: "REPLACE_WITH_LONG_SECRET_REPLACE_WITH_LONG_SECRET"
+
+  # User and group configuration
+  user:
+    name: docmost
+    uid: # Let system assign UID
+    group: docmost
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/docmost
+    data_dir: /opt/docmost/data
+    db_dir: /opt/docmost/db
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 3030

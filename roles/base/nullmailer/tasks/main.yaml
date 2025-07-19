@@ -1,0 +1,76 @@
+---
+#============================================================================================================
+# Nullmailer
+#============================================================================================================
+- name: main nullmailer block
+  tags:
+    - nullmailer
+    - untagged
+  when:
+    - run_role_nullmailer | bool
+  block:
+
+    - name: Set merged nullmailer configuration
+      ansible.builtin.set_fact:
+        nullmailer_config: "{{ nullmailer_defaults | combine(nullmailer, recursive=true) }}"
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - nullmailer
+          - mailutils
+        state: present
+        update_cache: yes
+
+#    - name: Write short hostname to /etc/nullmailer/me
+#      ansible.builtin.copy:
+#        dest: /etc/nullmailer/me
+#        content: "{{ ansible_hostname }}"
+#        owner: root
+#        group: root
+#        mode: '0644'
+
+    - name: Create adminaddr file
+      ansible.builtin.copy:
+        dest: /etc/nullmailer/adminaddr
+        content: "{{ nullmailer_config.email_to }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart nullmailer
+
+    - name: Create allmailfrom file
+      ansible.builtin.copy:
+        dest: /etc/nullmailer/allmailfrom
+        content: "{{ nullmailer_config.override_from }}"
+        owner: root
+        group: root
+        mode: '0644'
+      when: nullmailer_config.override_from is defined and nullmailer_config.override_from | trim != ''
+      notify: restart nullmailer
+
+    - name: Delete allmailfrom file
+      ansible.builtin.file:
+        path: /etc/nullmailer/allmailfrom
+        state: absent
+      when: nullmailer_config.override_from is not defined or nullmailer_config.override_from | trim == ''
+      notify: restart nullmailer
+
+    - name: Fail if any critical variable is empty
+      ansible.builtin.fail:
+        msg: "One or more critical variables are empty"
+      when: >
+        nullmailer_config.smtp_server | default('') == '' or
+        nullmailer_config.smtp_user | default('') == '' or
+        nullmailer_config.smtp_pass | default('') == ''
+      notify: restart nullmailer
+
+    - name: Create remotes file
+      ansible.builtin.copy:
+        dest: /etc/nullmailer/remotes
+        content: |
+          {{ nullmailer_config.smtp_server }} smtp --auth-login --port=587 --starttls --user={{ nullmailer_config.smtp_user }} --pass={{ nullmailer_config.smtp_pass }}
+        owner: root
+        group: mail
+        mode: '0640'
+      notify: restart nullmailer

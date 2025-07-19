@@ -1,0 +1,10 @@
+---
+- name: Restart sshd
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  listen: restart sshd
+  loop:
+    - sshd
+    - ssh
+  ignore_errors: true # in case one of the services does not exist

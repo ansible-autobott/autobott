@@ -1,0 +1,23 @@
+# {{ ansible_managed }}
+#
+# These groups are read by MariaDB server.
+# Use it for options that only the server (but not clients) should see
+
+# this is read by the standalone daemon and embedded servers
+[server]
+
+[client-server]
+port = {{ mariadb_config.port }}
+# socket = /run/mysqld/mysqld.sock
+
+# this is only for the mysqld standalone daemon
+[mysqld]
+
+#########################################################
+# Basic Settings
+#########################################################
+
+{% if mariadb_config.sql_mode != "" %}
+sql_mode = "{{ mariadb_config.sql_mode }}"
+{%- endif %}
+

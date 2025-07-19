@@ -1,0 +1,23 @@
+---
+#============================================================================================================
+# Nullmailer
+#============================================================================================================
+# Flag to disable the role
+run_role_nullmailer: False
+
+# User overrides - will be combined with defaults
+nullmailer: {}
+
+nullmailer_defaults:
+  # destination address to send emails to, accepts multiple emails comma separated
+  email_to: ""
+  # smtp configuration
+  smtp_server: ""
+  smtp_user: ""
+  smtp_pass: ""
+
+  # override set the from field in send emails
+  # note see: https://github.com/bruceg/nullmailer/issues/72
+  override_from: ""
+  # set the default domain from where emails are sent from
+  email_from: ""

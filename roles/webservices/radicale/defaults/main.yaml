@@ -1,0 +1,26 @@
+---
+#============================================================================================================
+# Radicale Role Defaults
+#============================================================================================================
+# Role execution control
+run_role_radicale: false
+
+# User configuration override (will be merged with radicale_defaults)
+radicale: {}
+radicale_defaults:
+  version: "3.5.4"
+  log_level: "debug" # debug | info | warning | error | critical
+  user:
+    name: radicale
+    uid: # Let system assign UID
+    group: radicale
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/radicale
+    data_dir: /opt/radicale/data
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 5232

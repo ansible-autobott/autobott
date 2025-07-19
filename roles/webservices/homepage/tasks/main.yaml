@@ -1,0 +1,155 @@
+---
+#============================================================================================================
+# Homepage Role
+#============================================================================================================
+
+- name: Main Homepage installation and configuration
+  tags:
+    - homepage
+    - untagged
+  when: run_role_homepage | bool
+  block:
+    - name: Set merged homepage configuration
+      ansible.builtin.set_fact:
+        homepage_config: "{{ homepage_defaults | combine(homepage, recursive=true) }}"
+      tags:
+        - homepage-settings
+
+    - name: Create homepage system group
+      ansible.builtin.group:
+        name: "{{ homepage_config.user.group }}"
+        gid: "{{ homepage_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create homepage system user
+      ansible.builtin.user:
+        name: "{{ homepage_config.user.name }}"
+        uid: "{{ homepage_config.user.uid | default(omit, true) }}"
+        group: "{{ homepage_config.user.group }}"
+        home: "{{ homepage_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Get UID of homepage user
+      ansible.builtin.command: id -u {{ homepage_config.user.name }}
+      register: homepage_uid_cmd
+      changed_when: false
+
+    - name: Set homepage_uid fact
+      ansible.builtin.set_fact:
+        homepage_uid: "{{ homepage_uid_cmd.stdout }}"
+
+    - name: Get GID of homepage group
+      ansible.builtin.command: id -g {{ homepage_config.user.group }}
+      register: homepage_gid_cmd
+      changed_when: false
+
+    - name: Set homepage_gid fact
+      ansible.builtin.set_fact:
+        homepage_gid: "{{ homepage_gid_cmd.stdout }}"
+
+    - name: Create Homepage directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ homepage_config.user.name }}"
+        group: "{{ homepage_config.user.group }}"
+      loop:
+        - "{{ homepage_config.paths.base_dir }}/config"
+        - "{{ homepage_config.paths.base_dir }}/images"
+        - "{{ homepage_config.paths.base_dir }}/icons"
+
+    - name: Copy JPG images from inventory and role to target directory
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ homepage_config.paths.base_dir }}/images/{{ item | basename }}"
+      loop: >-
+        {{
+          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/images/*.jpg', wantlist=True)
+          +
+          lookup('ansible.builtin.fileglob', role_path + '/files/images/*.jpg', wantlist=True)
+        }}
+      run_once: true
+      notify: restart homepage
+
+    - name: Copy JPG icons from inventory and role to target directory
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
+      loop: >-
+        {{
+          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/icons/*.jpg', wantlist=True)
+          +
+          lookup('ansible.builtin.fileglob', role_path + '/files/icons/*.jpg', wantlist=True)
+        }}
+      run_once: true
+      notify: restart homepage
+
+    - name: Copy PNG icons from inventory and role to target directory
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
+      loop: >-
+        {{
+          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/icons/*.png', wantlist=True)
+          +
+          lookup('ansible.builtin.fileglob', role_path + '/files/icons/*.png', wantlist=True)
+        }}
+      run_once: true
+      notify: restart homepage
+
+    - name: Copy first-found image to target directory
+      ansible.builtin.copy:
+        src: >-
+          {{
+            lookup('ansible.builtin.first_found',
+              {
+                'files': [
+                  inventory_dir + '/files/homepage/' + inventory_hostname + '/' + item,
+                  inventory_dir + '/files/homepage/' + item,
+                  role_path + '/files/' + item
+                ],
+                'skip': False
+              }
+            )
+          }}
+        dest: "{{ homepage_config.paths.base_dir }}/config/{{ item }}"
+      notify: restart homepage
+      tags:
+        - homepage-settings
+      loop:
+        - settings.yaml
+        - bookmarks.yaml
+        - widgets.yaml
+        - services.yaml
+
+
+    - name: "Create files needed for run docker"
+      ansible.builtin.template:
+        src: "docker-compose.yml"
+        dest: "{{ homepage_config.paths.base_dir }}/docker-compose.yml"
+        owner: "{{ homepage_config.user.name }}"
+        group: "{{ homepage_config.user.group }}"
+        mode: "0644"
+      notify: restart homepage
+
+    - name: Configure systemd wrapper service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/homepage.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart homepage
+
+    - name: Enable and start the service
+      ansible.builtin.systemd:
+        name: homepage
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd

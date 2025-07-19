@@ -1,0 +1,130 @@
+---
+#============================================================================================================
+# PHP-FPM Role - Main Tasks
+#============================================================================================================
+#
+#- name: Include cleanup tasks
+#  ansible.builtin.include_tasks: cleanup.yaml
+#  when: run_role_php_fpm
+
+#============================================================================================================
+# PHP-FPM
+#============================================================================================================
+
+- name: Main PHP-FPM block
+  tags:
+    - php-fpm
+    - untagged
+  when:
+    - run_role_php_fpm | bool
+  block:
+    - name: Set merged PHP-FPM configuration
+      ansible.builtin.set_fact:
+        php_fpm_config: "{{ php_fpm_defaults | combine(php_fpm, recursive=true) }}"
+
+    - name: Load distribution-specific variables
+      ansible.builtin.include_vars: "{{ ansible_distribution_release }}.yaml"
+      when: ansible_distribution_release is defined
+
+    - name: Install PHP-FPM and modules
+      ansible.builtin.apt:
+        name: "{{ php_modules }}"
+        state: present
+        update_cache: true
+        install_recommends: false
+
+    - name: Change PHP-FPM error log to syslog
+      ansible.builtin.lineinfile:
+        path: "/etc/php/{{ php_version }}/fpm/php-fpm.conf"
+        regexp: "^error_log\\s*="
+        line: "error_log = syslog"
+        backup: true
+      notify: restart php-fpm
+
+    - name: Configure PHP-FPM
+      ansible.builtin.template:
+        src: "php.{{ php_version }}.ini"
+        dest: "/etc/php/{{ php_version }}/fpm/php.ini"
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /usr/bin/php8.2 -c %s -m > /dev/null
+      notify: restart php-fpm
+
+    - name: Clean package cache
+      ansible.builtin.apt:
+        clean: true
+      changed_when: false
+
+#============================================================================================================
+# Cleanup
+#============================================================================================================
+
+    - name: Find PHP version directories excluding current version
+      ansible.builtin.find:
+        paths: /etc/php
+        file_type: directory
+        excludes:
+          - "{{ php_version | string }}"
+      register: php_configs_found
+
+    - name: Remove old PHP configuration directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ php_configs_found.files }}"
+
+    - name: Find old PHP-FPM log files
+      ansible.builtin.find:
+        paths: /var/log
+        recurse: false
+        file_type: file
+        use_regex: true
+        patterns: "{{ php_old_log_patterns }}"
+      register: older_logs
+
+    - name: Remove old PHP-FPM log files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ older_logs.files }}"
+
+    - name: Remove old PHP paths
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ php_old_remove }}"
+
+#============================================================================================================
+# Uninstall
+#============================================================================================================
+- name: Uninstall PHP-FPM block
+  tags:
+    - php-fpm
+    - untagged
+  when: not run_role_php_fpm
+  block:
+    - name: Load distribution-specific variables
+      ansible.builtin.include_vars: "{{ ansible_distribution_release }}.yaml"
+      when: ansible_distribution_release is defined
+
+    - name: Check if PHP-FPM service exists
+      ansible.builtin.stat:
+        path: "/lib/systemd/system/php{{ php_version }}-fpm.service"
+      register: php_fpm_service_file
+
+    - name: Stop PHP-FPM service if installed
+      ansible.builtin.service:
+        name: "php{{ php_version }}-fpm"
+        state: stopped
+      when: php_fpm_service_file.stat.exists
+
+    - name: Uninstall PHP-FPM and modules
+      ansible.builtin.apt:
+        name: "{{ php_modules }}"
+        state: absent
+        purge: true
+
+    - name: Remove unused dependencies
+      ansible.builtin.apt:
+        autoremove: true

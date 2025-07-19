@@ -1,0 +1,72 @@
+/* ==============================================================
+   Minerva Neue
+ ==============================================================*/
+/* make search pages result visible in order to allow new pages to be created*/
+.searchresults .mw-search-createlink{
+    display: block;
+}
+
+/* change color of h1 */
+.mw-body #bodyContent h1{
+    background: #344054;
+    padding: 0.2em;
+    color: #e8e8e8;
+    border-bottom: 0;
+    font-weight: bold;
+}
+
+/* change structure of headings*/
+.mw-body #bodyContent .mw-heading h1,
+.mw-body #bodyContent .mw-heading h2,
+.mw-body #bodyContent .mw-heading h3,
+.mw-body #bodyContent .mw-heading h4,
+.mw-body #bodyContent .mw-heading h5,
+.mw-body #bodyContent .mw-heading   h6
+{
+    display:block;
+    margin: 10px 0;
+    font-family: sans-serif;
+}
+
+.mw-body #bodyContent h1 span,
+.mw-body #bodyContent h2 span,
+.mw-body #bodyContent h3 span,
+.mw-body #bodyContent h4 span,
+.mw-body #bodyContent h5 span,
+.mw-body #bodyContent h6 span
+{
+    display: inline;
+}
+
+/* correct display of TOC */
+.mw-body #bodyContent  .toc .toctitle h2{
+    display: inline-block;
+}
+
+/* change edit icon*/
+.mw-editsection {
+    margin-left: 1rem;
+}
+.mw-editsection .mw-ui-icon-element{
+    padding: 0.35em;
+}
+.mw-editsection a{
+    background: white;
+}
+.mw-editsection a.mw-ui-icon-element:hover{
+    background: #cacaca;
+}
+.mw-editsection a span:before{
+    color: white;
+}
+
+/*change the color of the pre elements*/
+.mw-body .content  pre{
+    background: #F0F8FF;
+    padding: 0.3em 0.8em;
+    margin-bottom: 0.8rem;
+}
+
+.mw-body  .content li {
+     margin-bottom: 0px;
+}

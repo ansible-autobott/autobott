@@ -1,0 +1,49 @@
+---
+# System Upgrade Tasks
+# Handles APT package updates and system cleanup
+
+- name: "Perform system upgrade"
+  tags:
+    - "linux-upgrade"
+    - "never"
+  block:
+    - name: "Update APT cache"
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      changed_when: false
+      register: apt_update_result
+      until: apt_update_result is success
+      retries: 3
+      delay: 5
+
+    - name: "Perform full system upgrade"
+      ansible.builtin.apt:
+        upgrade: full
+        force_apt_get: true # More reliable than apt
+        dpkg_options: "force-confdef,force-confold" # Handle config file conflicts
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+      register: upgrade_result
+      until: upgrade_result is success
+      retries: 3
+      delay: 5
+
+    - name: "Clean package cache"
+      ansible.builtin.apt:
+        autoclean: true
+        clean: true # More thorough cleaning
+
+    - name: "Remove orphaned packages"
+      ansible.builtin.apt:
+        autoremove: true
+        purge: true # Remove configuration files too
+
+  rescue:
+    - name: "Log upgrade failure"
+      ansible.builtin.debug:
+        msg: "System upgrade failed. Please check the logs and package status."
+
+    - name: "Fail with clear message"
+      ansible.builtin.fail:
+        msg: "System upgrade failed. Manual intervention may be required."

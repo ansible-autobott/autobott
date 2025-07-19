@@ -1,0 +1,158 @@
+---
+#============================================================================================================
+# Prometheus Role
+#============================================================================================================
+
+- name: Main Prometheus installation and configuration
+  tags:
+    - prometheus
+    - monitoring
+    - untagged
+  when: run_role_prometheus | bool
+  block:
+    - name: Set merged prometheus configuration
+      ansible.builtin.set_fact:
+        prometheus_config: "{{ prometheus_defaults | combine(prometheus, recursive=true) }}"
+
+    - name: Create prometheus system group
+      ansible.builtin.group:
+        name: "{{ prometheus_config.user.group }}"
+        gid: "{{ prometheus_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create prometheus system user
+      ansible.builtin.user:
+        name: "{{ prometheus_config.user.name }}"
+        uid: "{{ prometheus_config.user.uid | default(omit, true) }}"
+        group: "{{ prometheus_config.user.group }}"
+        home: "{{ prometheus_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create prometheus directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ prometheus_config.user.name }}"
+        group: "{{ prometheus_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ prometheus_config.paths.data_dir }}"
+        - "{{ prometheus_config.paths.config_dir }}/rules"
+        - "{{ prometheus_config.paths.base_dir }}/install"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Prometheus tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_config.version }}/prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ prometheus_config.paths.base_dir }}/install/prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
+        owner: "{{ prometheus_config.user.name }}"
+        group: "{{ prometheus_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ prometheus_checksums[prometheus_config.version] }}"
+
+    - name: Extract Prometheus tarball
+      ansible.builtin.unarchive:
+        src: "{{ prometheus_config.paths.base_dir }}/install/prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
+        dest: "{{ prometheus_config.paths.base_dir }}/install"
+        remote_src: true
+        owner: "{{ prometheus_config.user.name }}"
+        group: "{{ prometheus_config.user.group }}"
+        mode: "0750"
+        creates: "{{ prometheus_config.paths.base_dir }}/install/prometheus-{{ prometheus_config.version }}.linux-amd64/prometheus"
+
+    - name: Link Prometheus binary to latest
+      ansible.builtin.file:
+        src: "{{ prometheus_config.paths.base_dir }}/install/prometheus-{{ prometheus_config.version }}.linux-amd64/"
+        dest: "{{ prometheus_config.paths.base_dir }}/install/prometheus_latest"
+        state: link
+      notify: restart prometheus
+
+    - name: Find old Prometheus tarballs
+      ansible.builtin.find:
+        paths: "{{ prometheus_config.paths.base_dir }}/install"
+        patterns: "prometheus-*.linux-amd64.tar.gz"
+        use_regex: false
+      register: prometheus_tarballs
+
+    - name: Delete outdated Prometheus tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ prometheus_tarballs.files }}"
+      when: "'prometheus-' ~ prometheus_config.version ~ '.linux-amd64.tar.gz' not in item.path"
+
+    - name: Find old Prometheus extracted directories
+      ansible.builtin.find:
+        paths: "{{ prometheus_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "prometheus-*"
+        use_regex: false
+      register: prometheus_dirs
+
+    - name: Delete outdated Prometheus extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ prometheus_dirs.files }}"
+      when: "'prometheus-' ~ prometheus_config.version ~ '.linux-amd64' not in item.path"
+
+      #====================================================
+      # Config
+      #====================================================
+
+    - name: Main prometheus configuration
+      ansible.builtin.template:
+        src: prometheus.yaml
+        dest: "{{ prometheus_config.paths.config_dir }}/prometheus.yaml"
+        owner: "{{ prometheus_config.user.name }}"
+        group: "{{ prometheus_config.user.group }}"
+        mode: "0640"
+      notify:
+        - restart prometheus
+
+    - name: Create rule files
+      ansible.builtin.copy:
+        src: "{{ lookup('first_found', params) }}"
+        dest: "{{ prometheus_config.paths.config_dir }}/rules/{{ item }}"
+        owner: "{{ prometheus_config.user.name }}"
+        group: "{{ prometheus_config.user.group }}"
+        mode: "0640"
+      vars:
+        params:
+          files:
+            - "{{ item }}"
+          paths:
+            - "{{ inventory_dir }}/files/prometheus_rules"
+            - "{{ role_path }}/files/prometheus_rules"
+      with_items: "{{ prometheus_config.rules_files }}"
+      when: prometheus_config.rules_files | length > 0
+      notify:
+        - restart prometheus
+
+    #====================================================
+    # Service
+    #====================================================
+
+    - name: Setup Prometheus systemd service
+      ansible.builtin.template:
+        src: prometheus.service.j2
+        dest: /lib/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - restart prometheus
+
+    - name: Enable and reload Prometheus systemd service
+      ansible.builtin.systemd:
+        name: prometheus
+        enabled: true
+        daemon_reload: true
+      notify:
+        - Reload systemd
+        - restart prometheus

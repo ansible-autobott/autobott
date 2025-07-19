@@ -1,0 +1,62 @@
+---
+- name: Create webservice database
+  community.mysql.mysql_db:
+    name: >-
+      {{ webservice.mariadb.db_name
+         if (webservice.mariadb.db_name is defined and webservice.mariadb.db_name | trim != '')
+         else webservice.name }}
+    collation: >-
+      {{ webservice.mariadb.collation
+         if (webservice.mariadb.collation is defined and webservice.mariadb.collation | trim != '')
+         else vhosts_cfg_data.mariadb.collation }}
+    encoding: >-
+      {{ webservice.mariadb.encoding
+         if (webservice.mariadb.encoding is defined and webservice.mariadb.encoding | trim != '')
+         else vhosts_cfg_data.mariadb.encoding }}
+    state: present
+  when:
+    - webservice.enabled | default(true)
+    - webservice.mariadb.enabled | default(false)
+
+- name: Delete deactivated webservice databases
+  community.mysql.mysql_db:
+    name: >-
+      {{ webservice.mariadb.db_name
+         if webservice.mariadb.db_name is defined and webservice.mariadb.db_name != 'default'
+         else webservice.name }}
+    state: absent
+  when:
+    - webservice.mariadb is defined
+    - webservice.enabled | default(true) | bool == false
+    - webservice.delete_data | default(false) | bool == true
+    - webservice.mariadb.enabled | default(true) | bool == false
+
+- name: Create webservice mariadb user
+  community.mysql.mysql_user:
+    name: >-
+      {{ webservice.mariadb.user
+         if (webservice.mariadb.user is defined and webservice.mariadb.user | trim != '')
+         else webservice.name }}
+    host: localhost
+    password: "{{ webservice.mariadb.password }}"
+    priv: >-
+      {{ (webservice.mariadb.user if (webservice.mariadb.user is defined and webservice.mariadb.user != 'default') else webservice.name) }}.*:ALL
+    state: present
+    append_privs: false
+  when:
+    - webservice.enabled | default(true)
+    - webservice.mariadb.enabled | default(false)
+
+- name: Delete webservice mariadb user
+  community.mysql.mysql_user:
+    name: >-
+      {{ webservice.mariadb.user
+         if (webservice.mariadb.user is defined and webservice.mariadb.user | trim != '')
+         else webservice.name }}
+    host: localhost
+    state: absent
+  when:
+    - webservice.mariadb is defined
+    - webservice.enabled | default(true) | bool == false
+    - webservice.delete_data | default(false) | bool == true
+    - webservice.mariadb.enabled | default(true) | bool == false

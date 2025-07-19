@@ -1,0 +1,37 @@
+---
+
+groups:
+  - name: systemStatus
+    rules:
+      - alert: systemd service down
+        expr: node_systemd_units{state="failed"} > 0
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "systemd service(s) in state failed"
+          description: "at least one systemd service has been in state failed for more than 5 minutes."
+          runbook: https://wiki.rivervps.com/index.php?title=Runbooks
+          server: "{{ $labels.server }}"
+
+      - alert: diskspace low
+        expr: (node_filesystem_free_bytes{device!="tmpfs"} / node_filesystem_size_bytes{device!="tmpfs"} ) *100 < 30
+        labels:
+          severity: info
+        annotations:
+          summary: "disk space is below 30%"
+          description: "disk space is below 30%"
+          runbook:
+          server: "{{ $labels.server }}"
+          device: "{{ $labels.device }}"
+
+      - alert: diskspace low
+        expr: (node_filesystem_free_bytes{device!="tmpfs"} / node_filesystem_size_bytes{device!="tmpfs"} ) *100 < 10
+        labels:
+          severity: warn
+        annotations:
+          summary: "disk space is below 10%"
+          description: "disk space is below 10%"
+          runbook:
+          server: "{{ $labels.server }}"
+          device: "{{ $labels.device }}"

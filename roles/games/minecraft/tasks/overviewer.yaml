@@ -1,0 +1,81 @@
+---
+- name: Check if minecraft-overviewer is installed
+  ansible.builtin.command: dpkg-query -W 'minecraft-overviewer'
+  register: overviewer
+  failed_when: overviewer.rc > 1
+  changed_when: overviewer.rc == 1
+
+- name: Check current installed overviewer version
+  ansible.builtin.command: >
+    dpkg-query -W -f='${Version}' minecraft-overviewer
+  register: overviewer_current_version
+  changed_when: false
+  failed_when: false
+
+- name: Set installed version fact (if available)
+  ansible.builtin.set_fact:
+    overviewer_installed_version: "{{ (overviewer_current_version.stdout | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+)')) | string }}"
+  when: overviewer_current_version.stdout is defined
+
+- name: Install/update overviewer package
+  ansible.builtin.apt:
+    deb: "https://github.com/andresbott/minecraft-overviewer-package/releases/download/v{{ minecraft_config.overviewer.version }}/minecraft-overviewer_{{ minecraft_config.overviewer.version
+      }}_amd64_buster.deb"
+  when: >
+    overviewer.changed or
+    overviewer_installed_version is not defined or
+    (minecraft_config.overviewer.version is version(overviewer_installed_version, '>', strict=True))
+
+- name: Ensure overviewer directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ minecraft_config.user.name }}"
+    group: "{{ minecraft_config.user.group }}"
+    mode: "0750"
+  loop:
+    - "{{ minecraft_config.paths.base }}/overviewer"
+
+- name: Download Minecraft textures for overviewer
+  ansible.builtin.get_url:
+    url: "{{ minecraft_config.overviewer.texture_url }}"
+    dest: "{{ minecraft_config.paths.base }}/overviewer/textures.zip"
+    owner: "{{ minecraft_config.user.name }}"
+    group: "{{ minecraft_config.user.group }}"
+    mode: "0640"
+
+- name: Generate overviewer configuration file
+  ansible.builtin.template:
+    src: overviewer.cfg.py
+    dest: "{{ minecraft_config.paths.base }}/overviewer/overviewer.cfg.py"
+    owner: "{{ minecraft_config.user.name }}"
+    group: "{{ minecraft_config.user.group }}"
+    mode: "0640"
+
+- name: Generate overviewer render script
+  ansible.builtin.template:
+    src: render_overviewer.sh
+    dest: "{{ minecraft_config.paths.base }}/overviewer/render_overviewer.sh"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Enable overviewer rendering cron job
+  ansible.builtin.cron:
+    name: minecraft_overviewer_render
+    cron_file: minecraft_overviewer_render
+    user: root
+    minute: "{{ minecraft_config.overviewer.cron.expression.split(' ')[0] }}"
+    hour: "{{ minecraft_config.overviewer.cron.expression.split(' ')[1] }}"
+    day: "{{ minecraft_config.overviewer.cron.expression.split(' ')[2] }}"
+    month: "{{ minecraft_config.overviewer.cron.expression.split(' ')[3] }}"
+    weekday: "{{ minecraft_config.overviewer.cron.expression.split(' ')[4] }}"
+    job: "{{ minecraft_config.paths.base }}/overviewer/render_overviewer.sh > /dev/null"
+  when: minecraft_config.overviewer.cron.enabled | default(false)
+
+- name: Disable overviewer rendering cron job
+  ansible.builtin.cron:
+    name: minecraft_overviewer_render
+    state: absent
+    cron_file: minecraft_overviewer_render
+  when: not minecraft_config.overviewer.cron.enabled | default(false)

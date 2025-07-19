@@ -1,0 +1,12 @@
+---
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart stash
+  ansible.builtin.service:
+    name: stash
+    state: restarted
+  listen: restart stash

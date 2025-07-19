@@ -1,0 +1,63 @@
+---
+theme: 'auto'
+
+server:
+    address: 'tcp://{{ authelia_config.service.bind_ip }}:{{ authelia_config.service.port }}/'
+
+log:
+    level: "{{ authelia_config.service.loglevel }}"
+    format: "json"
+
+telemetry:
+    metrics:
+        enabled: "{{ authelia_config.service.metrics }}"
+
+totp:
+    issuer: "{{ authelia_config.totp_issuer }}"
+
+storage:
+    encryption_key: "{{ authelia_config.secrets.storage_encryption_key }}"
+    local:
+        path: "{{ authelia_config.paths.data_dir }}/authelia.sqlite3"
+
+identity_validation:
+    elevated_session:
+        require_second_factor: false
+        skip_second_factor: true
+
+access_control:
+  default_policy: 'deny'
+  rules:
+{% for site in authelia_config.sites %}
+  - domain: '{{ site.domain }}'
+    policy: '{{ site.policy }}'
+    subject:
+{% for group in site.groups | default([]) %}
+      - 'group:{{ group }}'
+{% endfor %}
+
+{% endfor %}
+
+session:
+  # since we generate a new secrets on every run, users will be logged out
+  secret: "{{ 64 | random | to_uuid }}"
+  cookies:
+{% for site in authelia_config.cookies %}
+    - name: '{{ site.name}}'
+      domain: '{{ site.domain }}'
+      authelia_url: '{{ site.authelia_url }}'
+{% endfor %}
+
+
+authentication_backend:
+    password_reset:
+        disable: true
+    password_change:
+        disable: true
+    file:
+        path: "{{ authelia_config.paths.data_dir }}/users.yaml"
+
+notifier:
+    filesystem:
+        filename: "{{ authelia_config.paths.data_dir }}/notification.txt"
+

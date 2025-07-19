@@ -1,0 +1,29 @@
+---
+php_version: 8.2
+php_modules:
+  - php-fpm
+  - php-xml
+  - php-curl
+  - php-mbstring
+  - php-mysql
+  - php-sqlite3
+  - php-gd
+  - php-bz2
+  - php-apcu
+
+php_old_remove:
+  - /etc/php/7.0
+  - /etc/php/7.3
+  - /etc/php/7.4
+  - /etc/logrotate.d/php-fpm7.3
+  - /etc/logrotate.d/php-fpm7.4
+  - /etc/logrotate.d/php7.3-fpm
+  - /etc/logrotate.d/php7.4-fpm
+  - /var/log/php
+  - /var/log/php8.2-fpm.log
+
+php_old_log_patterns:
+  - "^php7.4-fpm.log"
+  - "^php7.3-fpm.log"
+  - "^php7.2-fpm.log"
+  - "^php7.1-fpm.log"

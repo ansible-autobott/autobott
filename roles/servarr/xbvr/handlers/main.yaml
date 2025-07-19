@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart xbvr
+  ansible.builtin.service:
+    name: xbvr
+    state: restarted
+  listen: restart xbvr

@@ -1,0 +1,37 @@
+---
+#============================================================================================================
+# ZFS Installation for Debian Bookworm
+#============================================================================================================
+
+- name: Install Linux headers for current kernel
+  ansible.builtin.package:
+    name: "linux-headers-{{ ansible_kernel }}"
+    state: present
+
+- name: Install DKMS and related packages
+  ansible.builtin.apt:
+    name:
+      - dkms
+    state: present
+
+- name: Install ZFS DKMS module
+  ansible.builtin.apt:
+    name:
+      - zfs-dkms
+    state: present
+    install_recommends: false
+    update_cache: true
+  register: zfs_dkms_install
+
+- name: Load ZFS kernel module
+  community.general.modprobe:
+    name: zfs
+    state: present
+
+- name: Install ZFS utilities
+  ansible.builtin.apt:
+    name:
+      - zfsutils-linux
+    state: present
+    install_recommends: false
+    update_cache: true

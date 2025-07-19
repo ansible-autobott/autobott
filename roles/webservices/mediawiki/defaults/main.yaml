@@ -1,0 +1,73 @@
+---
+#============================================================================================================
+# Mediawiki  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_mediawiki: false
+
+# User overrides - will be combined with mediawiki_defaults
+mediawiki: {}
+# Default configuration structure
+mediawiki_defaults:
+  version: 1.43.0
+  download_url: "http://mediawiki.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
+  # Uninstall behavior
+  delete_data_on_uninstall: false
+  # User and group configuration
+  user:
+    name: mediawiki
+    uid: # Let system assign UID
+    group: mediawiki
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    install_dir: /opt/mediawiki
+    public_html: /opt/mediawiki/public
+  # Database config
+  db:
+    name: mediawiki
+    user: mediawiki
+    pass: mediawiki
+  # info specific to the wiki
+  wiki:
+    name: "demo wiki"
+    admin_user: ""
+    admin_pass: ""
+    base_url: "https://wiki.localhost:8443"
+    emergency_contact_mail: "" # email address
+    password_sender_mail: "" # sender of that email address
+    secret_key: ""
+    site_upgrade_key: ""
+
+    namespace: "main"
+    print_exceptions: false
+    locale: "en_US.utf8"
+    lang: "en"
+    # allowed upload extensions
+    allowed_extensions:
+      - pdf
+      - tiff
+      - txt
+    # whitelist extensions that are normally not allowed
+    whitelisted_extensions:
+      - txt
+
+# Supported fe26 versions and checksums
+mediawiki_checksums:
+  "1.43.0": "56e0a7fe2ff78e50b9c87b3d589f2d8df5bcab0018e454b2a4a239c8586bd8ee"
+  "1.44.0": "792177808c3e0831accbe205d57b4133399ad141f0d0a825450a21b24027588f"
+
+# using local file in git as the extension download link expires, easiest way to store the artifact for now
+# https://www.mediawiki.org/wiki/Special:ExtensionDistributor/MobileFrontend
+mediawiki_mobile_frontend_file:
+  "1.43.0": "MobileFrontend-REL1_43-a44f280.tar.gz"
+  "1.44.0": "MobileFrontend-REL1_44.gz"
+# https://www.mediawiki.org/wiki/Skin:Minerva_Neue
+mediawiki_minerva_skin_file:
+  "1.43.0": "MinervaNeue-REL1_43-f09b248.tar.gz"
+  "1.44.0": "MinervaNeue-REL1_44.tar.gz"
+
+#mediawiki_release:
+#  "1.43.0": "REL1_43"
+#

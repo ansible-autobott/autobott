@@ -1,0 +1,61 @@
+---
+#============================================================================================================
+# Alertmanager Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_alertmanager: false
+
+# User configuration override (will be merged with alertmanager_defaults)
+alertmanager: {}
+# Default configuration structure
+alertmanager_defaults:
+  version: 0.28.1
+  # User and group configuration
+  user:
+    name: alertmanager
+    uid: # Let system assign UID
+    group: alertmanager
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/alertmanager
+    data_dir: /opt/alertmanager/data
+    config_dir: /opt/alertmanager/config
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 9093
+    loglevel: info
+
+  receivers: [] # a list of receivers that will be put "as is" in the alertmanager configuration,
+  # see https://prometheus.io/docs/alerting/latest/configuration/#receiver for details
+  #- name: sample-email
+  #  webhook_configs:
+  #    - url: https://my-hook.com
+
+  routes: [] # a list of alert routes that will be put "as is" in the alertmanager configuration,
+  # see https://prometheus.io/docs/alerting/latest/configuration/#route for details
+  #- receiver: 'sample-email'
+  #  group_wait: 30s
+  #  group_by: [cluster, alertname]
+  #  routes:
+  # All alerts with service=mysql or service=cassandra
+  # are dispatched to the database pager.
+  #    - receiver: 'sink'
+  #      group_wait: 10s
+  #      matchers:
+  #        - service=~"mysql|cassandra"
+  inhibit_rules: [] # a list of inhibit_rules that will be put "as is" in the alertmanager configuration,
+  # see https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule for details
+  #- source_match:
+  #    severity: 'critical'
+  #  target_match:
+  #    severity: 'warning'
+  #  equal: ['alertname', 'dev', 'instance']
+
+# Supported alertmanager versions and checksums
+alertmanager_checksums:
+  "0.28.1": "5ac7ab5e4b8ee5ce4d8fb0988f9cb275efcc3f181b4b408179fafee121693311."

@@ -1,0 +1,106 @@
+---
+#============================================================================================================
+# romm
+#============================================================================================================
+
+- name: Main romm block
+  tags:
+    - romm
+    - untagged
+  when:
+    - run_role_romm is defined
+    - run_role_romm
+  block:
+    - name: Set merged romm configuration
+      ansible.builtin.set_fact:
+        romm_config: "{{ romm_defaults | combine(romm, recursive=true) }}"
+
+    - name: Fail if app_secret is not set or is empty
+      fail:
+        msg: "The variable 'romm_config.app_secret' is required and cannot be empty."
+      when: romm_config.app_secret is not defined or romm_config.app_secret | length == 0
+
+    - name: Fail if db_pass is not set or is empty
+      fail:
+        msg: "The variable 'romm_config.db_pass' is required and cannot be empty."
+      when: romm_config.db_pass is not defined or romm_config.db_pass | length == 0
+
+    - name: Create romm system group
+      ansible.builtin.group:
+        name: "{{ romm_config.user.group }}"
+        gid: "{{ romm_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create romm system user
+      ansible.builtin.user:
+        name: "{{ romm_config.user.name }}"
+        uid: "{{ romm_config.user.uid | default(omit, true) }}"
+        group: "{{ romm_config.user.group }}"
+        home: "{{ romm_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Get UID of romm user
+      ansible.builtin.command: id -u {{ romm_config.user.name }}
+      register: romm_uid_cmd
+      changed_when: false
+
+    - name: Set romm_uid fact
+      ansible.builtin.set_fact:
+        romm_uid: "{{ romm_uid_cmd.stdout }}"
+
+    - name: Get GID of romm group
+      ansible.builtin.command: id -g {{ romm_config.user.group }}
+      register: romm_gid_cmd
+      changed_when: false
+
+    - name: Set romm_gid fact
+      ansible.builtin.set_fact:
+        romm_gid: "{{ romm_gid_cmd.stdout }}"
+
+    - name: Create Romm directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ romm_config.user.name }}"
+        group: "{{ romm_config.user.group }}"
+      loop:
+        - "{{ romm_config.paths.data_dir }}/assets"
+        - "{{ romm_config.paths.data_dir }}/resources"
+        - "{{ romm_config.paths.data_dir }}/redis"
+        - "{{ romm_config.paths.data_dir }}"
+        - "{{ romm_config.paths.config_dir }}"
+        - "{{ romm_config.paths.library_dir }}"
+
+    - name: Create files needed for run docker
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "{{ romm_config.paths.base_dir }}/{{ item }}"
+        owner: "{{ romm_config.user.name }}"
+        group: "{{ romm_config.user.group }}"
+        mode: "0644"
+      with_items:
+        - "docker-compose.yml"
+      notify:
+        - restart romm
+
+    - name: Configure systemd wrapper service
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/romm.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart romm
+
+    - name: Enable and start the service
+      ansible.builtin.systemd:
+        name: romm
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd

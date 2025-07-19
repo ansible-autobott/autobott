@@ -1,0 +1,52 @@
+---
+#============================================================================================================
+# APT Package Management Role Defaults
+# Controls the behavior of APT package management, sources, and upgrades
+#============================================================================================================
+
+# Enable/disable the entire role
+run_role_linux_apt: false
+
+# Default values that will be used if not set in inventory
+linux_apt_defaults:
+  # Target distribution release for upgrades (empty string disables release upgrades)
+  release: ""
+
+  # Repository mirror settings
+  mirror_country: "ch" # Country code for mirror selection
+
+  # Repository components configuration, if set to false some other roles might fail to install, e.g. zfs
+  use_contrib: true # Enable 'contrib' component
+  use_nonfree: true # Enable 'non-free' component
+  use_backports: true # Enable backports repository
+
+  # APT preferences configuration
+  #
+  # preference: list of Debian releases to pin, e.g., ['testing', 'unstable']
+  #
+  # This file sets APT pin priorities for package versions from different releases:
+  # - stable: priority 900 (preferred; installed unless a newer version is present)
+  # - testing: priority 400 (used only if no higher priority versions available)
+  # - unstable: priority 50 (used only if package not installed yet)
+  #
+  # Priority ranges summary:
+  #  500 <= P < 990 : install version unless newer installed or from target release
+  #  100 <= P < 500 : install only if no version from higher priority available
+  #  0 < P < 100   : install only if package not already installed
+  #
+  # Example:
+  # preference: ['testing', 'unstable']
+  preference: []
+  automatic_updates: true # Enable unattended-upgrades for security updates
+
+  # Additional repository configuration
+  # List of additional APT repositories to manage
+  # Example structure:
+  # sources_d:
+  #   - name: "docker"                                            # Repository identifier
+  #     repo: "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable"  # Repository definition
+  #     key_url: "https://download.docker.com/linux/debian/gpg"  # Repository signing key URL
+  #     key_id: "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"      # Key fingerprint for verification
+  #     enabled: true                                            # Repository state
+  #     pin_priority: 500                                        # Optional pin priority
+  extra_sources_d: []

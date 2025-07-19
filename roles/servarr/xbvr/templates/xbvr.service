@@ -1,0 +1,14 @@
+[Unit]
+Description=xbvr video server
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ xbvr_config.user.name }}
+ExecStart="{{ xbvr_config.paths.base_dir }}/binaries/latest/xbvr" -app_dir {{ xbvr_config.paths.data_dir }} -web_port {{ xbvr_config.service.web_port }}  --ws_addr {{ xbvr_config.service.websocket_addr }}
+Restart=on-failure
+WorkingDirectory={{ xbvr_config.paths.data_dir }}
+
+[Install]
+WantedBy=multi-user.target

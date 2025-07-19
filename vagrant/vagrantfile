@@ -1,0 +1,72 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+VAGRANT_VM_NAME = "ansible-autobott2-linux"
+# boxes at https://vagrantcloud.com/search.
+
+#VAGRANT_VM_BASE = "debian/bullseye64"
+# using locally build debian image
+VAGRANT_VM_BASE_12= "autobott-debian-12-base"
+
+# https://stackoverflow.com/questions/33250304/how-to-automatically-select-bridged-network-interfaces-in-vagrant
+# Grab the name of the default interface
+$default_network_interface = `ip route | awk '/^default/ {printf "%s", $5; exit 0}'`
+
+Vagrant.configure("2") do |config|
+
+    # ansible-autobott-linux-debian-12
+    config.vm.define "#{VAGRANT_VM_NAME}-debian-12", primary: true do |item|
+        item.vm.box = "#{VAGRANT_VM_BASE_12}"
+
+        item.vm.network "forwarded_port", guest: 8080, host: 8080 # http
+        item.vm.network "forwarded_port", guest: 8443, host: 8443 # https
+
+        # Second bridged adapter
+        # item.vm.network "public_network", bridge: "#{$default_network_interface}"
+
+        item.vm.provider "virtualbox" do |v|
+            # set the name of the VM
+            v.name = "#{VAGRANT_VM_NAME}-debian-12"
+
+            # use a linked clone of the imported machine
+            v.linked_clone = true
+
+            # use VBoxManage to make vm setting
+            #v.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+            v.customize ["modifyvm", :id, "--ioapic", "on"]
+            v.customize ["modifyvm", :id, "--vram", "100"]
+            v.memory = 12000
+            v.cpus = 4
+        end
+    end
+
+    # Disable the new default behavior introduced in Vagrant 1.7, to
+    # ensure that all Vagrant machines will use the same SSH key pair.
+    # See https://github.com/mitchellh/vagrant/issues/5005
+    # added by default ansible
+    config.ssh.insert_key = false
+
+    config.vm.provision "ansible" do |ansible|
+        ansible.verbose = "v"
+        ansible.playbook = "../autobott.yaml"
+        ansible.tags = ["enroll"]
+        ansible.extra_vars = {
+          "autobott_enroll" => {
+            "user" => "ans",
+            "passwd" => "banana",
+            "ssh_keys" => [
+              "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDv0lp74sCQJIrreeyRIFsghhH5696soRK3A0tVs3ZzC ans@autobott"
+            ]
+          }
+        }
+        ansible.groups = {
+          "autobott" =>          ["#{VAGRANT_VM_NAME}-debian-12"]
+        }
+
+        # ansible.host_vars = {
+        #   "host1" => {"http_port" => 303,
+        #               "maxRequestsPerChild" => 909}
+        # }
+    end
+end
+
+

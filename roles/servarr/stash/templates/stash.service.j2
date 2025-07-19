@@ -1,0 +1,14 @@
+[Unit]
+Description=stash video server
+After=syslog.target
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ stash_config.user.name }}
+ExecStart="{{ stash_config.paths.base_dir }}/binaries/stash-latest" -c {{ stash_config.paths.data_dir }}/config.yaml
+Restart=on-failure
+WorkingDirectory={{ stash_config.paths.data_dir }}
+
+[Install]
+WantedBy=multi-user.target

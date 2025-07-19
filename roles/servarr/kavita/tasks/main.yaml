@@ -1,0 +1,150 @@
+---
+#============================================================================================================
+# Kavita Role
+#============================================================================================================
+
+- name: Main Kavita installation and configuration
+  tags:
+    - kavita
+    - servarr
+    - untagged
+  when: run_role_kavita | bool
+  block:
+    - name: Set merged kavita configuration
+      ansible.builtin.set_fact:
+        kavita_config: "{{ kavita_defaults | combine(kavita, recursive=true) }}"
+
+    - name: Create kavita system group
+      ansible.builtin.group:
+        name: "{{ kavita_config.user.group }}"
+        gid: "{{ kavita_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create kavita system user
+      ansible.builtin.user:
+        name: "{{ kavita_config.user.name }}"
+        uid: "{{ kavita_config.user.uid | default(omit, true) }}"
+        group: "{{ kavita_config.user.group }}"
+        home: "{{ kavita_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create kavita directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ kavita_config.user.name }}"
+        group: "{{ kavita_config.user.group }}"
+        mode: "0750"
+      loop:
+        - "{{ kavita_config.paths.data_dir }}"
+        - "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}"
+
+    #====================================================
+    # Install
+    #====================================================
+
+    - name: Download Kavita tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/Kareadita/Kavita/releases/download/v{{ kavita_config.version }}/kavita-linux-x64.tar.gz"
+        dest: "{{ kavita_config.paths.base_dir }}/install/kavita-{{ kavita_config.version }}.linux-x64.tar.gz"
+        owner: "{{ kavita_config.user.name }}"
+        group: "{{ kavita_config.user.group }}"
+        mode: "0644"
+        checksum: "sha256:{{ kavita_checksums[kavita_config.version] }}"
+
+    - name: Extract Kavita tarball
+      ansible.builtin.unarchive:
+        src: "{{ kavita_config.paths.base_dir }}/install/kavita-{{ kavita_config.version }}.linux-x64.tar.gz"
+        dest: "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}"
+        remote_src: true
+        owner: "{{ kavita_config.user.name }}"
+        group: "{{ kavita_config.user.group }}"
+        mode: "0750"
+        creates: "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}/Kavita/Kavita"
+
+    - name: Link Kavita binary to latest
+      ansible.builtin.file:
+        src: "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}"
+        dest: "{{ kavita_config.paths.base_dir }}/install/latest"
+        state: link
+      notify: restart kavita
+
+    - name: Find old Kavita tarballs
+      ansible.builtin.find:
+        paths: "{{ kavita_config.paths.base_dir }}/install"
+        patterns: "kavita-*.linux-x64.tar.gz"
+        use_regex: false
+      register: kavita_tarballs
+
+    - name: Delete outdated Kavita tarballs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ kavita_tarballs.files }}"
+      when: "'kavita-' ~ kavita_config.version ~ '.linux-x64.tar.gz' not in item.path"
+
+    - name: Find old Kavita extracted directories
+      ansible.builtin.find:
+        paths: "{{ kavita_config.paths.base_dir }}/install"
+        file_type: directory
+        patterns: "*"
+        use_regex: false
+      register: kavita_dirs
+
+    - name: Delete outdated Kavita extracted directories
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ kavita_dirs.files }}"
+      when: "kavita_config.version not in item.path"
+
+    - name: Configure systemd service for Kavita
+      ansible.builtin.template:
+        src: service.j2
+        dest: /lib/systemd/system/kavita.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart kavita
+
+    - name: Set proper permissions excluding the Kavita binary
+      ansible.builtin.shell: |
+        find {{ kavita_config.paths.base_dir }}/install/latest/ -type d -exec chmod 0750 {} +
+        find {{ kavita_config.paths.base_dir }}/install/latest/ -type f ! -name 'Kavita' -exec chmod 0640 {} +
+
+    - name: Ensure Kavita binary is executable
+      ansible.builtin.file:
+        path: "{{ kavita_config.paths.base_dir }}/install/latest/Kavita/Kavita"
+        mode: "0750"
+
+    #============================================================================================================
+    # Kavita Configuration
+    #============================================================================================================
+    - name: Configure kavita settings
+      ansible.builtin.lineinfile:
+        path: "{{ kavita_config.paths.base_dir }}/install/latest/Kavita/config/appsettings.json"
+        regexp: '^[ \t]*"{{ item.property | regex_escape() }}":'
+        line: '  "{{ item.property }}": {{ item.value | to_json }},'
+      loop:
+        - { property: "IpAddresses", value: "{{ kavita_config.service.bind_ip }}" }
+        - { property: "TokenKey", value: "{{ lookup('ansible.builtin.password', '/dev/null length=80 chars=ascii_letters,digits') }}" }
+
+    - name: Configure kavita port
+      ansible.builtin.lineinfile:
+        path: "{{ kavita_config.paths.base_dir }}/install/latest/Kavita/config/appsettings.json"
+        regexp: '^[ \t]*"Port":'
+        line: '  "Port": {{ kavita_config.service.port | int }},'
+
+    - name: Enable and start Kavita  service
+      ansible.builtin.systemd:
+        name: kavita
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart kavita

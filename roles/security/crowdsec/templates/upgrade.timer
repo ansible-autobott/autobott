@@ -1,0 +1,10 @@
+# /etc/systemd/system/crowdsec-hub-update.timer:
+[Unit]
+Description=Run CrowdSec Hub Upgrade daily
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target

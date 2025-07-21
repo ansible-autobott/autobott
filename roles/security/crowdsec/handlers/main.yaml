@@ -1,0 +1,13 @@
+---
+- name: Restart Crowdsec
+  ansible.builtin.service:
+    name: crowdsec
+    state: restarted
+  listen: restart crowdsec
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+

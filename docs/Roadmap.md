@@ -20,6 +20,7 @@
 
 # Braindump
 
+* create a simple cron script that will send an alert email if any systemd service is failed state
 * check how to make borgmatic pull for vps manual/automatic backup
 * add a mechanism to prevent running old version
     * store the version on the server

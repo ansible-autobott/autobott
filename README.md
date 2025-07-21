@@ -41,34 +41,52 @@ Minimal desktop functionality is also provided.
 
 This ansible playbook has a convenien vagrant/virtualbox integration for testing and development. 
 
-1. Install virtual box from https://www.virtualbox.org/
-2. install vagrant https://developer.hashicorp.com/vagrant
-3. bake the base vagrant image (this needs to be only once)
+prerequisites: 
 
-This will bake a base debian image that autobott will use to clone other instances 
+
+*  Install virtual box from https://www.virtualbox.org/
+* install vagrant https://developer.hashicorp.com/vagrant 
+
+##### 1. Bake the base image
+
+Create the base vagrant image (this needs to be only once), this will bake a base debian image that autobott will use to clone other instances
+
 ```
 make vagrant-base
 ```
 
-4. Start and Enroll your VM (add the minimal setup to your new image)
+##### Install
+
+Start and Enroll your VM (add the minimal setup to your new image)
 ```
 make vagrant-up
 ```
 
-5. Run all roles to provision all the services
+Run all roles to provision all the services
 ```
 make vagrant-run
-
+```
 #You can also run specific roles,targets using the Vars TAG=<tag> and HOST=<host>
+```
 make vagrant-run TAG=authelia
 ```
+#### Next steps
+
+
+
 After completing the installation (can take a while) you can access the instance on https://localhost:8443
 
 If you get error "WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED", you need to trust the new known_hosts, you can run
 `make vagrant-ssh-renew` to delete and trigger a new ssh login
 
+**ssh access,** you can ssh into the machine with:
+```
+cd vagrant
+vagrant ssh
+```
+##### Cleanup
 
-6. Lastly if you want to delete the image ( or start all over again)
+Lastly if you want to delete the image ( or start all over again)
 
 Note: this will delete all data on the image 
 ```

@@ -69,7 +69,7 @@
         mode: "0600"
         owner: root
         group: root
-      no_log: true TODO
+      no_log: true
       loop: "{{ borgmatic_backups }}"
       when:
         - item.enabled | default(true)
@@ -81,7 +81,7 @@
         src: backup.yaml
         dest: "/etc/borgmatic.d/{{ item.name }}.yaml"
         mode: "0600"
-      no_log: true TODO
+      no_log: true
       loop: "{{ borgmatic_backups }}"
       when: item.enabled | default(true)
 

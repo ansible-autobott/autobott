@@ -71,22 +71,10 @@ borgmatic_backups:
   - name: test_php
     enabled: true
 
-    ssh_key: |
-      -----BEGIN OPENSSH PRIVATE KEY-----
-      b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-      QyNTUxOQAAACDCHKuBvMtJ+AsiuWPfx8F7NrYBVkGccTcHrSAG6ytRfQAAAJgolqJEKJai
-      RAAAAAtzc2gtZWQyNTUxOQAAACDCHKuBvMtJ+AsiuWPfx8F7NrYBVkGccTcHrSAG6ytRfQ
-      AAAEDqR3a0COkKitHz6gKwJ60uyrv9iaUueocXBiZOYCVlN8Icq4G8y0n4CyK5Y9/HwXs2
-      tgFWQZxxNwetIAbrK1F9AAAAFXlvdXItYXBwbGljYXRpb24tbmFtZQ==
-      -----END OPENSSH PRIVATE KEY-----
     encryption_passphrase: 123
     destination:
       - path: /backups/test_php
         label: local
-      - path: ssh://dq202kq5@dq202kq5.repo.borgbase.com/./repo
-        label: borgbase
-        encryption: repokey-blake2-aes-ocb
-
     dirs:
       - root: /vhosts/php/home_dir/public_html
 
@@ -97,10 +85,12 @@ borgmatic_backups:
     destination:
       - path: /backups/ttest2
         label: local
-        # select the encryption type, common values are: repokey-blake2, keyfile-blake2, default is none
+        # select the encryption type, common values are: repokey-blake2, keyfile-blake2 for borg1
+        # and repokey-blake2-aes-ocb for borg 2
+        # default is none
         # if you set an encryption you also must add a encryption_passphrase
         # check "borg init --help" or "borg repo-create --help" with Borg 2.
-        encryption: repokey-blake2-aes-ocb
+        encryption: none
 
     dirs:
       - root: /vhosts/php/home_dir/public_html

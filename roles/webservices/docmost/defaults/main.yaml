@@ -14,7 +14,7 @@ docmost_defaults:
   app_url: localhost:8080
   # change, only the characters `A-Za-z0-9`, without special characters or spaces
   db_pass: "changeMe"
-  # needs to be at least 32 chars
+  # needs to be at least 32 chars, create with openssl rand -base64 24
   app_secret: "REPLACE_WITH_LONG_SECRET_REPLACE_WITH_LONG_SECRET"
 
   # User and group configuration

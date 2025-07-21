@@ -84,7 +84,7 @@ linux_basic:
 #============================================================================================================
 # Nullmailer
 #============================================================================================================
-run_role_nullmailer: yes
+run_role_nullmailer: False
 nullmailer:
   email_to: "root@localhost,me@example.com"
   email_from: "autbott-debian"

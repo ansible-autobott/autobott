@@ -1,7 +1,17 @@
 # Roadmap
 
+## missing roles to migrate
+* base/linux-hardware 
+* security/fail2ban or security/crowdsec
+
+* desktop kde
+* linux-desktop
+
+
 ## possible future services
 
+* base/postgres
+* base/se-linux
 * vaultwarden
 * gonic / airsonic music server
 * excalidraw some type of selfhosted with server storage

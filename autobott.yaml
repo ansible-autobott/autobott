@@ -10,8 +10,6 @@
     - base/linux-basic
     - base/zfs
     - base/nullmailer
-    #  - base/linux-hardware
-    #  - base/se-linux
 
     # ===============  Base Services  =============== #
     - base-services/wireguard
@@ -19,8 +17,6 @@
     - base-services/docker
     - base-services/samba
     - base-services/mariadb
-#    - base-services/postgres
-    - base-services/headscale
 
     # ===============  Backup   =============== #
     - base-services/borg

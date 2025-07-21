@@ -1,0 +1,44 @@
+---
+#============================================================================================================
+# Headscale  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_headscale: false
+
+# User overrides - will be combined with headscale_defaults
+headscale: {}
+# Default configuration structure
+headscale_defaults:
+  # https://github.com/juanfont/headscale/releases
+  version: 0.26.1
+  # https://github.com/simcu/headscale-ui/releases
+  ui_version: 0.1.5
+
+  # User and group configuration
+  user:
+    name: headscale
+    uid: # Let system assign UID
+    group: headscale
+    gid: # Let system assign GID
+  # Installation paths
+  paths:
+    base_dir: /opt/headscale
+    data_dir: /opt/headscale/data
+    # static files to serve the UI
+    ui_dir: /opt/headscale/public_html
+
+  service:
+    bind_ip: 127.0.0.1
+    port: 9181
+    metrics_port: 9180
+
+  # deploy the management UI: https://github.com/gurucomputing/headscale-ui
+  ui:
+    enable: false
+
+headscale_checksums:
+  "0.26.1": "5012577e6fc5d4234aab7b4be0d6e271ea1a4ec38521a8aa472f80ea1fe81cba"
+
+headscale_UI_checksums:
+  "0.1.5": "d2977a723b6d386d86d53dd82983b42e04242ac20d189f1d7c6e4c21287e6e76"

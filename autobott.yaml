@@ -17,6 +17,7 @@
     - base-services/docker
     - base-services/samba
     - base-services/mariadb
+    - base-services/headscale
 
     # ===============  Backup   =============== #
     - base-services/borg

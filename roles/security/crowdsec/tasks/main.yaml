@@ -36,6 +36,13 @@
         line: "url: http://127.0.0.1:{{ crowdsec_config.local_api_port  }}"
       notify: restart crowdsec
 
+    - name: Update firewall bouncer api_url to match new port
+      ansible.builtin.lineinfile:
+        path: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
+        regexp: '^api_url:\s*'
+        line: "api_url: http://127.0.0.1:{{ crowdsec_config.local_api_port }}"
+      notify: restart crowdsec firewall-bouncer
+
     - name: Create Hub Upgrade service
       ansible.builtin.template:
         src: upgrade.service
@@ -48,23 +55,25 @@
         - reload systemd
 
     - name: Create Hub Upgrade timer
-      ansible.builtin.template:
-        src: upgrade.timer
-        dest: /etc/systemd/system/crowdsec-hub-upgrade.timer
-        owner: root
-        group: root
-        mode: "0644"
-        validate: /bin/systemd-analyze verify %s
       when: crowdsec_config.automatic_hub_upgrade
-      notify:
-        - reload systemd
+      block:
+        - name: Create Hub Upgrade timer
+          ansible.builtin.template:
+            src: upgrade.timer
+            dest: /etc/systemd/system/crowdsec-hub-upgrade.timer
+            owner: root
+            group: root
+            mode: "0644"
+            validate: /bin/systemd-analyze verify %s
+          when: crowdsec_config.automatic_hub_upgrade
+          notify:
+            - reload systemd
 
-    - name: Enable and start crowdsec-hub-upgrade.timer
-      ansible.builtin.systemd:
-        name: crowdsec-hub-upgrade.timer
-        enabled: yes
-        state: started
-
+        - name: Enable and start crowdsec-hub-upgrade.timer
+          ansible.builtin.systemd:
+            name: crowdsec-hub-upgrade.timer
+            enabled: yes
+            state: started
 
     - name: Remove Hub Upgrade timer
       when: not (crowdsec_config.automatic_hub_upgrade)
@@ -80,14 +89,12 @@
             name:  crowdsec-hub-upgrade.timer
             state: stopped
             enabled: no
+          when: hub_timer.stat.exists
 
         - name: Remove the systemd timer unit file
           ansible.builtin.file:
             path: /etc/systemd/system/crowdsec-hub-upgrade.timer
             state: absent
-
-
-
 
 
 - name: Remove Crowdsec installation and configuration

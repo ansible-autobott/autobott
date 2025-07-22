@@ -1,0 +1,6 @@
+[Unit]
+Description=CrowdSec Hub Upgrade Service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/cscli hub upgrade

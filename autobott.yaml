@@ -35,7 +35,7 @@
   roles:
     # ===============  Security   =============== #
     #    - security/fail2ban
-    #    - security/crowdsec
+    - security/crowdsec
     - security/firewall
 
     # ===============  Web Base  =============== #

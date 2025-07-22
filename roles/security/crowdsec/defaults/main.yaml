@@ -1,0 +1,18 @@
+---
+#============================================================================================================
+# Crowdsec  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_crowdsec: false
+
+# User overrides - will be combined with crowdsec_defaults
+crowdsec: {}
+# Default configuration structure
+crowdsec_defaults:
+
+  # configure the local api to not conflict with other services
+  local_api_port: 8082
+
+  # automatically run hub upgrade daily, this should be fin if you stay with the default config
+  automatic_hub_upgrade: False

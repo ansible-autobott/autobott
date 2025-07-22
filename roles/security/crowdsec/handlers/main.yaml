@@ -1,0 +1,19 @@
+---
+- name: Restart Crowdsec
+  ansible.builtin.service:
+    name: crowdsec
+    state: restarted
+  listen: restart crowdsec
+
+- name: Restart firewall-bouncer
+  ansible.builtin.service:
+    name: crowdsec-firewall-bouncer
+    state: restarted
+  listen: restart crowdsec firewall-bouncer
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+

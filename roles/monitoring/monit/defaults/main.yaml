@@ -1,0 +1,36 @@
+---
+#============================================================================================================
+# Monit  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_monit: false
+
+# User overrides - will be combined with monit_defaults
+monit: {}
+# Default configuration structure
+monit_defaults:
+
+  # configure the local api to not conflict with other services
+  port: 2812
+
+  checks:
+    system: True # main system alerts, cpu/disk/memory
+    ssh: True
+    mariadb: True
+    caddy:
+      enabled: true
+      port: 8080
+
+  external_hosts:
+    - name: docmost
+      url: https://docmost.localhost
+      port: 8443
+      ignore_ssl: true
+      ip: 127.0.0.1
+
+    - name: wiki
+      url: http://wiki.localhost
+      port: 8080
+      ip: 127.0.0.1
+

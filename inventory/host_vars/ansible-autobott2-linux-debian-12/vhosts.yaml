@@ -311,5 +311,12 @@ vhosts:
           - "https://grafana.localhost:8443"
         proxy_url: "http://127.0.0.1:3000"
 
+      - type: "proxy"
+        enabled: true
+        domains:
+          - "http://monit.localhost:8080"
+          - "https://monit.localhost:8443"
+        proxy_url: "http://127.0.0.1:2812"
+
 
 

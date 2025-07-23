@@ -1,0 +1,9 @@
+{% for disk in monit_disk_checks %}
+check filesystem {{ disk.name | default('rootfs') }} with path {{ disk.path }}
+  if space usage > {{ disk.space_threshold }}% then alert
+
+{% if disk.inode_threshold is defined %}
+  if inode usage > {{ disk.inode_threshold }}% then alert
+{% endif %}
+
+{% endfor %}

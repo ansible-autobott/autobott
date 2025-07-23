@@ -13,6 +13,13 @@ monit_defaults:
 
   # configure the local api to not conflict with other services
   port: 2812
+  smtp:
+    host: ""
+    port: ""
+    user: ""
+    pass: ""
+  # email addresses that will get notifications
+  alert_targets: []
 
   checks:
     system: True # main system alerts, cpu/disk/memory

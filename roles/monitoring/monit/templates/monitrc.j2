@@ -82,6 +82,19 @@ set statefile /var/lib/monit/state
 #                backup.bar.baz port 10025,  # backup mailserver on port 10025
 #                localhost                   # fallback relay
 #
+
+{% if monit_config.smtp.host %}
+set mailserver {{ monit_config.smtp.host }}{% if monit_config.smtp.port %} port {{ monit_config.smtp.port }}{% endif %}
+{% if monit_config.smtp.user and monit_config.smtp.pass %}
+    username "{{ monit_config.smtp.user }}" password "{{ monit_config.smtp.pass }}"
+    using tls
+{% endif %}
+{% else %}
+# No SMTP host configured, assuming local MTA (e.g., sendmail or postfix)
+set mailserver localhost
+{% endif %}
+
+
 #
 ## By default Monit will drop alert events if no mail servers are available.
 ## If you want to keep the alerts for later delivery retry, you can use the
@@ -144,8 +157,14 @@ set statefile /var/lib/monit/state
 ## This filter is recommended to avoid getting alerts for trivial cases.
 #
 # set alert your-name@your.domain not on { instance, action }
-#
-#
+
+{% if monit_config.alert_targets  %}
+{% for email in monit_config.alert_targets %}
+set alert {{ email }} not on { instance, action }
+{% endfor %}    
+{% endif %}
+
+
 ## Monit has an embedded HTTP interface which can be used to view status of
 ## services monitored and manage services from a web interface. The HTTP
 ## interface is also required if you want to issue Monit commands from the

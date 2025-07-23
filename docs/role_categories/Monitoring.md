@@ -20,6 +20,17 @@ _optional:_
 
 ```
 monit:
+  # configure an smpt server to use for sending the emails
+  # if you have a local smtp, e.g. nullmailer you don't need to specify again.
+  smtp:
+    host: ""
+    port: ""
+    user: ""
+    pass: ""
+    
+  # email addresses that will get notifications
+  alert_targets: []
+  
   checks:
     system: True        # main system alerts, cpu/disk/memory
     ssh: True           # monitor and restart sshd

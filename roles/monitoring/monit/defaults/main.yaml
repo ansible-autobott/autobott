@@ -17,20 +17,17 @@ monit_defaults:
   checks:
     system: True # main system alerts, cpu/disk/memory
     ssh: True
-    mariadb: True
+    mariadb: False
     caddy:
-      enabled: true
-      port: 8080
+      enabled: False
+      port: 80
 
-  external_hosts:
-    - name: docmost
-      url: https://docmost.localhost
-      port: 8443
-      ignore_ssl: true
-      ip: 127.0.0.1
-
-    - name: wiki
-      url: http://wiki.localhost
-      port: 8080
-      ip: 127.0.0.1
-
+  external_hosts: []
+    #    # name is used for the file name
+    #  - name: docmost
+    #    # the url needs to be able to resolve, e.g. for docmost.localhost, you need to add an entry to /etc/hosts
+    #    url: https://docmost.localhost
+    #    # optional, use if non-standard ports are used
+    #    port: 8443
+    #    # allow self signed certs
+    #    selfsigned: true

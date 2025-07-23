@@ -32,3 +32,21 @@ run_role_grafana: true
 # Monit
 #============================================================================================================
 run_role_monit: True
+monit:
+  checks:
+    mariadb: True
+    caddy:
+      enabled: true
+      port: 8080
+
+  external_hosts:
+    - name: docmost
+      url: https://docmost.localhost
+      port: 8443
+      selfsigned: true
+
+    - name: wiki
+      url: http://wiki.localhost
+      port: 8080
+
+

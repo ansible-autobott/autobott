@@ -49,6 +49,7 @@
     - monitoring/alertmanager
     - monitoring/node_exporter
     - monitoring/grafana
+    - monitoring/monit
 
     # ===============  Servarr  =============== #
     - servarr/transmission

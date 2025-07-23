@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Monit  Role Defaults
+#============================================================================================================
+
+# Role execution flag
+run_role_monit: false
+
+# User overrides - will be combined with monit_defaults
+monit: {}
+# Default configuration structure
+monit_defaults:
+
+  # configure the local api to not conflict with other services
+  port: 2812
+
+  checks:
+    system: True # main system alerts, cpu/disk/memory
+    ssh: True
+    mariadb: False
+    caddy:
+      enabled: False
+      port: 80
+
+  external_hosts: []
+    #    # name is used for the file name
+    #  - name: docmost
+    #    # the url needs to be able to resolve, e.g. for docmost.localhost, you need to add an entry to /etc/hosts
+    #    url: https://docmost.localhost
+    #    # optional, use if non-standard ports are used
+    #    port: 8443
+    #    # allow self signed certs
+    #    selfsigned: true

@@ -1,0 +1,173 @@
+---
+#============================================================================================================
+# Monit Role
+#============================================================================================================
+
+- name: Main Monit installation and configuration
+  tags:
+    - monit
+    - untagged
+  when: run_role_monit | bool
+  block:
+    - name: Set merged monit configuration
+      ansible.builtin.set_fact:
+        monit_config: "{{ monit_defaults | combine(monit, recursive=true) }}"
+
+    - name: Ensure Monit is installed
+      ansible.builtin.apt:
+        name:
+          - monit
+        state: present
+        update_cache: yes
+
+    - name: Deploy Monit configuration
+      ansible.builtin.template:
+        src: monitrc.j2
+        dest: /etc/monit/monitrc
+        mode: '0700'
+        owner: root
+        group: root
+      notify: restart monit
+
+    - name: Deploy monit check to conf-available
+      ansible.builtin.template:
+        src: "checks/{{ item.key }}.conf"
+        dest: "/etc/monit/conf-available/autobott-{{ item.key }}.conf"
+        owner: root
+        group: root
+        mode: '0644'
+      loop: "{{ monit_config.checks | dict2items }}"
+
+    - name: Ensure enabled monit checks are symlinked in conf-enabled
+      ansible.builtin.file:
+        src: "/etc/monit/conf-available/autobott-{{ item.key }}.conf"
+        dest: "/etc/monit/conf-enabled/autobott-{{ item.key }}.conf"
+        state: link
+      loop: "{{ monit_config.checks | dict2items }}"
+      when: >
+        (item.value is boolean and item.value) or
+        (item.value is mapping and item.value.enabled | default(false))
+      notify: restart monit
+
+    - name: Remove monit check configs if disabled
+      ansible.builtin.file:
+        path: "/etc/monit/conf-enabled/autobott-{{ item.key }}.conf"
+        state: absent
+      loop: "{{ monit_config.checks | dict2items }}"
+      when: >
+        (item.value is boolean and not item.value) or
+        (item.value is mapping and not (item.value.enabled | default(false)))
+      notify: restart monit
+
+    - name: add disk usage details
+      block:
+
+        - name: Set list of disk mounts to monitor
+          set_fact:
+            disk_mounts_to_monitor: >-
+              {{
+              ansible_mounts
+              | selectattr('fstype', 'match', '^(ext4|xfs|btrfs|zfs)$')
+              | selectattr('mount', 'search', '^/')
+              | list
+              }}
+
+        - name: Get mount names sanitized
+          set_fact:
+            sanitized_mount_names: "{{ disk_mounts_to_monitor | map(attribute='mount') | map('regex_replace', '^/', '') | list }}"
+
+        - name: Initialize monit_disk_checks
+          set_fact:
+            monit_disk_checks: []
+
+        - name: Build monit disk checks list
+          set_fact:
+            monit_disk_checks: "{{ monit_disk_checks + [ {'name': (item.0 if item.0 else 'root'), 'path': item.1, 'space_threshold': 80, 'inode_threshold': 80} ] }}"
+          loop: "{{ sanitized_mount_names | zip(disk_mounts_to_monitor | map(attribute='mount') | list) | list }}"
+          loop_control:
+            label: "{{ item.1 }}"
+
+        - name: Deploy Monit diskspace checks
+          template:
+            src: diskspace.conf.j2
+            dest: /etc/monit/conf-available/autobott-diskspace.conf
+          notify:
+            - restart monit
+
+        - name: Ensure enabled monit checks are symlinked in conf-enabled
+          ansible.builtin.file:
+            src: /etc/monit/conf-available/autobott-diskspace.conf
+            dest: /etc/monit/conf-enabled/autobott-diskspace.conf
+            state: link
+          notify: restart monit
+
+    - name: Generate external hosts config
+      block:
+
+        - name: Generate monit checks for configured URLs
+          template:
+            src: urls.j2
+            dest: "/etc/monit/conf-available/autobott-url-{{ item.name }}.conf"
+          loop: "{{ monit_config.external_hosts }}"
+          vars:
+            url: "{{ item }}"
+
+        - name: Ensure URL check symlinks in conf-enabled
+          ansible.builtin.file:
+            src: "/etc/monit/conf-available/autobott-url-{{ item.name }}.conf"
+            dest: "/etc/monit/conf-enabled/autobott-url-{{ item.name }}.conf"
+            state: link
+          loop: "{{ monit_config.external_hosts }}"
+          notify: restart monit
+
+        - name: Set list of expected Monit URL config files without regex_replace
+          set_fact:
+            expected_monit_url_configs: >-
+              [{% for host in monit_config.external_hosts %}
+              /etc/monit/conf-available/autobott-url-{{ host.name }}.conf{% if not loop.last %}, {% endif %}
+              {% endfor %}]
+
+        - name: Set list of expected Monit URL symlinks without regex_replace
+          set_fact:
+            expected_monit_url_symlinks: >-
+              [{% for host in monit_config.external_hosts %}
+              /etc/monit/conf-enabled/autobott-url-{{ host.name }}.conf{% if not loop.last %}, {% endif %}
+              {% endfor %}]
+
+        - name: Find all existing Monit URL config files
+          find:
+            paths: /etc/monit/conf-available/
+            patterns: "autobott-url-*.conf"
+            file_type: file
+          register: found_monit_url_configs
+
+        - name: Remove outdated Monit URL config files
+          file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ found_monit_url_configs.files }}"
+          when: item.path not in expected_monit_url_configs
+
+        - name: Find all existing Monit URL symlinks
+          find:
+            paths: /etc/monit/conf-enabled/
+            patterns: "autobott-url-*.conf"
+            file_type: link
+          register: found_monit_url_symlinks
+
+        - name: Remove outdated Monit URL symlinks
+          file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ found_monit_url_symlinks.files }}"
+          when: item.path not in expected_monit_url_symlinks
+          notify: restart monit
+
+
+    - name: Ensure Monit is enabled and started
+      ansible.builtin.service:
+        name: monit
+        enabled: yes
+        state: started
+
+

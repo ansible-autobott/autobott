@@ -37,6 +37,11 @@ linux_basic:
     host_defined:
       - htop
   hostname: "ansible-autobott2-linux-debian-12"
+  # adding extra host entries to be monitored by monit
+  # (this is only needed for domains that are not resolvable by a dns)
+  etc_host_entries:
+    - 127.0.0.1 wiki.localhost
+    - 127.0.0.1 docmost.localhost
   locale:
     generate:
       - en_US.UTF-8 UTF-8

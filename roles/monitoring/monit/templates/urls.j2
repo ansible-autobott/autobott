@@ -1,0 +1,7 @@
+{% set parsed_url = item.url | regex_findall('^(https?)://([^/:]+)') %}
+{% set scheme = parsed_url[0][0] if parsed_url else 'http' %}
+{% set host = parsed_url[0][1] if parsed_url else item.url %}
+check host {{ host }} with address {{ host }}
+    if failed port {{ item.port | default(80) }} protocol {{ scheme }}
+    and request "/" {%- if scheme == 'https' and item.selfsigned | default(false) %}  with ssl options{ selfsigned: allow } {%- endif %}
+    and with timeout 15 seconds for 3 times within 4 cycles then alert

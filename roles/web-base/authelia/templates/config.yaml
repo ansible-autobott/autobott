@@ -47,7 +47,7 @@ access_control:
 
 session:
   # since we generate a new secrets on every run, users will be logged out
-  secret: "{{ my_secret_var | default((64 | random | to_uuid), true) }}"
+  secret: "{{ authelia_config.secrets.session | default((64 | random | to_uuid), true) }}"
   inactivity: {{  authelia_config.timeout.inactivity }}
   expiration: {{  authelia_config.timeout.expiration }}
   remember_me: {{  authelia_config.timeout.remember_me }}

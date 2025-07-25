@@ -48,7 +48,7 @@ linux_basic_defaults:
     pw_auth_group_name: ""
 
     #sftp_jails:
-    #  - group_name: sftp
+    #  - group_name: sftp       # group needs to exist
     #    jail_dir: "/home"      # will be composed as {{ jail_dir }}/%u
     #    start_dir: "/home_dir" # optional, allows to define the default starting dir when opening a session
     #    umask: 0077            # change the umask parameter of the jail default is 0077 creates files as 0700

@@ -136,14 +136,8 @@
     - name: Enable Authelia service
       ansible.builtin.systemd:
         name: authelia
-        state: restarted
         enabled: true
         daemon_reload: true
-
-    - name: Restart Authelia
-      ansible.builtin.systemd:
-        name: authelia
-        state: restarted
 
 #============================================================================================================
 # Uninstall

@@ -14,6 +14,7 @@ firewall_defaults:
   allow_inbound_tcp:
     - 80    # HTTP
     - 443   # HTTPS
+    - 555
 
   allow_inbound_udp: []
 
@@ -23,8 +24,12 @@ firewall_defaults:
 
   allowed_outbound_udp: []
 
+  # make docker services not publicly available,
+  # check https://github.com/chaifeng/ufw-docker# for details
+  block_docker_public: True
+
   # allow local network to access docker interfaces
-  allow_docker: True
+  allow_between_containers: True
 
 # this is the bare minimum of ports needed for autobott to work.
 # change at own risk if you know what you are doing.

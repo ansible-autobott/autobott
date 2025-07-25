@@ -29,7 +29,14 @@ access_control:
   default_policy: 'deny'
   rules:
 {% for site in authelia_config.sites %}
+{% if site.domain is string %}
   - domain: '{{ site.domain }}'
+{% else %}
+  - domain:
+{% for domain in site.domain %}
+    - '{{ domain }}'
+{% endfor %}
+{% endif %}
     policy: '{{ site.policy }}'
     subject:
 {% for group in site.groups | default([]) %}
@@ -40,7 +47,10 @@ access_control:
 
 session:
   # since we generate a new secrets on every run, users will be logged out
-  secret: "{{ 64 | random | to_uuid }}"
+  secret: "{{ my_secret_var | default((64 | random | to_uuid), true) }}"
+  inactivity: {{  authelia_config.timeout.inactivity }}
+  expiration: {{  authelia_config.timeout.expiration }}
+  remember_me: {{  authelia_config.timeout.remember_me }}
   cookies:
 {% for site in authelia_config.cookies %}
     - name: '{{ site.name}}'
@@ -57,7 +67,18 @@ authentication_backend:
     file:
         path: "{{ authelia_config.paths.data_dir }}/users.yaml"
 
-notifier:
-    filesystem:
-        filename: "{{ authelia_config.paths.data_dir }}/notification.txt"
 
+{% if authelia_config.smtp.address == '' %}
+notifier:
+  filesystem:
+    filename: "{{ authelia_config.paths.data_dir }}/notification.txt"
+{% else %}
+notifier:
+  smtp:
+    address: "{{ authelia_config.smtp.address }}"
+    timeout: "{{ authelia_config.smtp.timeout }}"
+    username: "{{ authelia_config.smtp.username }}"
+    password: "{{ authelia_config.smtp.password }}"
+    sender: "{{ authelia_config.smtp.sender }}"
+    identifier: "{{ authelia_config.smtp.identifier }}"
+{% endif %}

@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-{% if readarr_config.daemon.umask is defined and readarr_config.daemon.umask | length %}
-UMask={{ readarr4_config.daemon.umask }}
+{% if readarr_config.service.umask is defined and readarr_config.service.umask | length > 0 %}
+UMask={{ readarr_config.service.umask }}
 {% endif %}
 
 User={{ readarr_config.user.name }}

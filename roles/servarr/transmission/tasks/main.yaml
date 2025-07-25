@@ -47,7 +47,7 @@
         path: /var/lib/transmission-daemon-flood-theme
         owner: debian-transmission
         group: debian-transmission
-        mode: "u=rwX,g=rX,o="
+        mode: "0750"
         recurse: true
 
     - name: Ensure systemd override directory exists
@@ -76,14 +76,19 @@
 
     - name: Ensure download directories exist
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ transmission_config.download.path }}"
         state: directory
-        owner: debian-transmission
-        group: debian-transmission
-        mode: "0750"
-      loop:
-        - "{{ transmission_config.download_path }}"
-        - "{{ transmission_config.download_path }}/incomplete"
+        owner: "{{ transmission_config.download.owner }}"
+        group: "{{ transmission_config.download.group }}"
+        mode: "{{ transmission_config.download.mode }}"
+
+    - name: Ensure incomplete directories exist
+      ansible.builtin.file:
+        path: "{{ transmission_config.download.path }}/incomplete"
+        state: directory
+        owner: "{{ transmission_config.download.owner }}"
+        group: "{{ transmission_config.download.group }}"
+        mode: "{{ transmission_config.download.mode }}"
 
     - name: Stop transmission-daemon for configuration
       ansible.builtin.service:
@@ -100,8 +105,8 @@
       loop:
         - { property: "rpc-bind-address", value: "{{ transmission_config.remote_bind_address }}" }
         - { property: "rpc-username", value: "{{ transmission_config.remote_user }}" }
-        - { property: "incomplete-dir", value: "{{ transmission_config.download_path }}/incomplete" }
-        - { property: "download-dir", value: "{{ transmission_config.download_path }}" }
+        - { property: "incomplete-dir", value: "{{ transmission_config.download.path }}/incomplete" }
+        - { property: "download-dir", value: "{{ transmission_config.download.path }}" }
         - { property: "rpc-whitelist-enabled", value: "{{ transmission_config.remote_whitelist_enabled }}" }
 
     - name: Configure transmission port
@@ -174,6 +179,6 @@
 
     - name: Remove download directory
       ansible.builtin.file:
-        path: "{{ transmission_config.download_path }}"
+        path: "{{ transmission_config.download.path }}"
         state: absent
       when: transmission_config.delete_data_on_uninstall

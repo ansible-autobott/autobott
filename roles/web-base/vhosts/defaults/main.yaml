@@ -94,6 +94,8 @@ vhosts_sample:
         proxy_url: "http://127.0.0.1:7070"
         proxy_lines: # add additional lines in the proxy settings like:
           - 'header_up X-Remote-User "{http.auth.user.id}"'
+          # this allows to inject basic auth header in the proxy for the upstream service
+          - Authorization "Basic {{ ( 'torrent:' ~ secrets.services.transmission.password ) | b64encode }}"
 
       # static content
       - enabled: true

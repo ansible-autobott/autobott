@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-{% if sonarr_config.daemon.umask is defined and sonarr_config.daemon.umask | length %}
-UMask={{ sonarr4_config.daemon.umask }}
+{% if sonarr_config.service.umask is defined and sonarr_config.service.umask | length > 0 %}
+UMask={{ sonarr_config.service.umask }}
 {% endif %}
 
 User={{ sonarr_config.user.name }}

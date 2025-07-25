@@ -40,13 +40,10 @@
         mode: "0644"
         validate: "testparm -s %s"
 
+
     #====================================================
     # Users
     #====================================================
-    - name: Create Samba group
-      ansible.builtin.group:
-        name: "{{ samba_config.samba_group }}"
-        state: present
 
     - name: Check existing users
       ansible.builtin.shell: "id {{ item.name }}"
@@ -55,6 +52,7 @@
       loop: "{{ samba_config.users }}"
       register: user_exists
       changed_when: false
+      no_log: true
       failed_when: false # Do not fail yet, we will fail explicitly later
 
     - name: Fail if any users do not exist
@@ -83,17 +81,8 @@
       no_log: true
       register: user_changed
 
-    - name: Create Samba users
-      ansible.builtin.shell: "(echo {{ item.password }}; echo {{ item.password }}) | smbpasswd -s -a {{ item.name }}"
-      args:
-        executable: /bin/bash
-      loop: "{{ samba_config.users }}"
-      register: create_user_output
-      changed_when: "'Added user' in create_user_output.stdout"
-      no_log: true
-      when: user_changed.changed
-
-    - name: Remove existing Samba users
+    # to make idempotent users, we first delete all users, and then create the ones we need.
+    - name: Remove all samba users.
       ansible.builtin.shell: "smbpasswd -x {{ item.name }} || true"
       args:
         executable: /bin/bash
@@ -102,6 +91,21 @@
       changed_when: "'delete unix user' in delete_user_output.stdout"
       no_log: true
       when: user_changed.changed
+
+    - name: Create Samba users
+      ansible.builtin.shell: "(echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd -s -a '{{ item.name }}'"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: create_user_output
+      changed_when: "'Added user' in create_user_output.stdout"
+      no_log: true
+      when: user_changed.changed
+
+    - name: Create Samba group
+      ansible.builtin.group:
+        name: "{{ samba_config.samba_group }}"
+        state: present
 
     - name: Add users to Samba group
       ansible.builtin.user:
@@ -114,27 +118,12 @@
     # Shares
     #====================================================
 
-    - name: Create samba system user
-      ansible.builtin.user:
-        name: "{{ samba_config.samba_user }}"
-        shell: /usr/sbin/nologin
-        system: true
-        create_home: false
-        state: present
-
-    - name: Create Samba shares root directory
-      ansible.builtin.file:
-        state: directory
-        path: "{{ samba_config.shares_root }}"
-        owner: root
-        group: root
-        mode: "0755"
-
     - name: Create share directories
       ansible.builtin.file:
         state: directory
-        path: "{{ share.path | default([samba_config.shares_root, item.name] | join('/')) }}"
-        owner: "{{ item.share_owner | default(samba_config.samba_user) }}"
-        group: "{{ item.share_group | default(samba_config.samba_group) }}"
-        mode: "{{ item.share_mode | default(samba_config.share_defaults.share_mode) }}"
+        path: "{{ item.path }}"
+        owner: "{{ item.owner | default(samba_config.share_defaults.share_owner) }}"
+        group: "{{ item.group | default(samba_config.share_defaults.share_group) }}"
+        mode: "{{ item.mode | default(samba_config.share_defaults.share_mode) }}"
       loop: "{{ samba_config.shares }}"
+      when: item.path != ''

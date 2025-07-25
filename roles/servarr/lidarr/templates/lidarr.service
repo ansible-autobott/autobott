@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-{% if lidarr_config.daemon.umask is defined and lidarr_config.daemon.umask | length %}
-UMask={{ lidarr4_config.daemon.umask }}
+{% if lidarr_config.service.umask is defined and lidarr_config.service.umask | length > 0 %}
+UMask={{ lidarr_config.service.umask }}
 {% endif %}
 
 User={{ lidarr_config.user.name }}

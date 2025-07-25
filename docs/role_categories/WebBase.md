@@ -55,6 +55,7 @@ authelia:
   # protected site configurations
   sites:
     - name: fe26
+      # domain can be a single one or a list of domains / regex of domains, e.g. *.my-domain.com
       domain: "fe26.localhost"
       auth_url: "https://auth.fe26.localhost:8443"
       policy: "two_factor" # one_factor | two_factor

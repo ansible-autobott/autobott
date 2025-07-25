@@ -63,7 +63,7 @@
       ansible.builtin.template:
         src: network.xml
         dest: /etc/jellyfin/network.xml
-        owner: root
+        owner: jellyfin
         group: root
         mode: '0644'
       when: not network_xml_exists.stat.exists

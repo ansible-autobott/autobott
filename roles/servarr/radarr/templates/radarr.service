@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-{% if radarr_config.daemon.umask is defined and radarr_config.daemon.umask | length %}
-UMask={{ radarr4_config.daemon.umask }}
+{% if radarr_config.service.umask is defined and radarr_config.service.umask | length > 0 %}
+UMask={{ radarr_config.service.umask }}
 {% endif %}
 
 User={{ radarr_config.user.name }}

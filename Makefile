@@ -36,7 +36,8 @@ enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS,
 	fi && \
 	HOST_VAL="-l $(HOST)" && \
 	ansible-playbook -i $(INV) -u $(ANSIBLE_USER) -t enroll $$HOST_VAL \
-		--extra-vars "ansible_ssh_pass=$$ANSIBLE_PASS ansible_become_pass=$$ANSIBLE_PASS" --become autobott.yaml
+	  --extra-vars "ansible_user=$$ANSIBLE_USER ansible_ssh_pass=$$ANSIBLE_PASS ansible_become_pass=$$ANSIBLE_PASS" \
+	  --become autobott.yaml
 
 run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 	@if [ -z "$(INV)" ]; then \

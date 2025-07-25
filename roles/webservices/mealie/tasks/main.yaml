@@ -63,6 +63,8 @@
         owner: "{{ mealie_config.user.name }}"
         group: "{{ mealie_config.user.group }}"
         mode: "0644"
+      notify:
+        - restart mealie
 
     - name: Configure systemd wrapper service
       ansible.builtin.template:

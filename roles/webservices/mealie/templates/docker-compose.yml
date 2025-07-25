@@ -18,3 +18,21 @@ services:
       PGID: {{ mealie_gid }} # optional, your group id
       TZ: {{ mealie_config.service.timezone }}
       BASE_URL: {{ mealie_config.base_url }}
+
+{% if mealie_config.theme is defined and mealie_config.theme != "" %}
+{%   set t = mealie_themes[mealie_config.theme] %}
+      THEME_LIGHT_PRIMARY: "{{ t.light_primary }}"
+      THEME_LIGHT_ACCENT: "{{ t.light_accent }}"
+      THEME_LIGHT_SECONDARY: "{{ t.light_secondary }}"
+      THEME_LIGHT_SUCCESS: "{{ t.light_success }}"
+      THEME_LIGHT_INFO: "{{ t.light_info }}"
+      THEME_LIGHT_WARNING: "{{ t.light_warning }}"
+      THEME_LIGHT_ERROR: "{{ t.light_error }}"
+      THEME_DARK_PRIMARY: "{{ t.dark_primary }}"
+      THEME_DARK_ACCENT: "{{ t.dark_accent }}"
+      THEME_DARK_SECONDARY: "{{ t.dark_secondary }}"
+      THEME_DARK_SUCCESS: "{{ t.dark_success }}"
+      THEME_DARK_INFO: "{{ t.dark_info }}"
+      THEME_DARK_WARNING: "{{ t.dark_warning }}"
+      THEME_DARK_ERROR: "{{ t.dark_error }}"
+{% endif %}

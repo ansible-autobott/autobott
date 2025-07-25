@@ -28,7 +28,8 @@
               "allow_inbound_udp": (firewall_config.allow_inbound_udp + firewall_required.allow_inbound_udp) | unique,
               "allowed_outbound_tcp": (firewall_config.allowed_outbound_tcp + firewall_required.allowed_outbound_tcp) | unique,
               "allowed_outbound_udp": (firewall_config.allowed_outbound_udp + firewall_required.allowed_outbound_udp) | unique,
-              "allow_docker": firewall_config.allow_docker 
+              "allow_between_containers": firewall_config.allow_between_containers,
+              "block_docker_public": firewall_config.block_docker_public
             }
           }}
           
@@ -54,6 +55,7 @@
         existing_firewall_hash: "{{ existing_firewall_hash_file.content | b64decode }}"
       when: firewall_hash_file_stat.stat.exists
 
+
     - name: Apply firewall configuration if changed
       when: existing_firewall_hash is not defined or existing_firewall_hash != firewall_config_hash
       block:
@@ -62,29 +64,31 @@
           community.general.ufw:
             state: reset
 
-        - name: Set default policy to deny incoming
+        - name: Set default policy to reject incoming
           community.general.ufw:
             direction: incoming
-            policy: deny
+            policy: reject
 
-        - name: Set default policy to deny outgoing
+        - name: Set default policy to reject outgoing
           community.general.ufw:
             direction: outgoing
-            policy: deny
+            policy: reject
 
-        - name: Allow Inbound traffic to Docker subnet
-          ufw:
-            rule: allow
-            from_ip: 172.16.0.0/12
-            direction: in
-          when: firewall_config.allow_docker
+        - name: Allow traffic between docker networks
+          when: firewall_config.allow_between_containers
+          block:
 
-        - name: Allow Outbound traffic to Docker subnet
-          ufw:
-            rule: allow
-            from_ip: 172.16.0.0/12
-            direction: out
-          when: firewall_config.allow_docker
+            - name: Allow Inbound traffic to Docker subnet
+              ufw:
+                rule: allow
+                from_ip: 172.16.0.0/12
+                direction: in
+
+            - name: Allow Outbound traffic to Docker subnet
+              ufw:
+                rule: allow
+                from_ip: 172.16.0.0/12
+                direction: out
 
         - name: Allow inbound TCP on specified ports
           ufw:
@@ -93,7 +97,6 @@
             proto: tcp
             direction: in
           loop: "{{ firewall_config.allow_inbound_tcp  }}"
-
 
         - name: Allow inbound UDP on specified ports
           ufw:
@@ -119,6 +122,26 @@
             proto: udp
           loop: "{{ firewall_config.allowed_outbound_udp }}"
 
+        - name: make docker services not publicly available
+          when: firewall_config.block_docker_public | bool
+          block:
+
+            - name: Ensure ufw-docker rules block is present in /etc/ufw/after.rules
+              blockinfile:
+                path: /etc/ufw/after.rules
+                create: yes
+                marker: "# {mark} ANSIBLE MANAGED: ufw-docker fix"
+                content: "{{ lookup('file', 'files/ufw-docker.rules') }}"
+              notify: restart ufw
+
+            - name: Ensure ufw-docker rules block is present in /etc/ufw/after6.rules
+              blockinfile:
+                path: /etc/ufw/after6.rules
+                create: yes
+                marker: "# {mark} ANSIBLE MANAGED: ufw-docker fix"
+                content: "{{ lookup('file', 'files/ufw-docker6.rules') }}"
+              notify: restart ufw
+
         - name: Enable UFW
           community.general.ufw:
             state: enabled
@@ -131,6 +154,7 @@
             owner: root
             group: root
             mode: "0644"
+          notify: restart ufw
 
     - name: Find UFW backup files with timestamp suffix
       become: true

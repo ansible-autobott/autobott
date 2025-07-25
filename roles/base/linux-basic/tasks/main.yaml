@@ -10,6 +10,7 @@
 - name: Configure basic Linux system
   tags:
     - "linux-basic"
+    - "linux_basic"
     - "untagged"
   when:
     - run_role_linux_basic is defined

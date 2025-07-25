@@ -26,7 +26,13 @@ transmission_defaults:
   umask: 18 # decimal notation: 18=022 (644), 2=002 (664), 7=007 (660)
 
   # Download paths
-  download_path: "/var/download"
+  download:
+    path: "/var/download"
+    owner: debian-transmission
+    group: debian-transmission
+    mode: "0750"
+
+
 
   # Uninstall behavior
   delete_data_on_uninstall: false

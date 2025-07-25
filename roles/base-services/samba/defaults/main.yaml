@@ -10,14 +10,12 @@ run_role_samba: false
 samba: {}
 # Default Samba configuration structure
 samba_defaults:
-  # define the root dir for all shared folders
-  shares_root: "/srv/shares"
   # where user information is stored
   users_dir: "/etc/samba/users"
-  # samba users are added to this group
+  # samba users are added to this group,
+  # important the string is duplicated in share_defaults below
   samba_group: "smbusers"
-  # default owner of samba shares
-  samba_user: "smbuser"
+
   # limit of open files
   root_soft_nofile: "16384"
 
@@ -45,12 +43,15 @@ samba_defaults:
     directory_mode: "0775"
     force_directory_mode: "0775"
     share_mode: "0775"
+    share_owner: "root"
+    share_group: "smbusers"
     hide_special_files: true
     hide_dot_files: true
     store_dos_attributes: false
     follow_symlinks: true
 
   # list of users that have access to samba
+  # Important these are system users, samba role will not create them.
   # Example share configuration:
   # users:
   #   - name: "user1"

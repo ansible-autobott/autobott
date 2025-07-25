@@ -77,7 +77,11 @@ transmission:
   remote_user: "torrent"
   remote_password: "torrent"
   # Download paths
-  download_path: "/var/download"
+  download:
+    path: "/var/download"
+
+
+
 ```
 #### Optional:
 ```yaml

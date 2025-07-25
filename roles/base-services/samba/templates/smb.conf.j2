@@ -76,12 +76,13 @@ short preserve case = {{ samba_config.global.short_preserve_case | lower }}
 {% if samba_config.shares | length > 0 %}
 
 {% for share in samba_config.shares %}
+{% if share.path != '' %}
 [{{ share.name }}]
 {% if share.comment is defined %}
   comment = "{{ share.comment }}"
 {% endif %}
 
-  path = {{ share.path | default([samba_config.shares_root,share.name] | join('/') ) }}
+  path = {{ share.path }}
 
 {% if share.valid_users is defined and share.valid_users | length > 0 %}
   valid users = {{ share.valid_users | join(' ') }}
@@ -112,5 +113,6 @@ short preserve case = {{ samba_config.global.short_preserve_case | lower }}
   store dos attributes = {{ share.store_dos_attributes | default(samba_config.share_defaults.store_dos_attributes) | lower }}
   follow symlinks = {{ share.follow_symlinks | default(samba_config.share_defaults.follow_symlinks) | lower }}
 
+{% endif %}
 {% endfor %}
 {% endif %}

@@ -4,8 +4,8 @@ After=syslog.target network.target
 
 [Service]
 Type=simple
-{% if prowlarr_config.daemon.umask is defined and prowlarr_config.daemon.umask | length %}
-UMask={{ prowlarr4_config.daemon.umask }}
+{% if prowlarr_config.service.umask is defined and prowlarr_config.service.umask | length > 0 %}
+UMask={{ prowlarr_config.service.umask }}
 {% endif %}
 
 User={{ prowlarr_config.user.name }}

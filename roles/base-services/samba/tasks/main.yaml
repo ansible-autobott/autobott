@@ -122,8 +122,8 @@
       ansible.builtin.file:
         state: directory
         path: "{{ item.path }}"
-        owner: "{{ item.owner | default(samba_config.share_defaults.share_owner) }}"
-        group: "{{ item.group | default(samba_config.share_defaults.share_group) }}"
-        mode: "{{ item.mode | default(samba_config.share_defaults.share_mode) }}"
+        owner: "{{ item.share_owner | default(samba_config.share_defaults.share_owner) }}"
+        group: "{{ item.share_group | default(samba_config.share_defaults.share_group) }}"
+        mode: "{{ item.share_mode | default(samba_config.share_defaults.share_mode) }}"
       loop: "{{ samba_config.shares }}"
       when: item.path != ''

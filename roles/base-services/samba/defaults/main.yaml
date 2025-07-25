@@ -66,5 +66,10 @@ samba_defaults:
   #     valid_users: ["@smbusers"] # list of valid users
   #     write_list: ["@smbusers"]  # list of write users
   #
-  #     All other settings from share_defaults can be overwritten
+  #       These are mandatory values, the rest of the settings will be read from share_defaults,
+  #       but they can all be overwritten, e.g.
+  #
+  #     force_user: "root"
+  #     force_group: "root"
+  #
   shares: []

@@ -1,0 +1,41 @@
+---
+name: {{ item.name }}
+
+dirs:
+{% for dir in item.dirs %}
+  - root: {{ dir.root }}
+{% if dir.exclude is defined %}
+    exclude:
+{% for exclude in dir.exclude %}
+      - "{{ exclude }}"
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+{% if item.mysql is defined %}
+mysql:
+{% for mysql in item.mysql %}
+  - dbname: {{ mysql.dbname }}
+{% if mysql.user is defined %}
+    user: {{ mysql.user }}
+{% endif %}
+{% if mysql.password is defined %}
+    pw: {{ mysql.password }}
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+destination: {{ item.destination | default(goback_config.backup_dest | string ~ '/' ~ item.name | string) }}
+keep: {{ item.keep }}
+owner : {{ item.file_owner | default ( goback_config.user.name )  }}
+mode : {{ item.file_mode | default ('0600')}}
+
+#notify:
+#  host: smtp.mail.com
+#  port: 587
+#  to:
+#    - mail1@mail.com
+#    - mail2@mail.com
+#  user: mail@mails.com
+#  password: 1234

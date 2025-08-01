@@ -47,6 +47,8 @@ linux_basic_defaults:
     # special group that will allow passwd auth, default only ssh keys are allowed
     pw_auth_group_name: ""
 
+    # allow to define sftp jails using the regular openssh server
+    sftp_jails: []
     #sftp_jails:
     #  - group_name: sftp       # group needs to exist
     #    jail_dir: "/home"      # will be composed as {{ jail_dir }}/%u
@@ -54,7 +56,13 @@ linux_basic_defaults:
     #    umask: 0077            # change the umask parameter of the jail default is 0077 creates files as 0700
     #    allow_password: true
     #    remove: false # set to true to remove the sftp jail config
-    sftp_jails: []
+
+    #  - user_name: sftp        # user needs to exist
+    #    jail_dir: "/home"      # jail for the specific user
+    #    start_dir: "/home_dir" # optional, allows to define the default starting dir when opening a session
+    #    umask: 0077            # change the umask parameter of the jail default is 0077 creates files as 0700
+    #    allow_password: true
+    #    remove: false # set to true to remove the sftp jail config
   #============================================================================================================
   # Timezone
   #============================================================================================================
@@ -90,10 +98,13 @@ linux_basic_defaults:
   # Users
   #============================================================================================================
 
+
+  groups: []
   #groups:
   #  - name: sftp
   #    gid: 402
-  groups: []
+
+  system_users: []
   #system_users:
   #  - username: "tardis"
   #    enabled: true
@@ -101,7 +112,8 @@ linux_basic_defaults:
   #    groups: [ 'trenzalore','gallifrey']
   #    uid: 2001
   #    gid: 2001
-  system_users: []
+
+  users: []
   #users:
   #  - username: jsmith
   #    name: "The Doctor"
@@ -109,6 +121,7 @@ linux_basic_defaults:
   #    delete_home: false # if enabled is set to false, determine if the home directory should be deleted
   #    primary_group: "users" # group needs to exist, default "users"
   #    groups: ['sudo', 'trenzalore','gallifrey']  # empty string removes user from all secondary groups
+  #    home: "/home/{{ item.username }}"  # allows to change the location of the home
   #    enforce_groups: no
   #    password: "my-secrets-password" # encrypted
   #    shell: /bin/bash # optional
@@ -119,7 +132,6 @@ linux_basic_defaults:
   #      - "ssh-rsa AAAAB.... doctor@desktop"
   #    uid: 2001
   #    gid: 2002
-  users: []
   users_extra: [] # same as users but allows to define users in two inventory places
 
   #============================================================================================================

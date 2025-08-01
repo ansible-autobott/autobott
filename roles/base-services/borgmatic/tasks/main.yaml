@@ -119,15 +119,29 @@
     - name: Remove duplicate hosts
       set_fact:
         borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
+
+    - name: Process each Borg SSH host
+      include_tasks: scan_and_add_known_host.yaml
+      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
+      loop_control:
+        loop_var: item
       when: borg_ssh_hosts is defined
 
-    - name: Ensure Borg SSH hosts are in known_hosts
-      known_hosts:
-        name: "{{ item }}"
-        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ item) }}"
-        path: "/root/.ssh/known_hosts"
-      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
-      when: borg_ssh_hosts is defined
+#    - name: Check DNS resolution for {{ item }}
+#      command: "getent hosts {{ item }}"
+#      register: dns_check
+#      failed_when: dns_check.rc != 0
+#      changed_when: false
+#      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
+#      when: borg_ssh_hosts is defined
+#
+#    - name: Ensure Borg SSH hosts are in known_hosts
+#      known_hosts:
+#        name: "{{ item }}"
+#        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ item) }}"
+#        path: "/root/.ssh/known_hosts"
+#      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
+#      when: borg_ssh_hosts is defined
 
     - name: Ensure local repo paths
       file:

@@ -1,0 +1,124 @@
+---
+#============================================================================================================
+# Goback Backup
+#============================================================================================================
+
+- name: Main Goback block
+  tags:
+    - goback
+    - untagged
+  when:
+    - run_role_goback is defined
+    - run_role_goback
+  block:
+    - name: Set merged goback configuration
+      ansible.builtin.set_fact:
+        goback_config: "{{ goback_defaults | combine(goback, recursive=true) }}"
+
+    - name: Check if goback is installed
+      command: dpkg-query -W 'goback'
+      register: goback
+      failed_when: goback.rc > 1
+      changed_when: goback.rc == 1
+
+    - name: check current goback version
+      shell: "dpkg-query -W 'goback' | awk '{print $2}'| awk -F':' '{print $NF}'"
+      register: goback_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: Install goback package
+      when: goback.changed or ( goback_config.version is version ( goback_current_version.stdout , '>', strict=True )  )
+      apt:
+        deb: "https://github.com/andresbott/goback/releases/download/v{{ goback_config.version }}/goback_{{ goback_config.version }}_linux_amd64.deb"
+
+    - name: Ensure goback group exists
+      ansible.builtin.group:
+        name: "{{ goback_config.user.group }}"
+        gid: "{{ goback_config.user.gid | default(omit, true) }}"
+
+    - name: Ensure goback user exists
+      ansible.builtin.user:
+        name: "{{ goback_config.user.name }}"
+        group: "{{ goback_config.user.group }}"
+        uid: "{{ goback_config.user.uid | default(omit, true) }}"
+        home: "{{ goback_config.user.home }}"
+        createhome: true
+        system: true
+
+    #============================================================================================================
+    # setup profiles
+    #============================================================================================================
+
+    - include_tasks:  mk_dest_dir.yaml # creates the destination dir with proper permissions
+      with_items:   "{{ goback_profiles }}"
+
+    - name: delete backup destination dir
+      file:
+        path: "{{ item.destination }}"
+        state: absent
+      with_items:   "{{ goback_profiles }}"
+      when:
+        - not item.enabled
+        - item.delete_destination is defined
+        - item.delete_destination
+
+    - name: Create backup profile
+      template:
+        src:          "goback.yaml"
+        dest:         "/etc/goback/profiles/{{ item.name}}.backup.yaml"
+        owner:        root
+        group:        root
+        mode:         0600
+      with_items:   "{{ goback_profiles }}"
+      when: item.enabled
+
+    - name: Remove backup profile
+      file:
+        path:         "/etc/goback/profiles/{{ item.name}}.backup.yaml"
+        state:        absent
+      with_items:   "{{ goback_profiles }}"
+      when: not item.enabled
+
+
+    - name: enable monthly backup
+      file:
+        src: "/etc/goback/profiles/{{ item.name}}.backup.yaml"
+        dest: /etc/goback/backupd.monthly/{{ item.name}}.backup.yaml
+        owner:        root
+        group:        root
+        state: link
+      with_items:   "{{ goback_profiles }}"
+      when:
+        - item.corn_monthly is defined
+        - item.corn_monthly
+        - item.enabled
+
+    - name: disable monthly backup
+      file:
+        path: "/etc/goback/backupd.monthly/{{ item.name}}.backup.yaml"
+        state: absent
+      with_items:   "{{ goback_profiles }}"
+      when: item.corn_monthly is not defined or not item.corn_monthly or not item.enabled
+
+    - name: enable weekly backup
+      file:
+        src: "/etc/goback/profiles/{{ item.name}}.backup.yaml"
+        dest: /etc/goback/backupd.weekly/{{ item.name}}.backup.yaml
+        owner:        root
+        group:        root
+        state: link
+      with_items:   "{{ goback_profiles }}"
+      when:
+        - item.corn_weekly is defined
+        - item.corn_weekly
+        - item.enabled
+
+    - name: disable weekly backup
+      file:
+        path: "/etc/goback/backupd.weekly/{{ item.name}}.backup.yaml"
+        state: absent
+      with_items:   "{{ goback_profiles }}"
+      when: item.corn_weekly is not defined or not item.corn_weekly or not item.enabled
+
+

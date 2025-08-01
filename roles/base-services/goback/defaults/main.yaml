@@ -1,0 +1,50 @@
+---
+#============================================================================================================
+# Goback Backup Configuration
+#============================================================================================================
+
+# Main role control
+run_role_goback: false
+
+# User overrides - these will be combined with goback_defaults
+goback: {}
+# Default configuration structure
+goback_defaults:
+  version:  0.2.1
+  base_dir: /opt/goback
+  backup_dest: /var/goback/output
+
+  user:
+    home: /var/goback/home
+    name: goback
+    uid:
+    group: goback
+    gid:
+
+
+goback_profiles: []
+goback_profiles_sample:
+
+  # very minimal profile config, this will place the backups in the default location
+  - name: demo_php_global
+    enabled: True
+    dirs:
+      - root: /vhosts/demo_php/home_dir/public_html
+    keep: 2
+    corn_weekly: True
+
+  # extended profile:  this will place the backups on a custom location
+  - name: demo_php
+    enabled: True
+    destination: /vhosts/demo_php/backups
+    delete_destination: no
+    dirs:
+      - root: /vhosts/demo_php/home_dir/public_html
+    keep: 1
+    file_owner: andresbott_com
+    file_mode: "0600"
+    dir_mode: "0700"
+    corn_monthly: True
+    corn_weekly: false
+
+

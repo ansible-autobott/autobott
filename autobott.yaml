@@ -21,6 +21,7 @@
     # ===============  Backup   =============== #
     - base-services/borg
     - base-services/borgmatic
+    - base-services/goback
 
     # ===============  Security   =============== #
     - security/lynis

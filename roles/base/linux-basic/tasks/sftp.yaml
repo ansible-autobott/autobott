@@ -15,6 +15,20 @@
         validate: "/usr/sbin/sshd -t -f %s"
       notify: restart sshd
 
+    #============================================================================================================
+    # Sftp Jails
+    #============================================================================================================
+    - name: Fail if any sftp_jail entry does not define exactly one of group_name or user_name
+      ansible.builtin.assert:
+        that:
+          - (item.group_name is defined) != (item.user_name is defined)
+        fail_msg: >-
+          Invalid sftp_jails entry: must define exactly one of 'group_name' or 'user_name', not both or neither
+          ({{ item }}).
+      loop: "{{ sftp_jails | default([]) }}"
+      loop_control:
+        label: "{{ item.group_name | default('') ~ item.user_name | default('') }}"
+
     - name: Configure SFTP chroot jails
       ansible.builtin.blockinfile:
         path: /etc/ssh/sshd_config
@@ -30,7 +44,9 @@
         validate: "/usr/sbin/sshd -t -f %s"
         marker: "# {mark} ANSIBLE MANAGED BLOCK - sftp jail handled by group {{ item.group_name }}"
       loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
-      when: not (item.remove | default(false))
+      when:
+        - not (item.remove | default(false))
+        - item.group_name is defined
       notify: restart sshd
 
     - name: Remove disabled SFTP jail configurations
@@ -40,5 +56,67 @@
         validate: "/usr/sbin/sshd -t -f %s"
         marker: "# {mark} ANSIBLE MANAGED BLOCK - sftp jail handled by group {{ item.group_name }}"
       loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
-      when: item.remove | default(false)
+      when:
+        - not (item.remove | default(false))
+        - item.group_name is defined
       notify: restart sshd
+
+    - name: Configure SFTP chroot jails for sigle user
+      ansible.builtin.blockinfile:
+        path: /etc/ssh/sshd_config
+        block: |
+          Match User {{ item.user_name }}
+                  ChrootDirectory {{ item.jail_dir }}
+                  PasswordAuthentication {{ 'yes' if item.allow_password | default(false) else 'no' }}
+                  ForceCommand internal-sftp -u {{ item.umask | default('027') | string }}{{ ' -d ' + item.start_dir if item.start_dir | default('') | length > 0 else '' }}
+                  AllowTcpForwarding no
+                  X11Forwarding no
+                  PermitTunnel no
+                  AllowAgentForwarding no
+        validate: "/usr/sbin/sshd -t -f %s"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - sftp jail handled by user {{ item.user_name }}"
+      loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
+      when:
+        - not (item.remove | default(false))
+        - item.user_name is defined
+      notify: restart sshd
+
+    - name: Remove disabled SFTP jail configurations for users
+      ansible.builtin.blockinfile:
+        path: /etc/ssh/sshd_config
+        state: absent
+        validate: "/usr/sbin/sshd -t -f %s"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - sftp jail handled by user {{ item.user_name }}"
+      loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
+      when:
+        - item.user_name is defined
+        - item.remove | default(false)
+      notify: restart sshd
+
+
+    - name: Check ownership and permissions of jail directories
+      ansible.builtin.stat:
+        path: "{{ item.jail_dir }}"
+      loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
+      register: sftp_jail_stats
+      loop_control:
+        label: "/var/{{ item }}"
+
+    - name: Ensure jail directories are owned by root:root
+      ansible.builtin.file:
+        path: "{{ item.stat.path }}"
+        owner: root
+        group: root
+      loop: "{{ sftp_jail_stats.results }}"
+      when: item.stat.pw_name != 'root' or item.stat.gr_name != 'root'
+      loop_control:
+        label: "{{ item.stat.path }}"
+
+    - name: Ensure jail directories have permission 0755 or stricter
+      ansible.builtin.file:
+        path: "{{ item.stat.path }}"
+        mode: '0755'
+      loop: "{{ sftp_jail_stats.results }}"
+      when: item.stat.mode|int(base=8) > 0o755
+      loop_control:
+        label: "{{ item.stat.path }}"

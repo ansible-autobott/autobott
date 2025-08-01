@@ -98,7 +98,7 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
 fi
 
 ## make use of bashrc.d structure for additional things
-c=`ls /home/{{ item.username }}/.bashrc.d/| grep ".bashrc" | wc -l`
+c=`ls {{ item.home | default( '/home/' ~ item.username  ) }}/.bashrc.d/| grep ".bashrc" | wc -l`
 if [ $c -gt 0  ]; then
 for file in /home/{{ item.username }}/.bashrc.d/*.bashrc; do
     source "$file"

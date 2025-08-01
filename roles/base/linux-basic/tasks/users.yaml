@@ -33,7 +33,6 @@
             groups: "{{ item.groups | default([]) | join(',') }}"
             comment: "{{ item.name | default('') }}"
             uid: "{{ item.uid | default(omit) }}"
-            create_home: false
             system: true
             state: present
           loop: "{{ linux_basic.system_users | default([]) }}"
@@ -71,7 +70,7 @@
               '!' }}"
             state: present
             create_home: true
-            home: "/home/{{ item.username }}"
+            home: "{{ item.home | default( '/home/' ~ item.username  ) }}"
           loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           #          no_log: true
           when: item.enabled | default(false)
@@ -95,7 +94,7 @@
         - name: Configure user shell environment
           ansible.builtin.template:
             src: bashrc.j2
-            dest: "/home/{{ item.username }}/.bashrc"
+            dest: "{{ item.home | default( '/home/' ~ item.username  ) }}/.bashrc"
             owner: "{{ item.username }}"
             group: "{{ item.primary_group | default('users') }}"
             mode: "0600"
@@ -104,7 +103,7 @@
 
         - name: Create user shell configuration directory
           ansible.builtin.file:
-            path: "/home/{{ item.username }}/.bashrc.d"
+            path: "{{ item.home | default( '/home/' ~ item.username  ) }}/.bashrc.d"
             state: directory
             owner: "{{ item.username }}"
             group: "{{ item.primary_group | default('users') }}"
@@ -114,7 +113,7 @@
 
         - name: Set correct home directory permissions
           ansible.builtin.file:
-            path: "/home/{{ item.username }}"
+            path: "{{ item.home | default( '/home/' ~ item.username  ) }}"
             owner: "{{ item.username }}"
             group: "{{ item.primary_group | default('users') }}"
             mode: "0750"
@@ -135,7 +134,7 @@
 
         - name: Remove home directories of disabled users
           ansible.builtin.file:
-            path: "/home/{{ item.username }}"
+            path: "{{ item.home | default( '/home/' ~ item.username  ) }}"
             state: absent
           loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
           when:

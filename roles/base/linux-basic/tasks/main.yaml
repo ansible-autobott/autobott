@@ -124,6 +124,19 @@
           when: locale_gen_updated.changed
           changed_when: true
 
+    # User Management
+    - name: Include user management tasks
+      ansible.builtin.include_tasks: users.yaml
+
+    - name: Configure sudo behavior
+      ansible.builtin.template:
+        src: sudo_config
+        dest: /etc/sudoers.d/00_autobott
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "/usr/sbin/visudo -cf %s"
+
     # SSH hardening
     - name: Include SSH configuration tasks
       ansible.builtin.include_tasks: ssh.yaml
@@ -155,19 +168,6 @@
       community.general.timezone:
         hwclock: "{{ linux_basic.time_rtc }}"
       when: linux_basic.time_rtc | default('') | length > 0
-
-    # User Management
-    - name: Include user management tasks
-      ansible.builtin.include_tasks: users.yaml
-
-    - name: Configure sudo behavior
-      ansible.builtin.template:
-        src: sudo_config
-        dest: /etc/sudoers.d/00_autobott
-        owner: root
-        group: root
-        mode: "0440"
-        validate: "/usr/sbin/visudo -cf %s"
 
     - name: Final package cleanup
       ansible.builtin.apt:

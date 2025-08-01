@@ -97,3 +97,28 @@ borgmatic_backups:
 #    mariadb:
 #      - php
 
+#============================================================================================================
+# Goback
+#============================================================================================================
+run_role_goback: true
+goback_profiles:
+  - name: demo_php
+    enabled: yes
+    destination: /vhosts/demo_php/home_dir/backups
+    delete_destination: false  # delete destination on disable
+    dirs:
+      - root: /vhosts/demo_php/home_dir/public_html
+        exclude:
+          - "*.log"
+          - "*.tmp"
+    mysql:
+      - dbname: "demo_php"
+        # if left undefined, goback will fallback to whatever mysqldump uses
+        #      user: ""
+        #      pw: ""
+    keep: 1
+    file_owner: demo_php
+    corn_monthly: no
+    corn_weekly: no
+
+

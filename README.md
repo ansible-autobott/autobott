@@ -57,6 +57,8 @@ make vagrant-base
 
 ##### Install
 
+IMPORTANT: make sour you don't have other VMs running and/or listening on localhost ports: 2200,8080,8443
+
 Start and Enroll your VM (add the minimal setup to your new image)
 ```
 make vagrant-up

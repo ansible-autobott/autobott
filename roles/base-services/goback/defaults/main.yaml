@@ -30,6 +30,8 @@ goback_profiles_sample:
     enabled: True
     dirs:
       - root: /vhosts/demo_php/home_dir/public_html
+    mysql:
+      - dbname:  demo
     keep: 2
     corn_weekly: True
 
@@ -40,6 +42,10 @@ goback_profiles_sample:
     delete_destination: no
     dirs:
       - root: /vhosts/demo_php/home_dir/public_html
+    mysql:
+      - dbname: demo
+        user: db_user
+        password: db_password
     keep: 1
     file_owner: andresbott_com
     file_mode: "0600"

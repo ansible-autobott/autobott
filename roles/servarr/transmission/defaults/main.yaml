@@ -32,7 +32,14 @@ transmission_defaults:
     group: debian-transmission
     mode: "0750"
 
-
+  # configure automatic cleanup targets
+  # this will automatically delete complete torrents that are older than N days
+  autoclean: []
+    #    - name: sonarr
+    #      target: /media/torrent/tv-sonar
+    #      days: 16
 
   # Uninstall behavior
   delete_data_on_uninstall: false
+
+

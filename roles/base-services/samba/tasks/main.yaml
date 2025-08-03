@@ -40,7 +40,6 @@
         mode: "0644"
         validate: "testparm -s %s"
 
-
     #====================================================
     # Users
     #====================================================
@@ -69,6 +68,54 @@
         group: root
         mode: "0600"
 
+    - name: Read stored hashes
+      ansible.builtin.slurp:
+        src: "{{ samba_config.users_dir }}/{{ item.name }}"
+      loop: "{{ samba_config.users }}"
+      register: stored_hashes
+      ignore_errors: true
+
+    - set_fact:
+        samba_users_need_update: false
+
+    - name: Compare stored hashes to expected hashes
+      set_fact:
+        samba_users_need_update: true
+      vars:
+        expected_hash: "{{ item.password | hash('sha1') }}"
+        stored_hash: >-
+          {{
+            (stored_hashes.results[loopIndex].content | b64decode | trim)
+            if (stored_hashes.results[loopIndex] is defined and not stored_hashes.results[loopIndex].failed)
+            else ''
+          }}
+      when: stored_hash != expected_hash
+      loop: "{{ samba_config.users }}"
+      loop_control:
+        index_var: loopIndex
+
+    # to make idempotent users, we first delete all users, and then create the ones we need.
+    - name: Remove all samba users.
+      ansible.builtin.shell: "smbpasswd -x {{ item.name }} || true"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: delete_user_output
+      changed_when: "'delete unix user' in delete_user_output.stdout"
+      no_log: true
+      when: samba_users_need_update
+
+    - name: Create Samba users
+      ansible.builtin.shell: "(echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd -s -a '{{ item.name }}'"
+      args:
+        executable: /bin/bash
+      loop: "{{ samba_config.users }}"
+      register: create_user_output
+      changed_when: "'Added user' in create_user_output.stdout"
+      no_log: true
+#      when: user_changed.changed
+      when: samba_users_need_update
+
     - name: Create Samba user hash
       # we create a hash to keep track when a password changed in the inventory
       ansible.builtin.copy:
@@ -80,27 +127,6 @@
       loop: "{{ samba_config.users }}"
       no_log: true
       register: user_changed
-
-    # to make idempotent users, we first delete all users, and then create the ones we need.
-    - name: Remove all samba users.
-      ansible.builtin.shell: "smbpasswd -x {{ item.name }} || true"
-      args:
-        executable: /bin/bash
-      loop: "{{ samba_config.users }}"
-      register: delete_user_output
-      changed_when: "'delete unix user' in delete_user_output.stdout"
-      no_log: true
-      when: user_changed.changed
-
-    - name: Create Samba users
-      ansible.builtin.shell: "(echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd -s -a '{{ item.name }}'"
-      args:
-        executable: /bin/bash
-      loop: "{{ samba_config.users }}"
-      register: create_user_output
-      changed_when: "'Added user' in create_user_output.stdout"
-      no_log: true
-      when: user_changed.changed
 
     - name: Create Samba group
       ansible.builtin.group:

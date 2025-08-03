@@ -14,7 +14,6 @@ firewall_defaults:
   allow_inbound_tcp:
     - 80    # HTTP
     - 443   # HTTPS
-    - 555
 
   allow_inbound_udp: []
 
@@ -44,7 +43,6 @@ firewall_required:
     - 53    # DNS
     - 80    # HTTP, needed e.g. for apt-get
     - 443   # HTTPS, needed e.g. for apt-get
-    - 587   # SMTP STARTTLS (used by nullmailer)
 
   allowed_outbound_udp:
     - 53    # DNS

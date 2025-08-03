@@ -53,6 +53,7 @@ authelia_defaults:
 
   # Sites protected by Authelia,
   # sample site has this fields
+  sites: []
   #    - name: fe26
   #      domain: "fe26.localhost"
   #      auth_url: "https://auth.fe26.localhost:8443"
@@ -60,9 +61,9 @@ authelia_defaults:
   #      # restrict to specific - groups:
   #      groups:
   #        - team1
-  sites: []
 
   # list of users allowed in Authelia:
+  users: []
   #  - username: alice
   #    displayname: "Alice Example"
   #    password: "changeme"
@@ -72,14 +73,14 @@ authelia_defaults:
   #      - team1
   #      - tema2
   #    disabled: false
-  users: []
 
   # defines the cookies that Authelia handles,
   # make sure that the domain overlaps the sites you configure.
+  cookies: []
   # - name: "authelia_session"
   #   domain: "localhost"
   #   authelia_url: "https://auth.localhost:8443"
-  cookies: []
+
 
   # smtp config used for notifications, e.g. when enabling 2fa or password reset
   # if address is empty, the default fallback

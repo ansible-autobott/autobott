@@ -137,6 +137,62 @@
         state: restarted
       changed_when: false
 
+    #============================================================================================================
+    # automatic cleanup
+    #============================================================================================================
+
+    - name: Ensure cleanup config directory exists
+      file:
+        path: /etc/transmission-cleanup.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create cleanup configs
+      ansible.builtin.template:
+        src: cleanupTarget.conf
+        dest: "/etc/transmission-cleanup.d/{{ item.name }}.conf"
+        owner: debian-transmission
+        group: debian-transmission
+        mode: "0600"
+      loop: "{{ transmission_config.autoclean }}"
+
+    - name: Get list of all existing cleanup config files
+      find:
+        paths: /etc/transmission-cleanup.d
+        patterns: '*.conf'
+        file_type: file
+      register: existing_configs
+
+    - name: Remove stale cleanup config files
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ existing_configs.files }}"
+      when: >
+        (item.path | basename | regex_replace('\\.conf$', '')) not in
+        (transmission_config.autoclean | map(attribute='name') | list)
+
+    - name: Install transmission cleanup script
+      ansible.builtin.copy:
+        src: transmission-cleanup.sh
+        dest: /usr/local/bin/transmission-cleanup.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create cron.daily entry to run as torrentcleaner
+      copy:
+        dest: /etc/cron.daily/transmission-cleanup
+        content: |
+          #!/bin/sh
+          exec runuser -u debian-transmission -- /usr/local/bin/transmission-cleanup.sh >> /var/log/transmission-cleanup.log 2>&1
+        owner: root
+        group: root
+        mode: '0755'
+
+
 #============================================================================================================
 # Transmission Removal Block
 #============================================================================================================

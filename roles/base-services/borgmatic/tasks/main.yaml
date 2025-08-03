@@ -46,9 +46,9 @@
         virtualenv: "{{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}"
         virtualenv_command: /usr/bin/python3 -m venv
 
-    - name: Create borgmatic wrapper script in /usr/local/sbin
+    - name: Create borgmatic wrapper script in /usr/local/bin
       ansible.builtin.copy:
-        dest: /usr/local/sbin/borgmatic
+        dest: /usr/local/bin/borgmatic
         content: |
           #!/bin/bash
           exec {{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/borgmatic "$@"
@@ -76,6 +76,15 @@
         - item.ssh_key is defined
         - item.ssh_key | length > 0
 
+    - name: Get Borg version
+      command: borg --version
+      register: borg_version_output
+      changed_when: false
+
+    - name: Extract Borg major version
+      set_fact:
+        borg_major_version: "{{ borg_version_output.stdout.split()[1].split('.')[0] }}"
+
     - name: Generate borgmatic configs for each backup job
       ansible.builtin.template:
         src: backup.yaml
@@ -84,6 +93,13 @@
       no_log: true
       loop: "{{ borgmatic_backups }}"
       when: item.enabled | default(true)
+
+    - name: Remove disabled borgmatic configs
+      file:
+        path:         "/etc/borgmatic.d/{{ item.name }}.yaml"
+        state:        absent
+      loop: "{{ borgmatic_backups }}"
+      when: not item.enabled | default(true)
 
     - name: Validate rendered borgmatic config
       command: borgmatic config validate
@@ -94,14 +110,7 @@
     #============================================================================================================
     # init
     #============================================================================================================
-    - name: Get Borg version
-      command: borg --version
-      register: borg_version_output
-      changed_when: false
 
-    - name: Extract Borg major version
-      set_fact:
-        borg_major_version: "{{ borg_version_output.stdout.split()[1].split('.')[0] }}"
 
     - name: Extract SSH hosts from destination paths
       set_fact:
@@ -127,22 +136,6 @@
         loop_var: item
       when: borg_ssh_hosts is defined
 
-#    - name: Check DNS resolution for {{ item }}
-#      command: "getent hosts {{ item }}"
-#      register: dns_check
-#      failed_when: dns_check.rc != 0
-#      changed_when: false
-#      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
-#      when: borg_ssh_hosts is defined
-#
-#    - name: Ensure Borg SSH hosts are in known_hosts
-#      known_hosts:
-#        name: "{{ item }}"
-#        key: "{{ lookup('pipe', 'ssh-keyscan -H ' ~ item) }}"
-#        path: "/root/.ssh/known_hosts"
-#      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
-#      when: borg_ssh_hosts is defined
-
     - name: Ensure local repo paths
       file:
         path: "{{ item.1.path }}"
@@ -165,15 +158,16 @@
       command: borgmatic repo-create
       when: borg_major_version == "2"
 
-    - name: Ensure export directory exists on remote host
+    - name: Ensure key export directory exists on remote host
       file:
         path: "/tmp/borg_key_exports"
         state: directory
         mode: '0700'
+      changed_when: false
       become: yes
 
-    - name: Export Borg keys from each destination
-      command: >      
+    - name: Export Borg keys from each destination for Borg 1.x
+      command: >
         borg key export {{ item.1.path }}
         /tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key
         --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
@@ -185,9 +179,27 @@
         - item.1.path is defined
         - item.1.encryption is defined
         - item.1.encryption != 'none'
+        - borg_major_version == "1"
       become: yes
       changed_when: false
-      register: borg_export_results
+
+    - name: Export Borg keys from each destination for Borg 2.x
+      command: >
+        borg key export
+          --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
+          --repo "{{ item.1.path }}"
+          "/tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key"
+      with_subelements:
+        - "{{ borgmatic_backups }}"
+        - destination
+      when:
+        - item.0.enabled | default(true)
+        - item.1.path is defined
+        - item.1.encryption is defined
+        - item.1.encryption != 'none'
+        - borg_major_version == "2"
+      become: yes
+      changed_when: false
 
     - name: Fetch exported Borg keys to control node
       fetch:
@@ -212,31 +224,72 @@
       become: yes
 
 
+
     #============================================================================================================
     # Schedule
     #============================================================================================================
-#    - name: Ensure systemd override directory exists
-#      ansible.builtin.file:
-#        path:  /etc/systemd/system/borgmatic.timer.d/
-#        state: directory
-#        owner: root
-#        group: root
-#        mode: "0755"
-#
-#    - name: Override borgmatic.timer to run weekly (Sunday at 2:00 AM)
-#      copy:
-#        dest: /etc/systemd/system/borgmatic.timer.d/override.conf
-#        content: |
-#          [Timer]
-#          OnCalendar=
-#          OnCalendar=Sun *-*-* 02:00:00
-#          RandomizedDelaySec=0
-#      notify:
-#        - reload systemd
-#        - restart borgmatic.timer
-#
-#    - name: Enable and start borgmatic.timer
-#      systemd:
-#        name: borgmatic.timer
-#        enabled: yes
-#        state: started
+    - name: Enable daily cron job for borgmatic profile
+      template:
+        src: run_in_cron.sh
+        dest: "/etc/cron.daily/borgmatic_profile_{{ item.name }}.sh"
+        mode: '0755'
+        owner: root
+        group: root
+      no_log: true
+      loop: "{{ borgmatic_backups }}"
+      when:
+        - item.schedule is defined
+        - item.schedule == "daily"
+        - item.enabled
+
+    - name: Disable daily cron job for borgmatic profile
+      file:
+        path: "/etc/cron.daily/borgmatic_profile_{{ item.name }}.sh"
+        state: absent
+      loop: "{{ borgmatic_backups }}"
+      no_log: true
+      when: item.schedule is not defined or item.schedule != "daily" or not item.enabled
+
+    - name: Enable weekly cron job for borgmatic profile
+      template:
+        src: run_in_cron.sh
+        dest: "/etc/cron.weekly/borgmatic_profile_{{ item.name }}.sh"
+        mode: '0755'
+        owner: root
+        group: root
+      no_log: true
+      loop: "{{ borgmatic_backups }}"
+      when:
+        - item.schedule is defined
+        - item.schedule == "weekly"
+        - item.enabled
+
+    - name: Disable weekly cron job for borgmatic profile
+      file:
+        path: "/etc/cron.weekly/borgmatic_profile_{{ item.name }}.sh"
+        state: absent
+      loop: "{{ borgmatic_backups }}"
+      no_log: true
+      when: item.schedule is not defined or item.schedule != "weekly" or not item.enabled
+
+    - name: Enable monthly cron job for borgmatic profile
+      template:
+        src: run_in_cron.sh
+        dest: "/etc/cron.monthly/borgmatic_profile_{{ item.name }}.sh"
+        mode: '0755'
+        owner: root
+        group: root
+      no_log: true
+      loop: "{{ borgmatic_backups }}"
+      when:
+        - item.schedule is defined
+        - item.schedule == "monthly"
+        - item.enabled
+
+    - name: Disable monthly cron job for borgmatic profile
+      file:
+        path: "/etc/cron.monthly/borgmatic_profile_{{ item.name }}.sh"
+        state: absent
+      loop: "{{ borgmatic_backups }}"
+      no_log: true
+      when: item.schedule is not defined or item.schedule != "monthly" or not item.enabled

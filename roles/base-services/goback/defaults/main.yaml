@@ -12,7 +12,7 @@ goback: {}
 goback_defaults:
   version:  0.2.1
   base_dir: /opt/goback
-  backup_dest: /var/goback/output
+  backup_dest: /var/goback
 
   user:
     home: /var/goback/home
@@ -38,7 +38,7 @@ goback_profiles_sample:
   # extended profile:  this will place the backups on a custom location
   - name: demo_php
     enabled: True
-    destination: /vhosts/demo_php/backups
+    destination: /vhosts/demo_php/home_dir/backups
     delete_destination: no
     dirs:
       - root: /vhosts/demo_php/home_dir/public_html

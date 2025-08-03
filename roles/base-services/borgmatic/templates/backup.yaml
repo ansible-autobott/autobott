@@ -9,7 +9,11 @@ repositories:
 {% for repo in item.destination %}
   - path: {{ repo.path }}
     # on init create dirs if they dont exist
+
+{% if borg_major_version == "1"  %}
     make_parent_directories: true
+{% endif %}
+
 {% if repo.label is defined %}
     label: {{ repo.label }}
 {% endif %}

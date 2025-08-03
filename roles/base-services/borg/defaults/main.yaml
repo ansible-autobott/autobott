@@ -18,9 +18,6 @@ borg_defaults:
 
     # where the backups will be stored
     data_directory: /var/borg_backups
-    # Create symlink to ease the access and not expose internal storage structure
-    # Set to empty string to disable symlink creation
-    data_symlink: /backup
 
     user:
       name: borg
@@ -33,11 +30,9 @@ borg_defaults:
     # Example access structure:
     # - name: test
     #   public_key: "ssh-rsa AAAAB..."
-    #   append_only: true
+    # check permission here: https://borgbackup.readthedocs.io/en/master/usage/serve.html
+    #   permissions: all | no-delete | write only | read-only
 # Supported Borg versions and checksums
 borg_checksums:
   "1.4.1": "b3ee1ce7454aacc0312c814e470df38132b1f6a71ae4164bea2b7d5033cb2480"
-  "2.0.0b14": "4c7222e5324f907f53331dee6783c5c4cd99cee1dfdff4893c839f798d2f3e2b"
-  "2.0.0b13": "35b50867cef2049b44970824da731e29894a493049c1441451bbf318741d5bbb"
-  "2.0.0b12": "35b50867cef2049b44970824da731e29894a493049c1441451bbf318741d5bbb"
-  "2.0.0b11": "9f72afb2f5fadfd4c15c4200e6078fe6361aa9e05f9a28cf6500d3b06c5caacc"
+  "2.0.0b19": "82f799e830e06a964b002739cc2659bdd3015aa2585b6212f2dd6976eac7c841"

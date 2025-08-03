@@ -37,23 +37,6 @@
         group: "{{ borg_config.server.user.group }}"
         mode: "0700"
 
-    - name: Create symbolic link to backup directory
-      ansible.builtin.file:
-        src: "{{ borg_config.server.data_directory }}"
-        dest: "{{ borg_config.server.data_symlink }}"
-        owner: "{{ borg_config.server.user.name }}"
-        group: "{{ borg_config.server.user.group }}"
-        state: link
-      when:
-        - borg_config.server.data_symlink | length > 0
-        - borg_config.server.data_directory | length > 0
-
-    - name: Remove symbolic link to backup directory
-      ansible.builtin.file:
-        path: "{{ borg_config.server.data_symlink }}"
-        state: absent
-      when: borg_config.server.data_symlink | length == 0
-
     - name: Configure ssh keys for borg repos
       ansible.builtin.blockinfile:
         path: "{{ borg_config.server.user.home }}/.ssh/authorized_keys"
@@ -64,7 +47,7 @@
         block: |
           # BORG: List of individual keys with access to specific repos, one key per access
           {% for profile in borg_config.server.repos %}
-          command="cd {{ borg_config.server.data_directory }} && borg serve {% if profile.append_only %}--append-only {% endif -%}
+          command="cd {{ borg_config.server.data_directory }} && borg serve {% if profile.permissions is defined  %}--permissions {{ profile.permissions }}  {% endif -%}
           --restrict-to-repository {{ borg_config.server.data_directory }}/{{ profile.name -}}
           " {{ profile.public_key }}
           {% endfor %}

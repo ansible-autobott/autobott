@@ -71,7 +71,7 @@ borgmatic_backups:
   - name: test_php
     enabled: true
 
-    encryption_passphrase: 123
+    encryption_passphrase: "123"
     destination:
       - path: /backups/test_php
         label: local
@@ -80,8 +80,7 @@ borgmatic_backups:
 
   - name: test2
     enabled: true
-    # used for encrypted repos
-    encryption_passphrase: 123
+    encryption_passphrase: "123"
     destination:
       - path: /backups/ttest2
         label: local
@@ -91,6 +90,7 @@ borgmatic_backups:
         # if you set an encryption you also must add a encryption_passphrase
         # check "borg init --help" or "borg repo-create --help" with Borg 2.
         encryption: none
+
 
     dirs:
       - root: /vhosts/php/home_dir/public_html

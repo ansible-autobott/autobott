@@ -17,9 +17,24 @@ borgmatic_backups: []
 backups_sample:
   - name: test_php
     enabled: true
-    # Important the destination needs to be an initialized repo
-    # destination can also be remote e.g. ssh://abd@def.repo.borgbase.com/./repo
-    destination: /vhosts/php/backups
+
+    # or a list of borg repositories
+    destination:
+      # the path can also be a ssh repo like: ssh://qwerty.repo.borgbase.com/./repo
+      - path: /backup/test_php
+        label: local
+        # select the encryption type, common values are: repokey, keyfile for borg1
+        # and repokey-blake2-aes-ocb for borg 2
+        # default is none
+        # check the documentation for more details
+        # if you set an encryption you also must add a encryption_passphrase
+        encryption: none
+
+    # used for encrypted repos, NOTE that only one encryption_passphrase is allowed even if
+    # more than one repo is configured, this is a borgmatic limitation.
+    # Important! Autobott does not have a mechanism to rotate the passphrase
+    encryption_passphrase: "secure"
+
     ## ssh private key used if the destination is ssh
     ssh_key: |
      -----BEGIN OPENSSH PRIVATE KEY-----
@@ -30,3 +45,4 @@ backups_sample:
       - php
       - test
     retention: "minimal" # "minimal", "medium", "aggressive"
+    schedule: "weekly" # daily | weekly | monthly | none

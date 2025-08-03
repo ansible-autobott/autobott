@@ -42,8 +42,7 @@
         name: "{{ goback_config.user.name }}"
         group: "{{ goback_config.user.group }}"
         uid: "{{ goback_config.user.uid | default(omit, true) }}"
-        home: "{{ goback_config.user.home }}"
-        createhome: true
+        createhome: false
         system: true
 
     #============================================================================================================

@@ -33,3 +33,4 @@ This is just a simple list of ideas and tasks to do on autobott
 * verify docmost backup/restore
 * make homepage files templated so that we can add secrets using ansible managed secrets
 
+* add a cron script to borg server that will send an email if no backup was made in over a month

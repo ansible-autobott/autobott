@@ -35,8 +35,6 @@
           line: "Protocol 2"
         - regexp: "^#?UsePAM"
           line: "UsePAM yes"
-        - regexp: "^#?Banner"
-          line: "Banner /etc/issue.net"
       notify: restart sshd
 
     - name: Create group for SSH password login

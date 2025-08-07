@@ -10,7 +10,7 @@
 
   - name: Create backup destination
     file:
-      path: "{{ item.destination | default(goback_config.backup_dest | string ~ '/' ~ item.name | string) }}"
+      path: "{{ item.destination | default(goback_config.backup_dest | string ~ '/' ~ item.content.name | string) }}"
       state: directory
       owner: "{{ item.file_owner | default ( goback_config.user.name )  }}"
       group: "{{ goback_gid.stdout | default(omit) }}"

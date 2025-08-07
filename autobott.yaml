@@ -5,11 +5,14 @@
 - hosts: all
   become: true
   roles:
+    # ===============  Base  =============== #
     - base/enroll
     - base/linux-apt
     - base/linux-basic
     - base/zfs
     - base/nullmailer
+
+    - base/smartd
 
     # ===============  Base Services  =============== #
     - base-services/wireguard

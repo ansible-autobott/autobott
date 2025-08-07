@@ -1,0 +1,68 @@
+---
+#============================================================================================================
+# Smartd
+#============================================================================================================
+- name: main smartd block
+  tags:
+    - smartd
+    - untagged
+  when:
+    - run_role_smartd | bool
+  block:
+
+    - name: Set merged smartd configuration
+      ansible.builtin.set_fact:
+        smartd_config: "{{ smartd_defaults | combine(smartd, recursive=true) }}"
+
+    - name: Install smartmontools
+      apt:
+        name:
+          - smartmontools
+        state: present
+        update_cache: yes
+
+    - name: configure /etc/smartd.conf
+      template:
+        src: smartd.conf
+        dest: /etc/smartd.conf
+        mode: '0640' # make not world readable because email is secret
+        owner: root
+        group: root
+
+    - name: Enable service smartd
+      service:
+        name: smartd
+        enabled: yes
+        state: started
+
+- name: main smartd block
+  tags:
+    - smartd
+    - untagged
+  when: not run_role_smartd | bool
+  block:
+
+    - name: Set merged smartd configuration
+      ansible.builtin.set_fact:
+        smartd_config: "{{ smartd_defaults | combine(smartd, recursive=true) }}"
+
+    - name: Check if smartd service exist
+      shell: service smartd status
+      register: smartd_status
+      failed_when: not(smartd_status.rc == 3 or smartd_status.rc == 0 or smartd_status.rc == 4)
+      changed_when: false
+
+    - name: Disable service smartd
+      service:
+        name: smartd
+        enabled: no
+        state: stopped
+      when: smartd_status.rc == 0
+
+    - name: uninstall smartmontools
+      apt:
+        name:
+          - smartmontools
+        state: absent
+        purge: yes
+

@@ -19,6 +19,7 @@
         name:
           - nullmailer
           - mailutils
+          - bsd-mailx # this provides /usr/bin/mail needed ny some apps
         state: present
         update_cache: yes
 

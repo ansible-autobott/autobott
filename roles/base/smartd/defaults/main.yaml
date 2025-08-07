@@ -1,0 +1,27 @@
+---
+#============================================================================================================
+# Smartd
+#============================================================================================================
+# Flag to disable the role
+run_role_smartd: False
+
+# User overrides - will be combined with defaults
+smartd: {}
+
+smartd_defaults:
+  # configure the power mode see https://www.smartmontools.org/wiki/Powermode for details
+  # possible values:
+  #  never: smartd will poll (check) the device regardless of its power mode.
+  #  sleep: check the device unless it is in SLEEP mode.
+  #  standby: check the device unless it is in SLEEP or STANDBY mode.
+  #  idle: check the device unless it is in SLEEP, STANDBY or IDLE mode.
+  #  in idle normally disks are still spinning
+  powermode: idle
+  # amount of checks before the power mode is skipped and disks are started
+  # to check the disk status, polling is done every 30 min; 1460 is once a month
+  skip_count: 0
+  # who to notify   # https://linux.die.net/man/5/smartd.conf
+  # there is a special sting nomailer to not send anyone an alert
+  # if you set something like root, and have nullmailer configured the admin should get the emails
+  # email can be a coma separated list without spaces
+  email: root

@@ -10,7 +10,7 @@ run_role_goback: false
 goback: {}
 # Default configuration structure
 goback_defaults:
-  version:  0.2.1
+  version:  0.3.0
   base_dir: /opt/goback
   backup_dest: /var/goback
 
@@ -26,31 +26,24 @@ goback_profiles: []
 goback_profiles_sample:
 
   # very minimal profile config, this will place the backups in the default location
-  - name: demo_php_global
-    enabled: True
-    dirs:
-      - root: /vhosts/demo_php/home_dir/public_html
-    mysql:
-      - dbname:  demo
-    keep: 2
+  - enabled: True
     corn_weekly: True
-
-  # extended profile:  this will place the backups on a custom location
-  - name: demo_php
-    enabled: True
-    destination: /vhosts/demo_php/home_dir/backups
-    delete_destination: no
-    dirs:
-      - root: /vhosts/demo_php/home_dir/public_html
-    mysql:
-      - dbname: demo
-        user: db_user
-        password: db_password
-    keep: 1
-    file_owner: andresbott_com
-    file_mode: "0600"
-    dir_mode: "0700"
-    corn_monthly: True
-    corn_weekly: false
+    cron_monthly: False
+    # content of the goback profile configuration,
+    # check the goback documentation for details: https://github.com/andresbott/goback
+    content:
+      version: 1
+      # IMPORTANT the role needs the name to be present
+      name: "test_local"
+      type: "local"
+      dirs:
+        # the path defines the source to backup / sync
+        - path: "/vhosts/demo_php/home_dir/public_html"
+      dbs:
+        name: demo
+        type: mysql
+      destination:
+        path:   "/vhosts/demo_php/backups"
+        keep: 3
 
 

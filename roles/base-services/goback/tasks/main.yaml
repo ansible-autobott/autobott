@@ -63,27 +63,24 @@
         - item.delete_destination
 
     - name: Create backup profile
-      template:
-        src:          "goback.yaml"
-        dest:         "/etc/goback/profiles/{{ item.name}}.backup.yaml"
-        owner:        root
-        group:        root
-        mode:         0600
-      with_items:   "{{ goback_profiles }}"
+      copy:
+        dest: "/etc/goback/profiles/{{ item.content.name }}.backup.yaml"
+        content: "{{ item.content | to_nice_yaml(indent=2, sort_keys=False)  }}"
+        validate: goback validate %s
+      loop: "{{ goback_profiles }}"
       when: item.enabled
 
     - name: Remove backup profile
       file:
-        path:         "/etc/goback/profiles/{{ item.name}}.backup.yaml"
+        path:         "/etc/goback/profiles/{{ item.content.name}}.backup.yaml"
         state:        absent
       with_items:   "{{ goback_profiles }}"
       when: not item.enabled
 
-
     - name: enable monthly backup
       file:
-        src: "/etc/goback/profiles/{{ item.name}}.backup.yaml"
-        dest: /etc/goback/backupd.monthly/{{ item.name}}.backup.yaml
+        src: "/etc/goback/profiles/{{ item.content.name}}.backup.yaml"
+        dest: /etc/goback/backupd.monthly/{{ item.content.name}}.backup.yaml
         owner:        root
         group:        root
         state: link
@@ -95,15 +92,15 @@
 
     - name: disable monthly backup
       file:
-        path: "/etc/goback/backupd.monthly/{{ item.name}}.backup.yaml"
+        path: "/etc/goback/backupd.monthly/{{ item.content.name }}.backup.yaml"
         state: absent
       with_items:   "{{ goback_profiles }}"
       when: item.corn_monthly is not defined or not item.corn_monthly or not item.enabled
 
     - name: enable weekly backup
       file:
-        src: "/etc/goback/profiles/{{ item.name}}.backup.yaml"
-        dest: /etc/goback/backupd.weekly/{{ item.name}}.backup.yaml
+        src: "/etc/goback/profiles/{{ item.content.name}}.backup.yaml"
+        dest: /etc/goback/backupd.weekly/{{ item.content.name}}.backup.yaml
         owner:        root
         group:        root
         state: link
@@ -115,7 +112,7 @@
 
     - name: disable weekly backup
       file:
-        path: "/etc/goback/backupd.weekly/{{ item.name}}.backup.yaml"
+        path: "/etc/goback/backupd.weekly/{{ item.content.name}}.backup.yaml"
         state: absent
       with_items:   "{{ goback_profiles }}"
       when: item.corn_weekly is not defined or not item.corn_weekly or not item.enabled

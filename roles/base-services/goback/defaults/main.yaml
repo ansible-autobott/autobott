@@ -10,7 +10,7 @@ run_role_goback: false
 goback: {}
 # Default configuration structure
 goback_defaults:
-  version:  0.3.0
+  version:  0.4.0
   base_dir: /opt/goback
   backup_dest: /var/goback
 
@@ -42,8 +42,10 @@ goback_profiles_sample:
       dbs:
         name: demo
         type: mysql
+      # IMPORTANT the reads this path as well, here it checks path, owner
       destination:
         path:   "/vhosts/demo_php/backups"
         keep: 3
+        owner: another user
 
 

@@ -27,9 +27,25 @@ docmost_defaults:
   paths:
     base_dir: /opt/docmost
     data_dir: /opt/docmost/data
-    db_dir: /opt/docmost/db
+
+  # https://docmost.com/docs/self-hosting/configuration/
+  # https://docmost.com/docs/self-hosting/environment-variables/#using-smtp
+  email:
+    driver: "" # smtp or postmark, set to "" to disable
+    host: ""
+    port: ""
+    # initiate directly tls connection, normally used for port 465
+    smtp_secure: "true"
+    username: ""
+    password: ""
+    from: ""
+    from_name: "Docmost"
+    postmark_token: ""
 
   # Service configuration
   service:
     bind_ip: 127.0.0.1
     port: 3030
+
+# if you need to overwrite the docker registry, currently this is exposed for dev only.
+docmost_registry: docmost/docmost

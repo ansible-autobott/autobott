@@ -9,6 +9,7 @@
     - untagged
   when:
     - run_role_authelia | bool
+    - not remove_authelia | bool
   block:
     - name: Set merged Authelia configuration
       ansible.builtin.set_fact:
@@ -146,7 +147,9 @@
   tags:
     - authelia
     - untagged
-  when: not run_role_authelia
+  when:
+    - run_role_authelia | bool
+    - remove_authelia | bool
   block:
 
     - name: Check if Authelia service exists

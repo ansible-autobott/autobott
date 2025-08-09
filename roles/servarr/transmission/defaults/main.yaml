@@ -3,9 +3,11 @@
 # Transmission Daemon Role Defaults
 # Documentation: https://wiki.debian.org/Transmission
 #============================================================================================================
-
 # Role execution flag
 run_role_transmission: false
+
+# set to true to remove transmission
+remove_transmission: false
 
 # User overrides - will be combined with transmission_defaults
 transmission: {}

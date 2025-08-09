@@ -8,7 +8,9 @@
     - jellyfin
     - servarr
     - untagged
-  when: run_role_jellyfin | bool
+  when:
+    - run_role_jellyfin | bool
+    - not remove_jellyfin | bool
   block:
     - name: Set merged jellyfin configuration
       ansible.builtin.set_fact:
@@ -102,8 +104,8 @@
     - jellyfin
     - untagged
   when:
-    - run_role_jellyfin is defined
-    - not run_role_jellyfin
+    - run_role_jellyfin | bool
+    - remove_jellyfin | bool
   block:
     - name: Report Jellyfin is disabled
       ansible.builtin.debug:

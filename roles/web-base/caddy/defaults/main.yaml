@@ -6,6 +6,9 @@
 # Main role control variable
 run_role_caddy: false
 
+# set to true to uninstall caddy
+remove_caddy: false
+
 # User override variable - will be combined with defaults
 caddy: {}
 # Default Caddy configuration structure

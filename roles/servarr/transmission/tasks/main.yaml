@@ -9,6 +9,7 @@
     - untagged
   when:
     - run_role_transmission | bool
+    - not remove_transmission | bool
   block:
     - name: Set merged transmission facts
       ansible.builtin.set_fact:
@@ -202,8 +203,8 @@
     - transmission
     - untagged
   when:
-    - run_role_transmission is defined
-    - not run_role_transmission
+    - run_role_transmission | bool
+    - remove_transmission | bool
   block:
     - name: Set merged transmission facts
       ansible.builtin.set_fact:

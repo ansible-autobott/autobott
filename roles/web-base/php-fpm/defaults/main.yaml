@@ -6,6 +6,9 @@
 # Main role control variable
 run_role_php_fpm: false
 
+# set to true to uninstall php fpm
+remove_php_fpm: false
+
 # User override variable - will be combined with defaults
 php_fpm: {}
 # Default PHP-FPM configuration structure

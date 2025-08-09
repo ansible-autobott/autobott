@@ -12,8 +12,6 @@ mediawiki: {}
 mediawiki_defaults:
   version: 1.43.0
   download_url: "http://mediawiki.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
-  # Uninstall behavior
-  delete_data_on_uninstall: false
   # User and group configuration
   user:
     name: mediawiki

@@ -11,8 +11,6 @@ sonarr: {}
 # Default configuration structure
 sonarr_defaults:
   download_url: "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64"
-  # Uninstall behavior
-  delete_data_on_uninstall: false
   # User and group configuration
   user:
     name: sonarr

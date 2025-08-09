@@ -10,6 +10,7 @@
   when:
     - run_role_mariadb is defined
     - run_role_mariadb | bool
+    - not remove_mariadb | bool
   block:
     - name: Set merged mariadb configuration
       ansible.builtin.set_fact:
@@ -127,11 +128,16 @@
       changed_when: true
 
     - ansible.builtin.include_tasks: pentest.yaml
+
+
 - name: Main MariaDB removal block
   tags:
     - mariadb
     - untagged
-  when: not run_role_mariadb | bool
+  when:
+    - run_role_mariadb is defined
+    - run_role_mariadb | bool
+    - remove_mariadb | bool
   block:
     - name: Set MariaDB package list (Debian/Ubuntu specific)
       ansible.builtin.set_fact:

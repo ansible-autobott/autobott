@@ -11,8 +11,6 @@ whisparr: {}
 # Default configuration structure
 whisparr_defaults:
   download_url: "http://whisparr.servarr.com/v1/update/nightly/updatefile?os=linux&runtime=netcore&arch=x64"
-  # Uninstall behavior
-  delete_data_on_uninstall: false
   # User and group configuration
   user:
     name: whisparr

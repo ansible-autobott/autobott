@@ -6,6 +6,9 @@
 # Main role control variable
 run_role_authelia: false
 
+# set to true to uninstall authelia
+remove_authelia: false
+
 # User override variable - will be combined with defaults
 authelia: {}
 # Default Authelia configuration structure

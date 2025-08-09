@@ -8,6 +8,7 @@
     - untagged
   when:
     - run_role_smartd | bool
+    - not remove_smartd | bool
   block:
 
     - name: Set merged smartd configuration
@@ -39,7 +40,9 @@
   tags:
     - smartd
     - untagged
-  when: not run_role_smartd | bool
+  when:
+    - run_role_smartd | bool
+    - remove_smartd | bool
   block:
 
     - name: Set merged smartd configuration

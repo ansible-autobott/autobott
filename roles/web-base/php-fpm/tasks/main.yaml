@@ -17,6 +17,7 @@
     - untagged
   when:
     - run_role_php_fpm | bool
+    - not remove_php_fpm | bool
   block:
     - name: Set merged PHP-FPM configuration
       ansible.builtin.set_fact:
@@ -102,7 +103,9 @@
   tags:
     - php-fpm
     - untagged
-  when: not run_role_php_fpm
+  when:
+    - run_role_php_fpm | bool
+    - remove_php_fpm | bool
   block:
     - name: Load distribution-specific variables
       ansible.builtin.include_vars: "{{ ansible_distribution_release }}.yaml"

@@ -9,6 +9,7 @@
     - untagged
   when:
     - run_role_caddy | bool
+    - not remove_caddy | bool
   block:
     - name: Set merged Caddy configuration
       ansible.builtin.set_fact:
@@ -103,7 +104,9 @@
   tags:
     - caddy
     - untagged
-  when: not run_role_caddy
+  when:
+    - run_role_caddy | bool
+    - remove_caddy | bool
   block:
 
     - name: Check if Caddy service exists

@@ -11,8 +11,6 @@ radarr: {}
 # Default configuration structure
 radarr_defaults:
   download_url: "http://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
-  # Uninstall behavior
-  delete_data_on_uninstall: false
   # User and group configuration
   user:
     name: radarr

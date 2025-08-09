@@ -4,6 +4,8 @@
 #============================================================================================================
 # Flag to disable the role
 run_role_smartd: False
+# set to true to uninstall
+remove_smartd: false
 
 # User overrides - will be combined with defaults
 smartd: {}

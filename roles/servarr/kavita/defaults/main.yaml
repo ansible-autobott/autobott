@@ -11,8 +11,6 @@ kavita: {}
 # Default configuration structure
 kavita_defaults:
   version: 0.8.6.2
-  # Uninstall behavior
-  delete_data_on_uninstall: false
   # User and group configuration
   user:
     name: kavita

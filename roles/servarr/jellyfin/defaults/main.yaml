@@ -6,6 +6,9 @@
 # Role execution flag
 run_role_jellyfin: false
 
+# set to true to remove
+remove_jellyfin: false
+
 # User overrides - will be combined with jellyfin_defaults
 jellyfin: {}
 # Default configuration structure

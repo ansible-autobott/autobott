@@ -141,10 +141,6 @@
     - name: Include SSH configuration tasks
       ansible.builtin.include_tasks: ssh.yaml
 
-    # sftp jails
-    - name: Include SFTP configuration tasks
-      ansible.builtin.include_tasks: sftp.yaml
-
     # Timezone Configuration
     - name: Set system timezone
       community.general.timezone:

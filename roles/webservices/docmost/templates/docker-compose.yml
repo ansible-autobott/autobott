@@ -3,7 +3,7 @@ version: '3'
 services:
   docmost:
     container_name: docmost_server
-    image: docmost/docmost:{{ docmost_config.version }}
+    image: {{ docmost_registry }}:{{ docmost_config.version }}
     depends_on:
       - db
       - redis
@@ -14,11 +14,30 @@ services:
       REDIS_URL: 'redis://docmost_redis:6379'
       PUID: {{ docmost_uid }}
       PGID: {{ docmost_gid }}
+
+      {% if docmost_config.email.driver in [ 'smtp', 'postmark' ] %}
+      MAIL_DRIVER: '{{ docmost_config.email.driver }}'
+      MAIL_FROM_ADDRESS: '{{ docmost_config.email.from }}'
+      MAIL_FROM_NAME: '{{ docmost_config.email.from_name }}'
+
+      {% if docmost_config.email.driver == 'smtp' %}
+      SMTP_HOST: '{{ docmost_config.email.host }}'
+      SMTP_PORT: '{{ docmost_config.email.port }}'
+      SMTP_USERNAME: '{{ docmost_config.email.username }}'
+      SMTP_PASSWORD: '{{ docmost_config.email.password }}'
+      SMTP_SECURE: '{{ docmost_config.email.smtp_secure }}'
+      {% elif docmost_config.email.driver == 'postmark' %}
+      POSTMARK_TOKEN: '{{ docmost_config.email.postmark_token }}'
+      {% endif %}
+      # Email driver is neither smtp nor postmark, no email env vars set
+      {% endif %}
+
+
     ports:
       - "{{ docmost_config.service.bind_ip }}:{{ docmost_config.service.port }}:3000"
     restart: unless-stopped
     volumes:
-      - storage:/app/data/storage
+      - {{ docmost_config.paths.data_dir }}:/app/data/storage
 
   db:
     container_name: docmost_postgres    
@@ -43,4 +62,4 @@ services:
 volumes:
   redis_data:
   postgres_data:
-  storage:
+#  storage:

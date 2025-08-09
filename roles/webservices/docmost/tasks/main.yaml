@@ -57,7 +57,6 @@
       loop:
         - "{{ docmost_config.paths.base_dir }}"
         - "{{ docmost_config.paths.data_dir }}"
-        - "{{ docmost_config.paths.db_dir }}"
 
     - name: Create files needed for run docker
       ansible.builtin.template:
@@ -65,7 +64,7 @@
         dest: "{{ docmost_config.paths.base_dir }}/{{ item }}"
         owner: "{{ docmost_config.user.name }}"
         group: "{{ docmost_config.user.group }}"
-        mode: "0644"
+        mode: "0600"
       with_items:
         - "docker-compose.yml"
       notify:

@@ -1,0 +1,154 @@
+# AUTOBOT MANAGED
+# This file is managed by ansible-autobot, based on the OOTB configuration
+
+# This is the sshd server system-wide configuration file.  See
+# sshd_config(5) for more information.
+
+# This sshd was compiled with PATH=/usr/local/bin:/usr/bin:/bin:/usr/games
+
+# The strategy used for options in the default sshd_config shipped with
+# OpenSSH is to specify options with their default value where
+# possible, but leave them commented.  Uncommented options override the
+# default value.
+
+Include /etc/ssh/sshd_config.d/*.conf
+
+#Port 22
+#AddressFamily any
+#ListenAddress 0.0.0.0
+#ListenAddress ::
+
+#HostKey /etc/ssh/ssh_host_rsa_key
+#HostKey /etc/ssh/ssh_host_ecdsa_key
+#HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Ciphers and keying
+#RekeyLimit default none
+
+# Logging
+#SyslogFacility AUTH
+#LogLevel INFO
+
+
+# ============================================
+# Banner:
+# ============================================
+
+# no default banner path
+#Banner /etc/issue.net
+PrintMotd no
+
+# ============================================
+# Authentication:
+# ============================================
+
+#LoginGraceTime 2m
+# To disable tunneled clear text passwords, change to no here!
+PasswordAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin no
+StrictModes yes
+#MaxAuthTries 6
+#MaxSessions 10
+#PubkeyAuthentication yes
+
+# Expect .ssh/authorized_keys2 to be disregarded by default in future.
+#AuthorizedKeysFile     .ssh/authorized_keys .ssh/authorized_keys2
+
+#AuthorizedPrincipalsFile none
+
+#AuthorizedKeysCommand none
+#AuthorizedKeysCommandUser nobody
+
+# For this to work you will also need host keys in /etc/ssh/ssh_known_hosts
+#HostbasedAuthentication no
+# Change to yes if you don't trust ~/.ssh/known_hosts for
+# HostbasedAuthentication
+#IgnoreUserKnownHosts no
+# Don't read the user's ~/.rhosts and ~/.shosts files
+#IgnoreRhosts yes
+
+# Change to yes to enable challenge-response passwords (beware issues with
+# some PAM modules and threads)
+KbdInteractiveAuthentication no
+
+# Kerberos options
+#KerberosAuthentication no
+#KerberosOrLocalPasswd yes
+#KerberosTicketCleanup yes
+#KerberosGetAFSToken no
+
+# GSSAPI options
+#GSSAPIAuthentication no
+#GSSAPICleanupCredentials yes
+#GSSAPIStrictAcceptorCheck yes
+#GSSAPIKeyExchange no
+
+# Set this to 'yes' to enable PAM authentication, account processing,
+# and session processing. If this is enabled, PAM authentication will
+# be allowed through the KbdInteractiveAuthentication and
+# PasswordAuthentication.  Depending on your PAM configuration,
+# PAM authentication via KbdInteractiveAuthentication may bypass
+# the setting of "PermitRootLogin prohibit-password".
+# If you just want the PAM account and session checks to run without
+# PAM authentication, then enable this but set PasswordAuthentication
+# and KbdInteractiveAuthentication to 'no'.
+UsePAM yes
+
+# ============================================
+# Others:
+# ============================================
+
+# Force to use Protocol version 2
+Protocol 2
+
+# X11 Forwarding
+X11Forwarding {{ 'yes' if linux_basic.ssh.x11_forwarding | default(false) else 'no' }}
+
+# Allow client to pass locale environment variables
+AcceptEnv LANG LC_*
+
+# disable fancy ssh stuff
+AllowTcpForwarding no
+PermitTunnel no
+AllowAgentForwarding no
+
+{% set has_sftp_jails = linux_basic.ssh.sftp_jails | default([]) | length > 0 %}
+
+{% if has_sftp_jails %}
+# ============================================
+# SFTP:
+# ============================================
+
+# override default of no subsystems
+Subsystem sftp internal-sftp
+
+{% for item in linux_basic.ssh.sftp_jails %}
+{% if item.group_name is defined %}
+# ANSIBLE MANAGED BLOCK - sftp jail handled by group {{ item.group_name }}
+Match Group {{ item.group_name }}
+        ChrootDirectory {{ item.jail_dir }}/%u
+        PasswordAuthentication {{ 'yes' if item.allow_password | default(false) else 'no' }}
+        ForceCommand internal-sftp -u {{ item.umask | default('027') }}{% if item.start_dir | default('') | length > 0 %} -d {{ item.start_dir }}{% endif %}
+
+        AllowTcpForwarding no
+        X11Forwarding no
+        PermitTunnel no
+        AllowAgentForwarding no
+
+{% endif %}
+{% if item.user_name is defined %}
+# ANSIBLE MANAGED BLOCK - sftp jail handled by user {{ item.user_name }}
+Match User {{ item.user_name }}
+        ChrootDirectory {{ item.jail_dir }}
+        PasswordAuthentication {{ 'yes' if item.allow_password | default(false) else 'no' }}
+        ForceCommand internal-sftp -u {{ item.umask | default('027') }}{% if item.start_dir | default('') | length > 0 %} -d {{ item.start_dir }}{% endif %}
+
+        AllowTcpForwarding no
+        X11Forwarding no
+        PermitTunnel no
+        AllowAgentForwarding no
+
+{% endif %}
+{% endfor %}
+{% endif %}

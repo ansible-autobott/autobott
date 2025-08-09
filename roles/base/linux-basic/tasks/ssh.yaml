@@ -16,26 +16,53 @@
         mode: "0755"
       notify: restart sshd
 
-    - name: Configure SSH daemon security options
-      ansible.builtin.lineinfile:
-        path: /etc/ssh/sshd_config
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
+    - name: Fail if any sftp_jail entry does not define exactly one of group_name or user_name
+      ansible.builtin.assert:
+        that:
+          - (item.group_name is defined) != (item.user_name is defined)
+        fail_msg: >-
+          Invalid sftp_jails entry: must define exactly one of 'group_name' or 'user_name', not both or neither
+          ({{ item }}).
+      loop: "{{ sftp_jails | default([]) }}"
+      loop_control:
+        label: "{{ item.group_name | default('') ~ item.user_name | default('') }}"
+
+    - name: Deploy sshd_config
+      ansible.builtin.template:
+        src: sshd_config
+        dest: /etc/ssh/sshd_config
+        owner: root
+        group: root
+        mode: '0644'
         validate: "/usr/sbin/sshd -t -f %s"
-      loop:
-        - regexp: "^#?PermitEmptyPasswords"
-          line: "PermitEmptyPasswords no"
-        - regexp: "^#?PermitRootLogin"
-          line: "PermitRootLogin no"
-        - regexp: "^#?PasswordAuthentication"
-          line: "PasswordAuthentication no"
-        - regexp: "^#?X11Forwarding"
-          line: "X11Forwarding {{ 'yes' if linux_basic.ssh.x11_forwarding | default(false) else 'no' }}"
-        - regexp: "^#?Protocol"
-          line: "Protocol 2"
-        - regexp: "^#?UsePAM"
-          line: "UsePAM yes"
       notify: restart sshd
+
+    - name: Check ownership and permissions of sftp jail directories
+      ansible.builtin.stat:
+        path: "{{ item.jail_dir }}"
+      loop: "{{ linux_basic.ssh.sftp_jails | default([]) }}"
+      register: sftp_jail_stats
+      loop_control:
+        label: "/var/{{ item }}"
+
+    - name: Ensure sftp jail directories are owned by root:root
+      ansible.builtin.file:
+        path: "{{ item.stat.path }}"
+        owner: root
+        group: root
+      loop: "{{ sftp_jail_stats.results }}"
+      when: item.stat.pw_name != 'root' or item.stat.gr_name != 'root'
+      loop_control:
+        label: "{{ item.stat.path }}"
+
+    - name: Ensure sftp jail directories have permission 0755 or stricter
+      ansible.builtin.file:
+        path: "{{ item.stat.path }}"
+        mode: '0755'
+      loop: "{{ sftp_jail_stats.results }}"
+      when: item.stat.mode|int(base=8) > 0o755
+      loop_control:
+        label: "{{ item.stat.path }}"
 
     - name: Create group for SSH password login
       ansible.builtin.group:

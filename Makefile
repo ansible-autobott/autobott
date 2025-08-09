@@ -57,7 +57,7 @@ run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 	ansible-playbook $$VAULT_OPT -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
 
 ##@ Secrets
-encrypt: ## encrypt secret for the specific inventory, env Vars: INV=inventory_path, KEY=thekey, VALUE=secret
+encrypt: ## encrypt secret for the specific inventory, env Vars: INV=inventory_path, KEY=variableName, VALUE=secret
 	@if [ -z "$(KEY)" ]; then \
 		echo "Error: Missing required parameter 'KEY'" >&2; \
 		exit 1; \

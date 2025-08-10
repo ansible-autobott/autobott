@@ -146,6 +146,26 @@ set mailserver localhost
 #
 # set mail-format { from: monit@foo.bar }
 #
+
+set mail-format {
+  from:    <monit@$HOST>
+  subject: Monit Alert: $EVENT $SERVICE on $HOST
+  message: $EVENT Service $SERVICE
+                Date:        $DATE
+                Action:      $ACTION
+                Host:        $HOST
+                Description: $DESCRIPTION
+
+The service state is: $SERVICE_STATE
+Action taken: $ACTION
+
+Additional info:
+$DESCRIPTION
+
+--
+This is an automated message from Monit.
+}
+
 #
 ## You can set alert recipients whom will receive alerts if/when a
 ## service defined in this file has errors. Alerts may be restricted on
@@ -160,7 +180,7 @@ set mailserver localhost
 
 {% if monit_config.alert_targets  %}
 {% for email in monit_config.alert_targets %}
-set alert {{ email }} not on { instance, action }
+set alert {{ email }} not on { instance, action } with reminder on {{ monit_config.reminder_interval }} cycles
 {% endfor %}    
 {% endif %}
 

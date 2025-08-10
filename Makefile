@@ -19,7 +19,7 @@ INV ?= ../inventory/main.yaml
 
 
 ##@ Run
-enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS, ANSIBLE_USER
+enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS (optional), ANSIBLE_USER
 	@echo "Running with inventory: $(INV)" && \
 	. ./venv/bin/activate && \
 	if [ -z "$(HOST)" ]; then \
@@ -30,13 +30,22 @@ enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS,
 		echo "Error: ANSIBLE_USER variable is required!"; \
 		exit 1; \
 	fi && \
-	if [ -z "$$ANSIBLE_PASS" ]; then \
-		echo "Error: ANSIBLE_PASS environment variable is required!"; \
+	if [ -z "$(INV)" ]; then \
+		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
 	fi && \
+	INV_DIR=$$(dirname "$(INV)") && \
+	INV_DIR=$$(dirname "$(INV)") && \
+	VAULT_PASS_FILE="$$INV_DIR/vault_pass.txt" && \
 	HOST_VAL="-l $(HOST)" && \
-	ansible-playbook -i $(INV) -u $(ANSIBLE_USER) -t enroll $$HOST_VAL \
-	  --extra-vars "ansible_user=$$ANSIBLE_USER ansible_ssh_pass=$$ANSIBLE_PASS ansible_become_pass=$$ANSIBLE_PASS" \
+	VAULT_OPT=$$( [ -f "$$VAULT_PASS_FILE" ] && echo "--vault-password-file=$$VAULT_PASS_FILE" || echo "" ) && \
+	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
+	EXTRA_VARS="ansible_user=$$ANSIBLE_USER" && \
+	if [ -n "$$ANSIBLE_PASS" ]; then \
+		EXTRA_VARS="$$EXTRA_VARS ansible_ssh_pass=$$ANSIBLE_PASS ansible_become_pass=$$ANSIBLE_PASS"; \
+	fi && \
+	ansible-playbook $$VAULT_OPT -i $(INV) -u $(ANSIBLE_USER) -t enroll $$HOST_VAL \
+	  --extra-vars "$$EXTRA_VARS" \
 	  --become autobott.yaml
 
 run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>

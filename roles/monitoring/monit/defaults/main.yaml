@@ -21,8 +21,15 @@ monit_defaults:
   # email addresses that will get notifications
   alert_targets: []
 
+  # every cycle is 2 minutes, this tells to send the alert every 720 cycles ( 1 day in this case)
+  reminder_interval: 720
+
   checks:
-    system: True # main system alerts, cpu/disk/memory
+    # main system alerts, cpu/disk/memory
+    system:
+      enabled: True
+      mem_limit: 80%
+      swap_limit: 20%
     ssh: True
     mariadb: False
     caddy:

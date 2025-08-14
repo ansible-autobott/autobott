@@ -10,7 +10,7 @@ run_role_goback: false
 goback: {}
 # Default configuration structure
 goback_defaults:
-  version:  0.4.0
+  version:  0.4.1
   base_dir: /opt/goback
   backup_dest: /var/goback
 

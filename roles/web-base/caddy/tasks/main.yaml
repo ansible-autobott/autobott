@@ -15,12 +15,172 @@
       ansible.builtin.set_fact:
         caddy_config: "{{ caddy_defaults | combine(caddy, recursive=true) }}"
 
-    - name: Install Caddy web server
+    - name: Remove Caddy if installed via apt
       ansible.builtin.apt:
         name: caddy
-        state: present
-        update_cache: true
-        install_recommends: false
+        state: absent
+        purge: yes
+        autoremove: yes
+
+    - name: Check if caddy build hash exists
+      ansible.builtin.stat:
+        path: "/etc/caddy/custom_build_hash"
+      register: caddy_build_hash
+
+    - name: Read existing plugin hash
+      ansible.builtin.slurp:
+        src: "/etc/caddy/custom_build_hash"
+      register: old_hash
+      when: caddy_build_hash.stat.exists
+
+    - name: Calculate plugin list + Go version + Caddy version hash
+      ansible.builtin.set_fact:
+        plugin_list_hash: >-
+          {{
+          (caddy_config.caddy_plugins | join(',') ~ ',' ~ caddy_config.go_version ~ ',' ~ caddy_config.caddy_version)
+          | hash('sha256')
+          }}
+
+    - name: build custom caddy
+      when: >
+        (not caddy_build_hash.stat.exists) or
+        (plugin_list_hash != (old_hash.content | b64decode | trim))
+      block:
+
+        - name: Install build dependencies
+          apt:
+            name:
+              - git
+            state: present
+            update_cache: yes
+
+        - name: Define Go install path
+          set_fact:
+            go_install_dir: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}"
+            go_bin: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin/go"
+
+        - name: Create Go dir
+          file:
+            path: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}"
+            state: directory
+            mode: '0700'
+
+        - name: Download Go tarball
+          get_url:
+            url: "https://go.dev/dl/go{{ caddy_config.go_version }}.linux-amd64.tar.gz"
+            dest: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}.tar.gz"
+            mode: '0644'
+
+        - name: Install Go in versioned directory
+          unarchive:
+            src: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}.tar.gz"
+            dest: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}"
+            remote_src: yes
+            creates: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin/go"
+
+        - name: Create GOPATH directory
+          file:
+            path: "{{ caddy_config.build_dir }}/gopath"
+            state: directory
+            mode: '0700'
+
+        - name: Install xcaddy (local build dir)
+          shell: |
+            GOBIN="{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin/" \
+            GOPATH="{{ caddy_config.build_dir }}/gopath" \
+            {{ go_bin }} install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+          args:
+            creates: "{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin/xcaddy"
+
+        - name: Build custom Caddy (this takes a while)
+          shell: |
+            export PATH="{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin:$PATH"
+            GOBIN="{{ caddy_config.build_dir }}/go{{ caddy_config.go_version }}/go/bin/" \
+            GOPATH="{{ caddy_config.build_dir }}/gopath" \
+            xcaddy build {{ caddy_config.caddy_version }} \
+            {% for plugin in caddy_config.caddy_plugins %} --with {{ plugin }}{% endfor %}
+          args:
+            chdir: "{{ caddy_config.build_dir }}"
+
+        - name: move caddy to /usr/local/bin
+          ansible.builtin.copy:
+            src: "{{ caddy_config.build_dir }}/caddy"
+            dest: /usr/local/bin/caddy
+            remote_src: yes
+
+        - name: Set caddy permissions
+          ansible.builtin.file:
+            path: /usr/local/bin/caddy
+            mode: '0755'
+            owner: root
+            group: root
+
+        - name: Clean up Go build directories
+          ansible.builtin.file:
+            path: "{{ caddy_config.build_dir }}"
+            state: absent
+
+        - name: Create /etc/caddy/
+          file:
+            path: /etc/caddy/
+            state: directory
+            mode: '0755'
+            owner: root
+            group: root
+
+        - name: Save new plugin hash
+          copy:
+            content: "{{ plugin_list_hash }}"
+            dest: "/etc/caddy/custom_build_hash"
+            mode: '0600'
+
+    #============================================================================================================
+    # Configure
+    #============================================================================================================
+
+    - name: Add main Caddyfile
+      ansible.builtin.template:
+        src: Caddyfile.j2
+        dest: /etc/caddy/Caddyfile
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure caddy system user exists
+      ansible.builtin.user:
+        name: caddy
+        system: yes
+        shell: /usr/sbin/nologin
+        home: /var/lib/caddy
+        comment: "Caddy web server user"
+        create_home: yes
+
+    - name: Create Caddy systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/caddy.service
+        content: |
+          [Unit]
+          Description=Caddy
+          Documentation=https://caddyserver.com/docs/
+          After=network.target network-online.target
+          Requires=network-online.target
+          
+          [Service]
+          Type=notify
+          User=caddy
+          Group=caddy
+          ExecStart=/usr/local/bin/caddy run --environ --config /etc/caddy/Caddyfile
+          ExecReload=/usr/local/bin/caddy reload --config /etc/caddy/Caddyfile --force
+          TimeoutStopSec=5s
+          LimitNOFILE=1048576
+          PrivateTmp=true
+          ProtectSystem=full
+          AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+          
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - Reload systemd
 
     - name: Enable and start Caddy service
       ansible.builtin.systemd:
@@ -29,16 +189,6 @@
         enabled: true
         daemon_reload: true
 
-    - name: Clean package cache
-      ansible.builtin.apt:
-        clean: true
-      changed_when: false
-
-    - name: Set proper permissions on /etc/caddy/
-      ansible.builtin.file:
-        path: "/etc/caddy/"
-        state: directory
-        mode: "0755"
 
     - name: Create sites-available and sites-enabled directories
       ansible.builtin.file:
@@ -49,13 +199,7 @@
         - sites-available
         - sites-enabled
 
-    - name: Add main Caddyfile
-      ansible.builtin.template:
-        src: Caddyfile.j2
-        dest: /etc/caddy/Caddyfile
-        owner: root
-        group: root
-        mode: "0644"
+
 
     - name: Add utility scrip
       ansible.builtin.template:
@@ -120,12 +264,10 @@
         state: stopped
       when: caddy_service_file.stat.exists
 
-    - name: Uninstall Caddy
-      ansible.builtin.apt:
-        name: caddy
+    - name: Delete Caddy installation
+      ansible.builtin.file:
+        path: "{{ item }}"
         state: absent
-        purge: true
-
-    - name: Remove unused dependencies
-      ansible.builtin.apt:
-        autoremove: true
+      loop:
+        - /usr/local/bin/caddy
+        - /etc/caddy

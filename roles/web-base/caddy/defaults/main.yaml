@@ -18,3 +18,12 @@ caddy_defaults:
   metrics: true
   http_port: 80
   https_port: 443
+
+  # ensure that there are at least 2GB of disk space for the build
+  build_dir: "/tmp/caddy_build"
+  caddy_version: "v2.10.0" # the git tag used to build caddy
+  go_version: 1.25.0
+
+  caddy_plugins: []
+    # list of plugins to build caddy with, e.g.
+    # - github.com/caddy-dns/cloudflare

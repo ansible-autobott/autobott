@@ -1,8 +1,7 @@
 # templates/caddy/static.caddy
 {% include  'parts/servername.j2' %} {
 
-    {% if server.internal_ssl | default(false) %}tls internal{% endif %}
-
+    {% include  'parts/tls.j2' with context %}
     {% include  'parts/basicauth.j2' %}
     {% include  'parts/authelia.j2' %}
 

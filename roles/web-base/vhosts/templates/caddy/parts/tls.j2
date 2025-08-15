@@ -1,0 +1,12 @@
+
+{% if server.tls is defined %}
+{% if server.tls.type | default('') == "internal" %}
+tls internal
+
+{% elif server.tls.type | default('') == "cloudflare" %}
+tls {
+    dns cloudflare  "{env.{{ webservice.name | upper }}_SERVER{{ server_index }}_CF}"
+}
+
+{% endif %}
+{% endif %}

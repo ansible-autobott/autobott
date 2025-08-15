@@ -2,7 +2,9 @@
 {% for server in webservice.servers | default([]) %}
   {% if server.enabled | default(true) %}
 
-{% include "caddy/" ~ server.type ~ ".caddy" %}
+    {% with server_index=loop.index %}
+    {% include "caddy/" ~ server.type ~ ".caddy"  %}
+    {% endwith %}
 
   {% endif %}
 {% endfor %}

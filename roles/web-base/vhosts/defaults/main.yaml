@@ -104,6 +104,21 @@ vhosts_sample:
         type: "static"
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
 
+      # different tls configs,only one is possible
+      - enabled: true
+        domains:
+          - "https://localhost:8443"
+        type: "static"
+        document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
+        # prevent caddy from trying to get a certificate
+        tls:
+          type: "internal"
+        # use cloudflare DNS challenge certificate
+        tls:
+          type: "cloudflare"
+          api_key: "<secret goes here>"
+
+
       # php server
       - enabled: true
         domains:

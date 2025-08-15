@@ -32,3 +32,24 @@
     state: link
     force: true
   notify: restart caddy
+
+- name: Add secrets to env file
+  blockinfile:
+    path: /etc/caddy/env
+    block: |
+      
+      # secrets for: {{ webservice.name }}
+      {% for server in webservice.servers | default([]) %}{% if server.enabled | default(true) %}
+      
+      {% if server.tls is defined %}
+      {% if server.tls.type | default('') == "cloudflare" %}
+      {{ webservice.name | upper }}_SERVER{{ loop.index }}_CF={{ server.tls.api_key }}
+      {% endif %}
+      {% endif -%}
+
+      {% endif %}{% endfor %}
+    create: yes
+    marker: "### {mark} Ansible managed - {{ webservice.name }} ###"
+    owner: root
+    group: root
+    mode: '0600'

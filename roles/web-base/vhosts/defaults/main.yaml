@@ -111,12 +111,12 @@ vhosts_sample:
         type: "static"
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
         # prevent caddy from trying to get a certificate
-        tls:
-          type: "internal"
+        # tls:
+        #   type: "internal"
         # use cloudflare DNS challenge certificate
-        tls:
-          type: "cloudflare"
-          api_key: "<secret goes here>"
+        # tls:
+        #  type: "cloudflare"
+        #  api_key: "<secret goes here>"
 
 
       # php server

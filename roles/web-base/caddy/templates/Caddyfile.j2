@@ -1,6 +1,7 @@
 {
     admin {{ caddy_config.admin }}
     email {{ caddy_config.email }}
+    skip_install_trust
 
 {% if caddy_config.email | bool %}
 metrics

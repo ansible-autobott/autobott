@@ -154,6 +154,8 @@
         home: /var/lib/caddy
         comment: "Caddy web server user"
         create_home: yes
+        groups: www-data
+        append: yes
 
     - name: Ensure env file exists with correct permissions
       file:

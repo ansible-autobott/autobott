@@ -24,6 +24,18 @@ smartd_defaults:
   skip_count: 0
   # who to notify   # https://linux.die.net/man/5/smartd.conf
   # there is a special sting nomailer to not send anyone an alert
-  # if you set something like root, and have nullmailer configured the admin should get the emails
+  # if you set something like root, and have nullmailer properly configured the admin will get the emails
   # email can be a coma separated list without spaces
   email: root
+
+
+  selftest:
+    short_weekly: true
+    long_bimonthly: true
+
+  # nano smart is a minimalistic UI that gives you smart information
+  # https://github.com/ansible-autobott/nanoSmart
+  nanoSmart:
+    enabled: true
+    version: "v0.0.1"
+    path: /opt/nanoSmart

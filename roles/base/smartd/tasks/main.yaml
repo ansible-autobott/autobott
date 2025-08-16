@@ -36,6 +36,91 @@
         enabled: yes
         state: started
 
+#============================================================================================================
+# NanoSmart
+#============================================================================================================
+    - name: run steps for nanoSmart
+      when: smartd_config.nanoSmart.enabled | bool
+      block:
+
+        - name: Ensure install directory exists
+          file:
+            path: "{{ smartd_config.nanoSmart.path }}/data"
+            state: directory
+            mode: '0755'
+
+        - name: Download nanoSmart zip
+          get_url:
+            url: "https://github.com/ansible-autobott/nanoSmart/releases/download/{{ smartd_config.nanoSmart.version }}/nanoSmart-{{ smartd_config.nanoSmart.version }}.zip"
+            dest: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
+            mode: '0644'
+
+        - name: Unpack nanoSmart zip
+          unarchive:
+            src: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
+            dest: "{{ smartd_config.nanoSmart.path }}"
+            remote_src: true
+
+        - name: Remove downloaded nanoSmart zip
+          file:
+            path: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
+            state: absent
+
+        - name: Deploy smart_monitor config
+          template:
+            src: smart_monitor.cfg
+            dest: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.conf"
+            mode: '0644'
+
+        - name: Create symlink for the webui
+          file:
+            src: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/webui"
+            dest: "{{ smartd_config.nanoSmart.path }}/webui"
+            state: link
+            force: true
+
+        - name: Ensure api dir exists
+          file:
+            path: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/webui/api"
+            state: directory
+            mode: '0755'
+
+        - name: Create symlink for the data
+          file:
+            src: "{{ smartd_config.nanoSmart.path }}/data"
+            dest: "{{ smartd_config.nanoSmart.path }}/webui/api/smart"
+            state: link
+            force: true
+
+        - name: Create smart_monitor daily cron job
+          copy:
+            dest: /etc/cron.daily/smart_monitor
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              {{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.sh
+
+        - name: Run smart_monitor script immediately
+          command: /etc/cron.daily/smart_monitor
+          changed_when: false
+
+    - name: cleanup steps for nanoSmart
+      when: not smartd_config.nanoSmart.enabled | bool
+      block:
+
+        - name: Remove smart_monitor daily cron job
+          file:
+            path: /etc/cron.daily/smart_monitor
+            state: absent
+
+        - name: Remove nanoSmart install dir
+          file:
+            path: "{{ smartd_config.nanoSmart.path }}"
+            state: absent
+
+#============================================================================================================
+# Remove
+#============================================================================================================
 - name: main smartd block
   tags:
     - smartd

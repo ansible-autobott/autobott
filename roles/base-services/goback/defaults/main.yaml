@@ -6,6 +6,10 @@
 # Main role control
 run_role_goback: false
 
+# second part of the role to be run at the end of execution
+run_goback_profiles: false
+
+
 # User overrides - these will be combined with goback_defaults
 goback: {}
 # Default configuration structure
@@ -40,12 +44,12 @@ goback_profiles_sample:
         # the path defines the source to backup / sync
         - path: "/vhosts/demo_php/home_dir/public_html"
       dbs:
-        name: demo
-        type: mysql
+        - name: demo
+          type: mysql
       # IMPORTANT the reads this path as well, here it checks path, owner
       destination:
         path:   "/vhosts/demo_php/backups"
         keep: 3
-        owner: another user
+        owner: another_user
 
 

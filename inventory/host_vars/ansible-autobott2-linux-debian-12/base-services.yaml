@@ -55,7 +55,7 @@ run_role_mariadb: true
 #============================================================================================================
 run_role_borg: true
 borg:
-  version: "2.0.0b14" # check borg_checksums below
+  version: "2.0.0b19"
   server:
     enabled: true
     repos:
@@ -102,23 +102,25 @@ borgmatic_backups:
 #============================================================================================================
 run_role_goback: true
 goback_profiles:
-  - name: demo_php
-    enabled: yes
-    destination: /vhosts/demo_php/home_dir/backups
-    delete_destination: false  # delete destination on disable
-    dirs:
-      - root: /vhosts/demo_php/home_dir/public_html
-        exclude:
-          - "*.log"
-          - "*.tmp"
-    mysql:
-      - dbname: "demo_php"
-        # if left undefined, goback will fallback to whatever mysqldump uses
-        #      user: ""
-        #      pw: ""
-    keep: 1
-    file_owner: demo_php
+  - enabled: yes
     corn_monthly: no
     corn_weekly: no
+    content:
 
+      version: 1
+      name: "demo_php"
+      type: "local"
+      dirs:
+        - path: /vhosts/demo_php/home_dir/public_html
+          exclude:
+            - "*.log"
+            - "*.tmp"
 
+      dbs:
+        - name: demo_php
+          type: mysql
+      # IMPORTANT the reads this path as well, here it checks path, owner
+      destination:
+        path:   "/vhosts/demo_php/home_dir/backups"
+        keep: 3
+        owner: demo_php

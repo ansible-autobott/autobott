@@ -98,3 +98,15 @@
 #  roles:
 #    - desktop/linux-kde
 #    - desktop/linux-desktop
+
+#============================================================================================================
+# post setup actions
+# some roles will depend on previous configuration, e.g. web service users existent
+#============================================================================================================
+
+- hosts: all
+  become: true
+  roles:
+    - role: base-services/goback
+      vars:
+        run_goback_profiles: true

@@ -9,12 +9,15 @@ run_role_minecraft: false
 # User-provided override (merged with minecraft_defaults)
 minecraft: {}
 minecraft_defaults:
+
   # get the jar here: https://www.minecraft.net/en-us/download/server
-  #minecraft_jar: https://piston-data.mojang.com/v1/objects/f69c284232d7c7580bd89a5a4931c3581eae1378/server.jar
-  #minecraft_version: 1.19.2
+  jar_url: "https://piston-data.mojang.com/v1/objects/6bce4ef400e4efaa63a13d5e6f6b500be969ef81/server.jar"
+  version: "1.21.8"
+
+  # alternative servers can also be installed
   # https://papermc.io/downloads
-  jar_url: "https://api.papermc.io/v2/projects/paper/versions/1.19.2/builds/224/downloads/paper-1.19.2-224.jar"
-  version: "paper-1.19.2-224"
+  #  jar_url: "https://fill-data.papermc.io/v1/objects/e6be3eab0e9340c8ef13b12d8ac52654b76d34da690678ce6bd315f51a3b27d7/paper-1.21.8-36.jar"
+  #  version: "paper-1.21.8-36"
 
   # set to true to delete all minecraft related data when disabled
   delete_data: false

@@ -149,3 +149,6 @@
     - name: Reload systemd to apply unit file changes
       ansible.builtin.systemd:
         daemon_reload: yes
+
+- name: Flush handlers
+  meta: flush_handlers

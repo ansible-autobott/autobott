@@ -17,17 +17,3 @@ This is just a simple list of ideas and tasks to do on autobott
 * OliveTin
 * SMART web ui => https://github.com/AnalogJ/scrutiny
 
-# Braindump
-
-* explore on setting up monit to lert if systemd services are in a failed state
-* add a mechanism to prevent running old version
-    * store the version on the server
-    * autobot will check the version and only run if it is a supported one, e.g. v3 allows to update from v2 but not v1
-
-* validation role:
-    * ensure all servarr ports are not publicly available
-* grafana
-    * add a graph for zfs l2arc cache hit ratio
-    * Smart data for disks
-
-* add a cron script to borg server that will send an email if no backup was made in over a month

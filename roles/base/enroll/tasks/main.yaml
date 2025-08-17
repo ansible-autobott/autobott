@@ -5,7 +5,6 @@
     - untagged
     - enroll
   when:
-    - run_role_autobott_enroll is defined
     - run_role_autobott_enroll
   become: true
   block:
@@ -88,3 +87,70 @@
         group: root
         mode: "0600"
       when: autobott_enroll_data.root_bashrc
+
+#============================================================================================================
+# Version Control
+#============================================================================================================
+
+    - name: Manage Autobott version
+      block:
+        - name: Check if version file exists
+          ansible.builtin.stat:
+            path: "/etc/autobott_version"
+          register: version_file_stat
+
+        - name: Read current version if file exists
+          ansible.builtin.slurp:
+            src: "/etc/autobott_version"
+          when: version_file_stat.stat.exists
+          register: current_version_raw
+
+        - name: Decode current version
+          set_fact:
+            current_version: "{{ current_version_raw.content | b64decode | trim }}"
+          when: version_file_stat.stat.exists
+
+        - name: Extract desired major version
+          set_fact:
+            desired_major: "{{ (autobot_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
+
+        - name: Extract current major version (only if file exists)
+          set_fact:
+            current_major: "{{ (current_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
+          when: version_file_stat.stat.exists
+
+        - name: Set upgrade validity flag
+          set_fact:
+            invalid_upgrade: >-
+              {{ version_file_stat.stat.exists
+                 and (desired_major | int != current_major | int)
+                 and (desired_major | int != (current_major | int + 1)) }}
+
+        - name: Autobott execution not viable
+          ansible.builtin.debug:
+            msg: >
+              Invalid upgrade path detected!, Current version: {{ current_version }}; Target version: {{ autobot_version }}
+              Rule: Only same-major ({{ current_major | int }}) or next-major ({{ (current_major | int) + 1 }}) upgrades are allowed.
+          when: invalid_upgrade | bool
+          changed_when: true
+
+        - name: Fail on invalid upgrade
+          ansible.builtin.fail:
+            msg: "Upgrade blocked due to invalid version transition (see above)."
+          when: invalid_upgrade | bool
+
+
+- name: Write new version to host
+  ansible.builtin.copy:
+    dest: "/etc/autobott_version"
+    content: "{{ autobot_version }}\n"
+    owner: root
+    group: root
+    mode: '0644'
+  when:
+    - run_role_autobott_enroll | bool
+    - run_autobott_write_version | bool
+  tags:
+    - role_enroll
+    - untagged
+    - enroll

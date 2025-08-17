@@ -5,6 +5,11 @@
 # flag that allows to disable the role
 run_role_autobott_enroll: true
 
+# current version
+autobot_version: v0.1.1
+# used to write the version back to the host at the end
+run_autobott_write_version: false
+
 # Default values that will be used if not set in inventory
 autobott_enroll_defaults:
   # Ansible login user for system management

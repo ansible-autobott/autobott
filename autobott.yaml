@@ -110,3 +110,7 @@
     - role: base-services/goback
       vars:
         run_goback_profiles: true
+    # at the end, as last step we write the new version
+    - role: base/enroll
+      vars:
+        run_autobott_write_version: true

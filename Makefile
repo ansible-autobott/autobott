@@ -175,6 +175,67 @@ vagrant-snapshot-restore: ## restore to snapshot of the vagrant state
 	@cd vagrant && \
 	vagrant snapshot restore ansible-autobott-linux-debian-12 automated-snapshot
 
+
+##@ Release
+
+check_env: # check for needed envs
+ifndef GITHUB_TOKEN
+	$(error GITHUB_TOKEN is undefined, create one with repo permissions here: https://github.com/settings/tokens/new?scopes=repo,write%3Apackages )
+endif
+	@[ "${version}" ] || ( echo ">> version is not set, usage: make release version=\"v1.2.3\" "; exit 1 )
+	@which jq > /dev/null || ( echo ">> jq is not installed. Please install jq for JSON parsing."; exit 1 )
+
+.PHONY: check-git-clean
+check-git-clean: # check if git repo is clen
+	@git diff --quiet
+
+.PHONY: check-branch
+check-branch:
+	@current_branch=$$(git symbolic-ref --short HEAD) && \
+	if [ "$$current_branch" != "main" ]; then \
+		echo "Error: You are on branch '$$current_branch'. Please switch to 'main'."; \
+		exit 1; \
+	fi
+
+check-autobott-version:
+	@[ "${version}" ] || ( echo ">> version is not set, usage: make check-autobot-version version=\"v1.2.3\" "; exit 1 )
+	@AUTOBOT_VERSION=$$(grep -E '^autobot_version:' ./roles/base/enroll/defaults/main.yaml | awk '{print $$2}') && \
+	if [ "$$AUTOBOT_VERSION" != "$(version)" ]; then \
+		echo "Error: autobot_version ($$AUTOBOT_VERSION) does not match the release version ($(version))"; \
+		exit 1; \
+	else \
+		echo "autobot_version ($$AUTOBOT_VERSION) matches release version ($(version))"; \
+	fi
+
+
+#release: check_env check-branch check-git-clean ## release a new version, call with version="v1.2.3", make sure to have valid GH token
+release:  check_env check-autobott-version ## release a new version, call with version="v1.2.3", make sure to have valid GH token
+	@[ "${version}" ] || ( echo ">> version is not set, usage: make release version=\"v1.2.3\" "; exit 1 )
+	@echo "Preparing release notes for version $(version)..."
+	@PREV_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo "") && \
+	if [ -z "$$PREV_TAG" ]; then \
+		echo "No previous tag found, using all commits"; \
+		COMMIT_RANGE=""; \
+	else \
+		COMMIT_RANGE="$$PREV_TAG..HEAD"; \
+	fi && \
+	RELEASE_BODY=$$(git log $$COMMIT_RANGE --pretty=format:'- %s (%an)' | sed 's/"/\\"/g') && \
+	echo "Release notes:\n$$RELEASE_BODY" && \
+	git tag -d $(version) >/dev/null 2>&1 || true && \
+	git tag -a $(version) -m "Release version: $(version)" && \
+	git push --delete origin $(version) >/dev/null 2>&1 || true && \
+	git push origin $(version) && \
+	RELEASE_ID=$$(curl -s -H "Authorization: token $(GITHUB_TOKEN)" \
+		-H "Accept: application/vnd.github.v3+json" \
+		-X POST \
+		-d '{"tag_name":"$(version)","name":"Release $(version)","body":"'"$$RELEASE_BODY"'","draft":false,"prerelease":false}' \
+		"https://api.github.com/repos/ansible-autobott/autobott/releases" | jq -r '.id') && \
+	if [ "$$RELEASE_ID" = "null" ] || [ -z "$$RELEASE_ID" ]; then \
+		echo "Error: Could not create release for tag $(version)"; \
+		exit 1; \
+	fi && \
+	echo "Release $(version) created successfully with ID $$RELEASE_ID"
+
 ##@ Test
 lint: ## run ansible lint
 	@. ./venv/bin/activate && \

@@ -207,9 +207,7 @@ check-autobott-version:
 		echo "autobot_version ($$AUTOBOT_VERSION) matches release version ($(version))"; \
 	fi
 
-
-#release: check_env check-branch check-git-clean ## release a new version, call with version="v1.2.3", make sure to have valid GH token
-release:  check_env check-autobott-version ## release a new version, call with version="v1.2.3", make sure to have valid GH token
+release:  check_env check-autobott-version check-branch check-git-clean ## release a new version, call with version="v1.2.3", make sure to have valid GH token
 	@[ "${version}" ] || ( echo ">> version is not set, usage: make release version=\"v1.2.3\" "; exit 1 )
 	@echo "Preparing release notes for version $(version)..."
 	@PREV_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo "") && \

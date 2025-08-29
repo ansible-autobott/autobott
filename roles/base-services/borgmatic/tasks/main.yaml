@@ -100,6 +100,7 @@
         state:        absent
       loop: "{{ borgmatic_backups }}"
       when: not item.enabled | default(true)
+      no_log: true
 
     - name: Validate rendered borgmatic config
       command: borgmatic config validate
@@ -110,7 +111,6 @@
     #============================================================================================================
     # init
     #============================================================================================================
-
 
     - name: Extract SSH hosts from destination paths
       set_fact:
@@ -124,10 +124,12 @@
       with_subelements:
         - "{{ borgmatic_backups }}"
         - destination
+      no_log: true
 
     - name: Remove duplicate hosts
       set_fact:
         borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
+      when: borg_ssh_hosts is defined
 
     - name: Process each Borg SSH host
       include_tasks: scan_and_add_known_host.yaml
@@ -147,6 +149,7 @@
       when:
         - item.1.path is defined
         - not (item.1.path is match('^ssh:'))
+      no_log: true
 
     - name: init repos for borg 1.x
       command: borgmatic init
@@ -156,7 +159,11 @@
 
     - name: init repos for borg 2.x
       command: borgmatic repo-create
-      when: borg_major_version == "2"
+      when:
+        - borg_major_version == "2"
+        - borg_ssh_hosts is defined
+        - borg_ssh_hosts | length > 0
+      no_log: true
 
     - name: Ensure key export directory exists on remote host
       file:

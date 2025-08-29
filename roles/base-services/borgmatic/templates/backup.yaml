@@ -38,6 +38,7 @@ ssh_command: ssh -i /etc/borgmatic.d/{{ item.name }}.pkey
 encryption_passphrase: "{{ item.encryption_passphrase }}"
 {% endif %}
 
+progress: true
 
 exclude_if_present:
   - .nobackup

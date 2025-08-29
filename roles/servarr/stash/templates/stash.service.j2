@@ -5,7 +5,12 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+{% if stash_config.service.umask is defined and stash_config.service.umask | length > 0 %}
+UMask={{ stash_config.service.umask }}
+{% endif %}
+
 User={{ stash_config.user.name }}
+Group={{ stash_config.user.group }}
 ExecStart="{{ stash_config.paths.base_dir }}/binaries/stash-latest" -c {{ stash_config.paths.data_dir }}/config.yaml
 Restart=on-failure
 WorkingDirectory={{ stash_config.paths.data_dir }}

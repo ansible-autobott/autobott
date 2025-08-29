@@ -38,13 +38,23 @@
         autoremove: true
         autoclean: true
 
-    # Hostname Configuration
+    # fqdn Configuration
     - name: Configure system hostname
-      when: linux_basic.hostname | default('') | length > 0
+      when: linux_basic.fqdn | default('') | length > 0
       block:
         - name: Set system hostname
           ansible.builtin.hostname:
-            name: "{{ linux_basic.hostname }}"
+            name: "{{ linux_basic.fqdn }}"
+          register: hostname_change
+
+        - name: Set system /etc/mailname
+          ansible.builtin.copy:
+            dest: /etc/mailname
+            content: |
+              {{ linux_basic.fqdn | default(ansible_fqdn) }}
+            owner: root
+            group: root
+            mode: "0644"
           register: hostname_change
 
         - name: Reboot system if hostname changed
@@ -59,7 +69,13 @@
         create: true
         mode: "0644"
         block: |
-          127.0.1.1 {% if linux_basic.fqdn | default('') | length > 0 %}{{ linux_basic.fqdn }}{% else %}{{ ansible_fqdn }}{% endif %} {% if linux_basic.hostname | default('') | length > 0 %}{{ linux_basic.hostname }}{% else %}{{ ansible_hostname }}{% endif %}
+          {% set hostname = (linux_basic.fqdn | default(ansible_fqdn)) %}
+    
+          127.0.1.1 {% if '.' in hostname %}
+          {{ hostname }} {{ hostname.split('.')[0] }}
+          {% else %}
+          {{ hostname }}
+          {% endif %}
 
           # Additional hosts
           {% for host in linux_basic.etc_host_entries | default([]) %}

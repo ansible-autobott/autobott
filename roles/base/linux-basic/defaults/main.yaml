@@ -27,11 +27,8 @@ linux_basic_defaults:
   #============================================================================================================
   # Host Config
   #============================================================================================================
-  # define the host's hostname
+  # define the host's fqdn hostname, a single word hostname is possible but not recommended
   # if nothing is set the default fallback is the value of ansible_hostname
-  hostname: ""
-  # define the host's Fully qualified domain name, as queried in hostname --fqdn
-  # if nothing is set the default fallback is the value of ansible_fqdn
   fqdn: ""
   # add extra entries to /etc/hosts
   # example

@@ -37,5 +37,5 @@ smartd_defaults:
   # https://github.com/ansible-autobott/nanoSmart
   nanoSmart:
     enabled: true
-    version: "v0.0.1"
+    version: "v0.0.2"
     path: /opt/nanoSmart

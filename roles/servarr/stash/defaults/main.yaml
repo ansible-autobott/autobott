@@ -29,6 +29,9 @@ stash_defaults:
   # Service configuration
   service:
     bind_ip: 127.0.0.1
+    # start the service with different umask value
+    # set to something like 0022 (755) or 0007 (770), will be ommited if empty
+    umask: ""
     port: 9999
 
 # Supported stash versions and checksums

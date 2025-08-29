@@ -1,0 +1,70 @@
+---
+#============================================================================================================
+# Hdparm
+#============================================================================================================
+- name: main hdparm block
+  tags:
+    - hdparm
+    - untagged
+  when:
+    - run_role_hdparm | bool
+  block:
+
+    - name: Set merged hdparm configuration
+      ansible.builtin.set_fact:
+        hdparm_config: "{{ hdparm_defaults | combine(hdparm, recursive=true) }}"
+
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - hdparm
+        state: present
+        update_cache: yes
+
+    - name: Initialize resolved_disks
+      ansible.builtin.set_fact:
+        resolved_disks: []
+
+    - name: Add disks with dev
+      ansible.builtin.set_fact:
+        resolved_disks: "{{ resolved_disks + [ {'dev': item.dev, 'options': item.options} ] }}"
+      loop: "{{ hdparm_config.disks }}"
+      when: item.dev is defined
+
+    - name: Resolve disks by serial on remote host
+      ansible.builtin.set_fact:
+        resolved_disks: "{{ resolved_disks + new_disks }}"
+      vars:
+        new_disks: >-
+          {%- set result = [] -%}
+          {%- for disk in hdparm_config.disks -%}
+            {%- if disk.serial is defined -%}
+              {%- for s in disk.serial -%}
+                {%- set dev = lookup('ansible.builtin.pipe', 'ssh ' ~ inventory_hostname ~ ' lsblk -o NAME,SERIAL -dn | awk \'$2=="' ~ s ~ '" {print "/dev/"$1}\'') -%}
+                {%- if dev != "" -%}
+                  {%- set _ = result.append({'dev': dev, 'options': disk.options}) -%}
+                {%- endif -%}
+              {%- endfor -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {{ result }}
+
+    - name: Update hdparm entries in hdparm.conf
+      ansible.builtin.blockinfile:
+        path: /etc/hdparm.conf
+        block: |
+          {% for item in resolved_disks %}
+          {{ item.dev }} {
+          {% for option in item.options %}
+            {{ option }}
+          {% endfor %}
+          }
+          {% endfor %}
+        marker: '# {mark} ANSIBLE MANAGED BLOCK'
+      register: hdparm_cfg_change
+
+
+    - name: re-apply hdparm config
+      command: /usr/lib/pm-utils/power.d/95hdparm-apm resume
+      when: hdparm_cfg_change.changed
+

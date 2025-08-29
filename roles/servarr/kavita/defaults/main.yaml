@@ -17,6 +17,8 @@ kavita_defaults:
     uid: # Let system assign UID
     group: kavita
     gid: # Let system assign GID
+    # add additional secondary groups
+
   # Installation paths
   paths:
     base_dir: /opt/kavita
@@ -28,7 +30,6 @@ kavita_defaults:
     # start the service with different umask value
     # set to something like 0022 (755) or 0007 (770), will be ommited if empty
     umask: ""
-    auth_method: "External" # Basic | Forms | External | None
 
 kavita_checksums:
   "0.8.6.2": "d0213e237dd92a57b6cdc9bd5116e9efd1459921ea1130acd323a4b6277e6ccc"

@@ -88,6 +88,15 @@
         group: "{{ xbvr_config.user.group }}"
       notify: restart xbvr
 
+    - name: Ensure execution bit to included ffmpeg
+      ansible.builtin.file:
+        path: "{{ item }}"
+        mode: u+x,g+x
+        state: file
+      loop:
+        - "{{ xbvr_config.paths.data_dir }}/bin/ffmpeg"
+        - "{{ xbvr_config.paths.data_dir }}/bin/ffprobe"
+
     - name: Create systemd service for xbvr
       ansible.builtin.template:
         src: xbvr.service

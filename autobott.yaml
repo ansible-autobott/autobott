@@ -13,6 +13,7 @@
     - base/nullmailer
 
     - base/smartd
+    - base/hdparm
 
     # ===============  Base Services  =============== #
     - base-services/wireguard

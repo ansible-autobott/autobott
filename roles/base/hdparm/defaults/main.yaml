@@ -1,0 +1,42 @@
+---
+#============================================================================================================
+# Hdparm
+#============================================================================================================
+# Flag to disable the role
+run_role_hdparm: False
+
+# User overrides - will be combined with defaults
+hdparm: {}
+
+hdparm_defaults:
+  disks: []
+
+# disks defines a list of items / options to be applied using hdparm.conf
+# e.g.
+# get disk details using: sudo lsblk -o NAME,SERIAL,MODEL,SIZE
+# you can specify a dev path, or alternative a serial number.
+# if you specify a serial, autobott will get the path at execution time and replace it by /dev/xxx
+hdparm_config:
+  disks:
+    - dev:
+        - /dev/sda
+      options:
+        - "spindown_time = 120"
+
+    - serial:
+        - "123"
+        - "4567"
+      options:
+        - "spindown_time = 120"
+
+
+# options
+#  spindown_time, the value is in multiples of 5 seconds / 30 min
+#    * 1–240 → multiples of 5 seconds (5s to 20 min)
+#    * 241–251 → multiples of 30 minutes (30min to 11.5h)
+#
+#  apm, Advanced Power Management level (0–255):
+#    * 0 → Disabled
+#    * 1–127 → Low power, slower response
+#    * 128–254 → High power, faster response
+#    * 255 → Maximum performance, no spindown

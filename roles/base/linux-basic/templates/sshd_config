@@ -113,15 +113,19 @@ AllowTcpForwarding no
 PermitTunnel no
 AllowAgentForwarding no
 
+# close idle session after 15 min
+ClientAliveInterval 900
+
+# override default of no subsystems
+Subsystem       sftp    /usr/lib/openssh/sftp-server
+
+
 {% set has_sftp_jails = linux_basic.ssh.sftp_jails | default([]) | length > 0 %}
 
 {% if has_sftp_jails %}
 # ============================================
 # SFTP:
 # ============================================
-
-# override default of no subsystems
-Subsystem sftp internal-sftp
 
 {% for item in linux_basic.ssh.sftp_jails %}
 {% if item.group_name is defined %}
@@ -130,6 +134,7 @@ Match Group {{ item.group_name }}
         ChrootDirectory {{ item.jail_dir }}/%u
         PasswordAuthentication {{ 'yes' if item.allow_password | default(false) else 'no' }}
         ForceCommand internal-sftp -u {{ item.umask | default('027') }}{% if item.start_dir | default('') | length > 0 %} -d {{ item.start_dir }}{% endif %}
+        Subsystem sftp internal-sftp
 
         AllowTcpForwarding no
         X11Forwarding no
@@ -143,6 +148,7 @@ Match User {{ item.user_name }}
         ChrootDirectory {{ item.jail_dir }}
         PasswordAuthentication {{ 'yes' if item.allow_password | default(false) else 'no' }}
         ForceCommand internal-sftp -u {{ item.umask | default('027') }}{% if item.start_dir | default('') | length > 0 %} -d {{ item.start_dir }}{% endif %}
+        Subsystem sftp internal-sftp
 
         AllowTcpForwarding no
         X11Forwarding no

@@ -1,4 +1,4 @@
-# templates/caddy/static.caddy
+# templates/caddy/spa.caddy
 {% include  'parts/servername.j2' %} {
 
     {% include  'parts/tls.j2' with context %}
@@ -12,6 +12,7 @@
     %}
 
     root * {{ doc_root }}
-    encode
+	encode
+    try_files {path} /index.html
     file_server
 }

@@ -24,6 +24,7 @@ validate_secret_prefix() {
     SECRET="\$A${SECRET}"
   else
     echo "Error: SECRET does not start with '\$ANSIBLE_VAULT' or 'NSIBLE_VAULT'. Cannot decrypt." >&2
+    echo "make sure to define secret with single quote SECRET='\$ANSIBLE_VAULT... ' "
     exit 1
   fi
 }

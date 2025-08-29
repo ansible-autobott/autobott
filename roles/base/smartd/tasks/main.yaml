@@ -20,6 +20,7 @@
         name:
           - smartmontools
           - unzip
+          - jq
         state: present
         update_cache: yes
 
@@ -99,7 +100,7 @@
             mode: '0755'
             content: |
               #!/bin/bash
-              {{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.sh
+              {{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.sh  > /dev/null
 
         - name: Run smart_monitor script immediately
           command: /etc/cron.daily/smart_monitor

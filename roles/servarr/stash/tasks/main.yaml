@@ -14,6 +14,13 @@
       ansible.builtin.set_fact:
         stash_config: "{{ stash_defaults | combine(stash, recursive=true) }}"
 
+    - name: Install ffmpeg
+      apt:
+        name:
+          - ffmpeg
+        state: present
+        update_cache: yes
+
     - name: Create stash system group
       ansible.builtin.group:
         name: "{{ stash_config.user.group }}"

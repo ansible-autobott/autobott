@@ -1,0 +1,46 @@
+---
+#============================================================================================================
+# jellyfin-player Role - Main Tasks
+#============================================================================================================
+- name: Main jellyfin-player block
+  tags:
+    - jellyfin-player
+    - jellyfin_player
+    - untagged
+  when:
+    - run_role_jellyfin_player | bool
+  block:
+    - name: Set merged jellyfin-player configuration
+      ansible.builtin.set_fact:
+        jellyfin_player_config: "{{ jellyfin_player_defaults | combine(jellyfin_player, recursive=true) }}"
+
+    - name: get current jellyfin-player version
+      shell: "jellyfinmediaplayer --version | awk '{print $2}'"
+      register: jellyfin_player_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update jellyfin-player
+      when: jellyfin_player_current_version.stdout != jellyfin_player_config.version
+      block:
+
+        - file:
+            path: "/tmp/jellyfin-player"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download jellyfin-player
+
+          ansible.builtin.get_url:
+            url: "https://github.com/jellyfin/jellyfin-media-player/releases/download/v{{ jellyfin_player_config.version }}/jellyfin-media-player_{{ jellyfin_player_config.version }}-1_amd64-bookworm.deb"
+            dest: "/tmp/jellyfin-player"
+
+        - name: Install  jellyfin-player .deb file
+          apt:
+            deb: "/tmp/jellyfin-player/jellyfin-media-player_{{ jellyfin_player_config.version }}-1_amd64-bookworm.deb"
+
+        - file:
+            path: "/tmp/jellyfin-player"
+            state: absent

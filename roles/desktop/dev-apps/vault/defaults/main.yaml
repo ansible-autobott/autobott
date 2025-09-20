@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# vault Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_vault: false
+
+# User override variable - will be combined with defaults
+vault: {}
+# Default vault configuration structure
+vault_defaults:
+  # get url from: https://www.vaultproject.io/downloads
+  version: "1.15.4"
+

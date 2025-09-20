@@ -54,7 +54,7 @@
           exec {{ borgmatic_config.base_dir }}/py3_venv/{{ py3_version.stdout }}/bin/borgmatic "$@"
         mode: "0755"
 
-    - name: Ensure /etc/borgmatic.d directory exists
+    - name: Ensure borgmatic directories exits
       ansible.builtin.file:
         path: /etc/borgmatic.d
         state: directory
@@ -94,13 +94,47 @@
       loop: "{{ borgmatic_backups }}"
       when: item.enabled | default(true)
 
-    - name: Remove disabled borgmatic configs
-      file:
-        path:         "/etc/borgmatic.d/{{ item.name }}.yaml"
-        state:        absent
-      loop: "{{ borgmatic_backups }}"
-      when: not item.enabled | default(true)
-      no_log: true
+    - name: Remove disabled and removed borgmatic configs
+      block:
+
+        - name: Remove disabled borgmatic configs
+          file:
+            path:         "/etc/borgmatic.d/{{ item.name }}.yaml"
+            state:        absent
+          loop: "{{ borgmatic_backups }}"
+          when: not item.enabled | default(true)
+          no_log: true
+
+        - name: Find existing borgmatic configs
+          ansible.builtin.find:
+            paths: /etc/borgmatic.d
+            patterns:
+              - "*.yaml"
+              - "*.pkey"
+          register: borgmatic_existing
+
+        - name: Build expected borgmatic files for enabled backups
+          set_fact:
+            expected_files: >-
+              {{
+                borgmatic_backups
+                 | selectattr('enabled','defined') | selectattr('enabled')
+                 | map(attribute='name')
+                 | map('string')  | map('regex_replace', '^', '/etc/borgmatic.d/') | map('regex_replace', '$', '.yaml')
+                 | list
+                 +
+                 borgmatic_backups
+                 | selectattr('enabled','defined') | selectattr('enabled')
+                 | map(attribute='name')
+                 | map('string')  | map('regex_replace', '^', '/etc/borgmatic.d/') | map('regex_replace', '$', '.pkey')
+                 | list
+               }}
+
+        - name: Remove deleted borgmatic configs
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop: "{{ (borgmatic_existing.files | map(attribute='path') | list) | difference(expected_files) }}"
 
     - name: Validate rendered borgmatic config
       command: borgmatic config validate
@@ -112,125 +146,67 @@
     # init
     #============================================================================================================
 
-    - name: Extract SSH hosts from destination paths
-      set_fact:
-        borg_ssh_hosts: "{{ borg_ssh_hosts | default([]) + [(_host_match | default(''))] }}"
-      vars:
-        _host_match: "{{ item.1.path | regex_search('^ssh://[^@]+@([^:/]+)', '\\1') if item.1.path is match('^ssh://[^@]+@[^:/]+') else None }}"
-      when:
-        - item.0.enabled | default(true)
-        - item.1.path is defined
-        - _host_match is not none
-      with_subelements:
-        - "{{ borgmatic_backups }}"
-        - destination
-      no_log: true
-
-    - name: Remove duplicate hosts
-      set_fact:
-        borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
-      when: borg_ssh_hosts is defined
-
-    - name: Process each Borg SSH host
-      include_tasks: scan_and_add_known_host.yaml
-      loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
-      loop_control:
-        loop_var: item
-      when: borg_ssh_hosts is defined
-
-    - name: Ensure local repo paths
+    - name: Ensure facts directory exists
       file:
-        path: "{{ item.1.path }}"
+        path: /etc/ansible/facts.d
         state: directory
         mode: '0755'
-      with_subelements:
-        - "{{ borgmatic_backups }}"
-        - destination
-      when:
-        - item.1.path is defined
-        - not (item.1.path is match('^ssh:'))
+
+    - name: Check if remote fact file exists
+      stat:
+        path: /etc/ansible/facts.d/borgmatic_repos_init.fact
+      register: borgmatic_repos_init_fact
+
+    - name: Initialize local fact if missing
+      copy:
+        dest: /etc/ansible/facts.d/borgmatic_repos_init.fact
+        content: '{"repos": []}'
+        mode: '0640'
+      when: not borgmatic_repos_init_fact.stat.exists
+
+    - name: Read borgmatic fact
+      slurp:
+        src: /etc/ansible/facts.d/borgmatic_repos_init.fact
+      register: fact_raw
+
+    - name: Parse current items
+      set_fact:
+        init_repos: "{{ fact_raw.content | b64decode | from_json }}"
+
+    - name: ensure correct known hosts
+      block:
+
+        - name: Extract SSH hosts from destination paths
+          set_fact:
+            borg_ssh_hosts: "{{ borg_ssh_hosts | default([]) + [(_host_match | default(''))] }}"
+          vars:
+            _host_match: "{{ item.1.path | regex_search('^ssh://[^@]+@([^:/]+)', '\\1') if item.1.path is match('^ssh://[^@]+@[^:/]+') else None }}"
+          when:
+            - item.0.enabled | default(true)
+            - item.1.path is defined
+            - _host_match is not none
+          with_subelements:
+            - "{{ borgmatic_backups }}"
+            - destination
+          no_log: true
+
+        - name: Remove duplicate hosts
+          set_fact:
+            borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
+          when: borg_ssh_hosts is defined
+
+        - name: add ssh hosts to _known_host
+          include_tasks: scan_and_add_known_host.yaml
+          loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
+          loop_control:
+            loop_var: item
+          when: borg_ssh_hosts is defined
+
+    - name: Init Borg backup targets
+      ansible.builtin.include_tasks: init_borg_target.yaml
+      loop: "{{ borgmatic_backups }}"
+      when: (item.enabled | default(false)) | bool
       no_log: true
-
-    - name: init repos for borg 1.x
-      command: borgmatic init
-      when: borg_major_version == "1"
-      register: borgmatic_init_result
-      changed_when: borgmatic_init_result.stdout != ""
-
-    - name: init repos for borg 2.x
-      command: borgmatic repo-create
-      when:
-        - borg_major_version == "2"
-        - borg_ssh_hosts is defined
-        - borg_ssh_hosts | length > 0
-      no_log: true
-
-    - name: Ensure key export directory exists on remote host
-      file:
-        path: "/tmp/borg_key_exports"
-        state: directory
-        mode: '0700'
-      changed_when: false
-      become: yes
-
-    - name: Export Borg keys from each destination for Borg 1.x
-      command: >
-        borg key export {{ item.1.path }}
-        /tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key
-        --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
-      with_subelements:
-        - "{{ borgmatic_backups }}"
-        - destination
-      when:
-        - item.0.enabled | default(true)
-        - item.1.path is defined
-        - item.1.encryption is defined
-        - item.1.encryption != 'none'
-        - borg_major_version == "1"
-      become: yes
-      changed_when: false
-
-    - name: Export Borg keys from each destination for Borg 2.x
-      command: >
-        borg key export
-          --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
-          --repo "{{ item.1.path }}"
-          "/tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key"
-      with_subelements:
-        - "{{ borgmatic_backups }}"
-        - destination
-      when:
-        - item.0.enabled | default(true)
-        - item.1.path is defined
-        - item.1.encryption is defined
-        - item.1.encryption != 'none'
-        - borg_major_version == "2"
-      become: yes
-      changed_when: false
-
-    - name: Fetch exported Borg keys to control node
-      fetch:
-        src:  /tmp/borg_key_exports/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key
-        dest: "{{ inventory_file | dirname }}/files/borg/{{ inventory_hostname }}/{{ item.0.name }}_{{ item.1.label | default('repo') }}.key "
-        flat: yes
-      changed_when: false
-      with_subelements:
-        - "{{ borgmatic_backups }}"
-        - destination
-      when:
-        - item.0.enabled | default(true)
-        - item.1.path is defined
-        - item.1.encryption is defined
-        - item.1.encryption != 'none'
-
-    - name: Remove exported key from remote host (cleanup)
-      file:
-        path: "/tmp/borg_key_exports/"
-        state: absent
-      changed_when: false
-      become: yes
-
-
 
     #============================================================================================================
     # Schedule

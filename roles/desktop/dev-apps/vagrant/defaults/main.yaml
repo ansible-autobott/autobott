@@ -1,0 +1,12 @@
+---
+#============================================================================================================
+# vagrant Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_vagrant: false
+
+# User override variable - will be combined with defaults
+vagrant: {}
+# Default vagrant configuration structure
+vagrant_defaults:

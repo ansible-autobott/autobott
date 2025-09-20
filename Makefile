@@ -65,6 +65,24 @@ run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
 	ansible-playbook $$VAULT_OPT -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
 
+run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
+	@if [ -z "$(INV)" ]; then \
+		echo "Error: Missing required parameter 'INV'" >&2; \
+		exit 1; \
+	fi && \
+	INV_DIR=$$(dirname "$(INV)") && \
+	VAULT_PASS_FILE="$$INV_DIR/vault_pass.txt" && \
+	echo "Running with inventory: $(INV)" && \
+ 	. ./venv/bin/activate && \
+	TAG_VAL=$$( [ -n "$$TAG" ] && echo "-t $$TAG" || echo "" ) && 	\
+	HOST_VAL=$$( [ -n "$(HOST)" ] && echo "-l $(HOST)" || echo "" ) && \
+	VAULT_OPT=$$( [ -f "$$VAULT_PASS_FILE" ] && echo "--vault-password-file=$$VAULT_PASS_FILE" || echo "" ) && \
+	echo "Using tag: $$TAG_VAL" && \
+	echo "Using host: $$HOST_VAL" && \
+	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
+	ansible-playbook -vvv $$VAULT_OPT -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
+
+
 ##@ Secrets
 encrypt: ## encrypt secret for the specific inventory, env Vars: INV=inventory_path, KEY=variableName, VALUE=secret
 	@if [ -z "$(KEY)" ]; then \

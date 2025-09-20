@@ -29,7 +29,8 @@ mariadb_databases:
 {% endif %}
 
 
-archive_name_format: '{{item.name}}-{hostname}-{now}'
+archive_name_format: '{{ item.archive_name | default(item.name) }}-{hostname}-{now}'
+
 {% if item.ssh_key is defined %}
 ssh_command: ssh -i /etc/borgmatic.d/{{ item.name }}.pkey
 {% endif %}
@@ -39,6 +40,13 @@ encryption_passphrase: "{{ item.encryption_passphrase }}"
 {% endif %}
 
 progress: true
+
+{% if item.skip_actions is defined %}
+skip_actions:
+{% for action in item.skip_actions %}
+  - {{ action }}
+{% endfor %}
+{% endif %}
 
 exclude_if_present:
   - .nobackup

@@ -1,0 +1,51 @@
+---
+#============================================================================================================
+# ytdlp Role - Main Tasks
+#============================================================================================================
+- name: Main ytdlp block
+  tags:
+    - ytdlp
+    - untagged
+  when:
+    - run_role_ytdlp | bool
+  block:
+    - name: Set merged ytdlp configuration
+      ansible.builtin.set_fact:
+        ytdlp_config: "{{ ytdlp_defaults | combine(ytdlp, recursive=true) }}"
+
+    - name: get current ytdlp version
+      shell: "ytdlp --version"
+      register: ytdlp_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update ytdlp
+      when: ytdlp_current_version.stdout != ytdlp_config.version
+      block:
+
+        - file:
+            path: "/tmp/ytdlp"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download ytdlp
+          
+          ansible.builtin.get_url:
+            url: "https://github.com/yt-dlp/yt-dlp/releases/download/{{ ytdlp_config.version }}/yt-dlp_linux"
+            dest: "/tmp/ytdlp"
+
+        - name: Move ytdlp
+          command: "mv /tmp/ytdlp/yt-dlp_linux /usr/local/bin/ytdlp"
+
+        - file:
+            path: "/tmp/ytdlp"
+            state: absent
+
+        - file:
+            path: "/usr/local/bin/ytdlp"
+            state: file
+            mode: 0755
+            owner: root
+            group: root

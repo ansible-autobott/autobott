@@ -1,0 +1,17 @@
+---
+#============================================================================================================
+# freecad Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_freecad: false
+
+# User override variable - will be combined with defaults
+freecad: {}
+# Default freecad configuration structure
+freecad_defaults:
+  # https://www.freecad.org/downloads.php?lang=en
+  version: "1.0.2"
+
+freecad_versions:
+  1.0.2: "https://github.com/FreeCAD/FreeCAD/releases/download/1.0.2/FreeCAD_1.0.2-conda-Linux-x86_64-py311.AppImage"

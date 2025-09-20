@@ -1,0 +1,12 @@
+---
+#============================================================================================================
+# node Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_node: false
+
+# User override variable - will be combined with defaults
+node: {}
+# Default node configuration structure
+node_defaults:

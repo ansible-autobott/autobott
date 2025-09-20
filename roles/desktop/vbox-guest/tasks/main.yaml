@@ -1,0 +1,65 @@
+---
+#============================================================================================================
+# vbox_guest Role - Main Tasks
+#============================================================================================================
+- name: Main vbox_guest block
+  tags:
+    - vbox_guest
+    - vbox-guest
+    - untagged
+  when:
+    - run_role_vbox_guest | bool
+  block:
+    - name: Ensure required packages for building modules are installed
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - dkms
+          - bzip2
+        state: present
+        update_cache: true
+
+    - name: Get VirtualBox version from host additions package
+      ansible.builtin.command: VBoxControl --version
+      register: vbox_version
+      failed_when: vbox_version.rc not in [0,1]  # may fail if not installed yet
+      changed_when: false
+      ignore_errors: true
+
+    - name: Set VirtualBox version fact (fallback if VBoxControl missing)
+      ansible.builtin.set_fact:
+        vbox_version: "{{ lookup('pipe', 'VBoxManage -v | cut -d r -f1') | default('7.0.20', true) }}"
+
+    - name: Download VBoxGuestAdditions ISO
+      ansible.builtin.get_url:
+        url: "https://download.virtualbox.org/virtualbox/{{ vbox_version }}/VBoxGuestAdditions_{{ vbox_version }}.iso"
+        dest: "/tmp/VBoxGuestAdditions.iso"
+        mode: '0644'
+
+    - name: Create mount point
+      ansible.builtin.file:
+        path: /mnt/vbox
+        state: directory
+
+    - name: Mount VBoxGuestAdditions ISO
+      ansible.builtin.mount:
+        path: /mnt/vbox
+        src: /tmp/VBoxGuestAdditions.iso
+        fstype: iso9660
+        state: mounted
+
+    - name: Run VBoxLinuxAdditions installer
+      ansible.builtin.command: sh /mnt/vbox/VBoxLinuxAdditions.run
+      register: vboxadd_output
+      failed_when: vboxadd_output.rc not in [0, 2]
+      become: true
+
+    - name: Unmount ISO
+      ansible.builtin.mount:
+        path: /mnt/vbox
+        state: unmounted
+
+    - name: Remove ISO file
+      ansible.builtin.file:
+        path: /tmp/VBoxGuestAdditions.iso
+        state: absent

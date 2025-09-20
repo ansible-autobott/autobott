@@ -1,0 +1,41 @@
+---
+- name: Ensure profile directory exists
+  file:
+    path: "{{ profile.destination }}"
+    state: directory
+    mode: '0750'
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+
+- name: Ensure profile 'profile' subdir exists
+  file:
+    path: "{{ profile.destination }}/profile"
+    state: directory
+    mode: '0750'
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+
+- name: Link chrome binary for profile
+  file:
+    src: "/opt/google/chrome"
+    dest: "{{ profile.destination }}/chrome"
+    state: link
+    force: yes
+
+- name: Create profile launcher script
+  template:
+    src: chrome_profile.sh.j2
+    dest: "{{ profile.destination }}/{{ profile.name }}.sh"
+    mode: '0750'
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+
+- name: Link launcher into /usr/local/bin if requested
+  file:
+    src: "{{ profile.destination }}/{{ profile.name }}.sh"
+    dest: "/usr/local/bin/{{ profile.name }}"
+    state: link
+    force: yes
+  when:
+    - profile.bin is defined
+    - profile.bin

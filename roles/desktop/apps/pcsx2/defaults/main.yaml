@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# pcsx2 Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_pcsx2: false
+
+# User override variable - will be combined with defaults
+pcsx2: {}
+# Default pcsx2 configuration structure
+pcsx2_defaults:
+  # get from: https://github.com/PCSX2/pcsx2
+  version: v1.6.0
+

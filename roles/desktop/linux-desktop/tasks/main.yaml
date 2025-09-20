@@ -1,0 +1,86 @@
+---
+#============================================================================================================
+# Linux-desktop Role - Main Tasks
+#============================================================================================================
+- name: Main Linux-desktop block
+  tags:
+    - always        # <- ensures it runs no matter what
+  block:
+    - name: Set merged Linux-desktop configuration
+      ansible.builtin.set_fact:
+        linux_desktop_config: "{{ linux_desktop_defaults | combine(linux_desktop, recursive=true) }}"
+
+    - fail:
+        msg: "linux_desktop_config.user needs to be defined"
+      when:
+        - linux_desktop_config.user == ""
+
+    - name: Ensure desktop user exists
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ linux_desktop_config.user }}"
+      register: user_check
+      failed_when: false
+      changed_when: false
+
+    - name: Fail if user does not exist
+      ansible.builtin.fail:
+        msg: "User '{{ linux_desktop_config.user }}' does not exist on this system"
+      when: user_check.ansible_facts.getent_passwd[linux_desktop_config.user] is not defined
+
+    - name: "get primary group of desktop user"
+      command: "id -g {{ linux_desktop_config.user }}"
+      register: desktop_user_result
+      changed_when: false
+
+    - name: Set fact with main group
+      ansible.builtin.set_fact:
+        linux_desktop_user_main_group: "{{ desktop_user_result.stdout }}"
+
+- name: Main Linux-desktop block
+  tags:
+    - linux_desktop
+    - linux-desktop
+    - untagged
+  when:
+    - run_role_linux_desktop | bool
+  block:
+
+    - name: create user space folders in the home dir
+      file:
+        path: "/home/{{ linux_desktop_config.user }}/{{ item }}"
+        state: directory
+        mode: 0750
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+      with_items: "{{ linux_desktop_config.folders }}"
+
+    #============================================================================================================
+    # Inventory files: copy files defined in the inventory to the host
+    #============================================================================================================
+    - name: inventory files
+      ansible.builtin.include_tasks: "inventory_files.yaml"
+      with_items: "{{ linux_desktop_config.inventory_files }}"
+      when:
+        - linux_desktop_config.inventory_files is defined
+        - linux_desktop_config.inventory_files | length > 0
+
+    #============================================================================================================
+    # common bashrc
+    #============================================================================================================
+
+    - name: make sure .bashrc.d exists
+      file:
+        path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+        state: directory
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+        mode: 0750
+
+    - name: Copy .bashrc.d template
+      template:
+        src: bashrc.d/bash_aliases.bashrc
+        dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/10_bash_aliases.bashrc"
+        mode: 0750
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"

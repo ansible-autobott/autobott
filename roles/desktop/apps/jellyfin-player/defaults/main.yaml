@@ -1,0 +1,14 @@
+---
+#============================================================================================================
+# jellyfin-player Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_jellyfin_player: false
+
+# User override variable - will be combined with defaults
+jellyfin_player: {}
+# Default jellyfin_player configuration structure
+jellyfin_player_defaults:
+  # https://github.com/jellyfin/jellyfin-media-player/releases
+  version: "1.10.1" # version without V

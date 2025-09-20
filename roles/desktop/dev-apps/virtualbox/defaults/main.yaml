@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# virtualbox Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_virtualbox: false
+
+# User override variable - will be combined with defaults
+virtualbox: {}
+# Default virtualbox configuration structure
+virtualbox_defaults:
+  # virtualbox version to install
+  pacakge: "virtualbox-7.1"
+

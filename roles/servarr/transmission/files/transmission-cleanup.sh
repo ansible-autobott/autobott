@@ -31,7 +31,7 @@ cleanup_torrents() {
         log "Processing torrent ID: $id"
 
         target=$("$TRANSMISSION_BIN" "$remote" -n "$user:$pass" -t "$id" -i | awk '/Location:/ {print $2}')
-        name=$("$TRANSMISSION_BIN" "$remote" -n "$user:$pass" -t "$id" -f | head -1 | sed "s/ ([0-9]\+ files)://g")
+        name=$("$TRANSMISSION_BIN" "$remote" -n "$user:$pass" -t "$id" -f   | sed -n '1s/ ([0-9]\+ files)://p')
 
         if [ -z "$name" ]; then
             log "  [SKIP] Torrent name is empty for ID $id"

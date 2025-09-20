@@ -28,12 +28,13 @@ borg_defaults:
 
     repos: []
     # Example access structure:
-    # - name: test
-    #   public_key: "ssh-rsa AAAAB..."
+    #     - name: test
+    #       ssh_keys:
+    #         - public_key: "ssh-rsa AAAAB..."
     # check permission here: https://borgbackup.readthedocs.io/en/master/usage/serve.html
-    #  "all" is needed to create the repo, otherwise it will fail. if the repo is created this can be updated.
-    #   permissions: all | no-delete | write-only | read-only
-    #
+    # "all" is needed to create the repo, otherwise it will fail. if the repo is created this can be updated.
+    #           permissions: all | no-delete | write-only | read-only
+
 # Supported Borg versions and checksums
 borg_checksums:
   "1.4.1": "b3ee1ce7454aacc0312c814e470df38132b1f6a71ae4164bea2b7d5033cb2480"

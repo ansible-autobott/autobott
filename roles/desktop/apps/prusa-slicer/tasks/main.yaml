@@ -1,0 +1,84 @@
+---
+#============================================================================================================
+# prusa-slicer Role - Main Tasks
+#============================================================================================================
+- name: Main prusa-slicer block
+  tags:
+    - prusa-slicer
+    - untagged
+  when:
+    - run_role_prusa_slicer | bool
+  block:
+    - name: Set merged prusa-slicer configuration
+      ansible.builtin.set_fact:
+        prusa_slicer_config: "{{ prusa_slicer_defaults | combine(prusa_slicer, recursive=true) }}"
+
+    - name: get installed prusa slicer version
+      shell: cat /opt/prusa_slicer/version
+      register: prusa_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or upgrade prusa slicer
+      when: prusa_version.rc == 1 or ( prusa_version.stdout != prusa_slicer_config.version )
+      block:
+
+        - name: Create install dir for prusa
+          file:
+            path:         /opt/prusa_slicer/
+            state:        directory
+            owner:        root
+            group:        root
+            mode:         0755
+
+        - name: download Prusa Slicer
+          get_url:
+            url: "{{ prusa_slicer_versions[prusa_slicer_config.version] }}"
+            dest: "/opt/prusa_slicer/PrusaSlicer.{{ prusa_slicer_config.version }}.AppImage"
+
+        - name: link binary
+          file:
+            src: "/opt/prusa_slicer/PrusaSlicer.{{ prusa_slicer_config.version }}.AppImage"
+            dest: "/usr/local/bin/prusa-slicer"
+            state: link
+
+    - name: copy icon
+      copy:
+        src: PrusaSlicer-1.png
+        dest: "/opt/prusa_slicer/icon.png"
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: correct permissions
+      file:
+        path: "/opt/prusa_slicer/"
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+        recurse: yes
+
+    - name: Create Desktop entry
+      copy:
+        dest: /usr/share/applications/prusa_slicer.desktop
+        mode: 0644
+        owner: root
+        group: root
+        content: |
+            #!/usr/bin/env xdg-open
+            [Desktop Entry]
+            Name=Prusa Slicer
+            GenericName=3d printer slicer
+            Comment=Open source 3d printing slicer
+            Exec=/usr/local/bin/prusa-slicer
+            Icon=/opt/prusa_slicer/icon.png
+            Terminal=false
+            Type=Application
+            Categories=Graphics;Engineering;
+            MimeType=
+            Keywords=
+
+
+
+

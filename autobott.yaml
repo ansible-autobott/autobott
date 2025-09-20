@@ -93,12 +93,32 @@
 # Linux Desktop
 #============================================================================================================
 
-#- hosts:
-#    - linux_desktop
-#  become: true
-#  roles:
-#    - desktop/linux-kde
-#    - desktop/linux-desktop
+- hosts:
+    - linux_desktop
+  become: true
+  roles:
+    # basic desktop
+    - desktop/vbox-guest
+    - desktop/linux-desktop
+    - desktop/linux-kde
+
+    # developer apps
+    - desktop/dev-apps/golang
+    - desktop/dev-apps/kubectl
+    - desktop/dev-apps/k9s
+    - desktop/dev-apps/node
+    - desktop/dev-apps/vagrant
+    - desktop/dev-apps/vault
+    - desktop/dev-apps/virtualbox
+
+    # desktop apps
+    - desktop/apps/freecad
+    - desktop/apps/google-chrome
+    - desktop/apps/jellyfin-player
+    - desktop/apps/pcsx2
+    - desktop/apps/prusa-slicer
+    - desktop/apps/ytdlp
+    - desktop/apps/linux-candy
 
 #============================================================================================================
 # post setup actions

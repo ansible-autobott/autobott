@@ -17,6 +17,8 @@ borgmatic_backups: []
 backups_sample:
   - name: test_php
     enabled: true
+    # define the archive name string, as default the backup is used
+    archive_name: test_php
 
     # or a list of borg repositories
     destination:

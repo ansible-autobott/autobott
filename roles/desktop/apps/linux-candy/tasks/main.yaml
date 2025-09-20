@@ -1,0 +1,23 @@
+---
+#============================================================================================================
+# linux_candy Role - Main Tasks
+#============================================================================================================
+- name: Main linux_candy block
+  tags:
+    - linux_candy
+    - linux-candy
+    - untagged
+  when:
+    - run_role_linux_candy | bool
+  block:
+    - name: Set merged linux_candy configuration
+      ansible.builtin.set_fact:
+        linux_candy_config: "{{ linux_candy_defaults | combine(linux_candy, recursive=true) }}"
+
+    - name: Install linux-candy package
+      apt:
+        deb: "https://github.com/andresbott/linux-candy/releases/download/v{{ linux_candy_config.version }}/linux-candy_{{ linux_candy_config.version }}_all.deb"
+      register: result
+      until: result is not failed
+      retries: 3
+      delay: 5

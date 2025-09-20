@@ -1,0 +1,51 @@
+---
+#============================================================================================================
+# k9s Role - Main Tasks
+#============================================================================================================
+- name: Main k9s block
+  tags:
+    - k9s
+    - untagged
+  when:
+    - run_role_k9s | bool
+  block:
+    - name: Set merged k9s configuration
+      ansible.builtin.set_fact:
+        k9s_config: "{{ k9s_defaults | combine(k9s, recursive=true) }}"
+
+    - name: get current k9s version
+      shell: "k9s version --short | grep Version | awk -F ' ' '{print $2}'"
+      register: k9s_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update k9s
+      when: k9s_current_version.stdout != k9s_config.version
+      block:
+
+        - file:
+            path: "/tmp/k9s"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download k9s
+          unarchive:
+            src: "https://github.com/derailed/k9s/releases/download/{{ k9s_config.version }}/k9s_Linux_amd64.tar.gz"
+            dest: "/tmp/k9s"
+            remote_src: yes
+
+        - name: Move k9s
+          command: "mv /tmp/k9s/k9s /usr/local/bin/k9s"
+
+        - file:
+            path: "/tmp/k9s"
+            state: absent
+
+        - file:
+            path: "/usr/local/bin/k9s"
+            state: file
+            mode: 0755
+            owner: root
+            group: root

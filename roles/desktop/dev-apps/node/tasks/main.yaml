@@ -1,0 +1,89 @@
+---
+#============================================================================================================
+# node Role - Main Tasks
+#============================================================================================================
+- name: Main node block
+  tags:
+    - node
+    - untagged
+  when:
+    - run_role_node | bool
+  block:
+    - name: Set merged node configuration
+      ansible.builtin.set_fact:
+        node_config: "{{ node_defaults | combine(node, recursive=true) }}"
+
+#    - debug:
+#        msg:  "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
+#      become: yes
+#      become_user: "/home/{{ linux_desktop_config.user }}"
+
+    - name: check if .nvm exists
+      stat:
+        path: "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
+      register: nvm_stat
+
+    - name: ensure acl is installed
+      apt:
+        name: acl
+        state: present
+
+    - name: copy nvm installer
+      copy:
+        src: nvm_0.39.1_install.sh
+        dest: /tmp/nvm_0.39.1_install.sh
+        owner: root
+        group: root
+        mode: '0777'
+      when: nvm_stat.stat.exists == false
+
+    - name: Install NVM
+      become: yes
+      become_user: "{{ linux_desktop_config.user }}"
+      shell: >
+        bash /tmp/nvm_0.39.1_install.sh
+      args:
+        creates: "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
+
+    - name: remove the installer
+      file:
+        path: /tmp/nvm_0.39.1_install.sh
+        state: absent
+      when: nvm_stat.stat.exists == false
+
+    - name: make sure .bashrc.d exists
+      file:
+        path: "/home/{{linux_desktop_config.user}}/.bashrc.d"
+        state: directory
+        owner:  "{{ linux_desktop_config.user }}"
+        group:  "{{ linux_desktop_config.user }}"
+        mode: 0750
+
+    - name: Copy .bashrc.d template
+      template:
+        src: nvm.bashrc
+        dest: "/home/{{linux_desktop_config.user}}/.bashrc.d/nvm.bashrc"
+        mode: 0750
+        owner: "{{linux_desktop_config.user}}"
+        group: "{{linux_desktop_config.user}}"
+
+    - name: Install Node LTS
+      become: yes
+      become_user: "{{ linux_desktop_config.user }}"
+      shell: "source /home/{{ linux_desktop_config.user }}/.nvm/nvm.sh && nvm install --lts"
+      args:
+        executable: /bin/bash
+
+- name: Uninstall Node Version Manager
+  when: not (run_role_node | bool)
+  block:
+
+    - name: "remove .bashrc.d template"
+      file:
+        path: "/home/{{linux_desktop_config.user}}/.bashrc.d/nvm.bashrc"
+        state: absent
+
+    - name: "remove .nvm directory"
+      file:
+        path: "/home/{{linux_desktop_config.user}}/.nvm"
+        state: absent

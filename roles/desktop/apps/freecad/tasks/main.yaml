@@ -1,0 +1,56 @@
+---
+#============================================================================================================
+# freecad Role - Main Tasks
+#============================================================================================================
+- name: Main freecad block
+  tags:
+    - freecad
+    - untagged
+  when:
+    - run_role_freecad | bool
+  block:
+    - name: Set merged freecad configuration
+      ansible.builtin.set_fact:
+        freecad_config: "{{ freecad_defaults | combine(freecad, recursive=true) }}"
+
+    - name: Ensure target directory exists
+      file:
+        path: "/opt/freecad/{{ freecad_config.version }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download FreeCAD AppImage
+      get_url:
+        url: "{{ freecad_versions[freecad_config.version] }}"
+        dest: "/opt/freecad/{{ freecad_config.version }}/FreeCAD.AppImage"
+        mode: '0755'
+
+    - name: Update symlink to point to current version
+      file:
+        src: "/opt/freecad/{{ freecad_config.version }}/FreeCAD.AppImage"
+        dest: "/usr/local/freecad"
+        state: link
+        force: yes
+
+    - name: copy icon
+      copy:
+        src: freecad_128.png
+        dest: "/opt/freecad/icon.png"
+        mode: 0644
+        owner: root
+        group: root
+
+
+    - name: Install FreeCAD desktop entry
+      copy:
+        dest: /usr/share/applications/freecad.desktop
+        mode: '0644'
+        content: |
+          [Desktop Entry]
+          Name=FreeCAD
+          Comment=Open-source parametric 3D CAD modeler
+          Exec=/usr/local/freecad
+          Icon=/opt/freecad/icon.png
+          Type=Application
+          Categories=Graphics;Engineering;
+          Terminal=false

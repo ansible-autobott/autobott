@@ -1,0 +1,65 @@
+---
+#============================================================================================================
+# pcsx2 Role - Main Tasks
+#============================================================================================================
+- name: Main pcsx2 block
+  tags:
+    - pcsx2
+    - untagged
+  when:
+    - run_role_pcsx2 | bool
+  block:
+    - name: Set merged pcsx2 configuration
+      ansible.builtin.set_fact:
+        pcsx2_config: "{{ pcsx2_defaults | combine(pcsx2, recursive=true) }}"
+
+    - file:
+        path: "/opt/pcsx2"
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
+
+    - name: copy icon
+      copy:
+        src: PCSX2.png
+        dest: "/opt/pcsx2/icon.png"
+        mode: 0644
+        owner: root
+        group: root
+
+    - name: get current pcsx2 version
+      shell: "ls -l /opt/pcsx2/ | grep pcsx2 | awk -F ' ' '{print $9}' | awk -F '-' '{print $2}'"
+      register: pcsx2_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update pcsx2
+      when: pcsx2_current_version.stdout != pcsx2_config.version
+      block:
+
+        - name: Download pcsx2
+          get_url:
+            url: "https://github.com/PCSX2/pcsx2/releases/download/{{ pcsx2_config.version }}/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+            dest: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+
+        - file:
+            path: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+            state: file
+            mode: 0755
+            owner: root
+            group: root
+
+        - name: link into usr/local
+          ansible.builtin.file:
+            src: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+            dest: /usr/local/bin/pcsx2
+            state: link
+
+        - name: Create Desktop entry
+          template:
+            src: pcsx2-desktop.entry.j2
+            dest: "/usr/share/applications/pcsx2.desktop"
+            mode: 0644
+            owner: root
+            group: root

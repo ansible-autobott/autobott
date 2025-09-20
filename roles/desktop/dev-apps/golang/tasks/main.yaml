@@ -1,0 +1,62 @@
+---
+#============================================================================================================
+# Golang Role - Main Tasks
+#============================================================================================================
+- name: Main Golang block
+  tags:
+    - golang
+    - untagged
+  when:
+    - run_role_golang | bool
+  block:
+    - name: Set merged Golang configuration
+      ansible.builtin.set_fact:
+        golang_config: "{{ golang_defaults | combine(golang, recursive=true) }}"
+
+    # ============================== Godeb ============================== #
+    - name: Download godeb
+      unarchive:
+        src: "{{ golang_config.godeb_url }}"
+        dest: "/usr/local/bin/"
+        remote_src: yes
+        owner:        root
+        group:        root
+        mode:         0755
+      args:
+        creates: "/usr/local/bin/godeb"
+
+    # ============================== Go ============================== #
+    - name: check if go is installed
+      shell:
+        cmd: go version 2>&1 | head -1 | cut -d '"' -f 2
+      register: result
+      check_mode: false
+      changed_when: false
+      failed_when: result.rc != 0 and result.rc != 127
+
+    - name: get current go version
+      shell: "go version | awk '{print $3}' | cut -c3-"
+      register: go_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: Install Go if not installed or outdated
+      shell: "/usr/local/bin/godeb install {{ golang_config.go_version }}"
+      when: >
+        go_current_version.stdout == "" or
+        go_current_version.stdout is version( golang_config.go_version, '<')      
+
+    # ============================== goreleaser ============================== #
+    - name: Install goreleaser
+      apt:
+        deb: "{{ golang_config.goreleaser_url }}"
+
+    # ============================== nfpm ============================== #
+    - name: Install nfpm
+      apt:
+        deb: "{{ golang_config.nfpm_url }}"
+
+    # ============================== golangci-lint ============================== #
+    - name: Install golangci-lint
+      apt:
+        deb: "{{ golang_config.golangci_lint_url }}"

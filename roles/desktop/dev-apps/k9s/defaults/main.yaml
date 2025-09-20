@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# k9s Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_k9s: false
+
+# User override variable - will be combined with defaults
+k9s: {}
+# Default k9s configuration structure
+k9s_defaults:
+  # k9s version to install
+  version: "v0.29.1"
+

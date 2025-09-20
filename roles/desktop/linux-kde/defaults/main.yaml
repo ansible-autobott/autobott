@@ -1,0 +1,16 @@
+---
+#============================================================================================================
+# linux_kde Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_linux_kde: false
+
+# User override variable - will be combined with defaults
+linux_kde: {}
+# Default linux_kde configuration structure
+linux_kde_defaults:
+  add_kde_menu_actions: false
+  add_kde_elementary_breeze: false
+
+linux_kde_elementary_breeze_url:  "https://github.com/andresbott/elementary-breeze/releases/download/v0.1.4/elementary-breeze_0.1.4_all.deb"

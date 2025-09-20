@@ -60,7 +60,9 @@ borg:
     enabled: true
     repos:
       - name: test
-        public_key: "ssh-rsa AAAAB...ss"
+        ssh_keys:
+          - public_key: "ssh-rsa AAAAB...ss"
+            permissions: all
         append_only: true
 
 #============================================================================================================

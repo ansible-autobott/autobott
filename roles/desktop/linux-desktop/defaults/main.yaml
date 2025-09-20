@@ -1,0 +1,32 @@
+---
+#============================================================================================================
+# Linux-desktop Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_linux_desktop: false
+
+# User override variable - will be combined with defaults
+linux_desktop: {}
+# Default Linux-desktop configuration structure
+linux_desktop_defaults:
+  user: "" # define a linux desktop user
+  # create folders in the home dir
+  folders:
+    - "Screenshots"
+  #============================================================================================================
+  # Inventory files
+  #============================================================================================================
+  # files present on the inventory and copied over to the destination
+  # this allows to put a lot of files in place
+  inventory_files: []
+  #  - file_name: ""
+  #    destination: ""
+  #    user: ""
+  #    group: ""
+  #    permissions: ""
+  #    extra_vars:
+  #      - var1: "value1"
+  #    state: "" # possible values are  "present" (copy) | "templated" (copy+ template)| "link" (symlink) | "absent" (delete)
+
+

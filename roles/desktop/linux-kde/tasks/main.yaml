@@ -1,0 +1,95 @@
+---
+#============================================================================================================
+# linux_kde Role - Main Tasks
+#============================================================================================================
+- name: Main linux_kde block
+  tags:
+    - linux_kde
+    - linux-kde
+    - untagged
+  when:
+    - run_role_linux_kde | bool
+  block:
+    - name: Set merged linux_kde configuration
+      ansible.builtin.set_fact:
+        linux_kde_config: "{{ linux_kde_defaults | combine(linux_kde, recursive=true) }}"
+
+    - name: Load package names based on distro relese
+      include_vars: "{{ item }}"
+      with_first_found:
+        - "{{ ansible_distribution_release }}.yaml"
+
+    - name: Installing KDE
+      apt:
+        name: "{{ kde_packages }}"
+        state: latest
+        #    install_recommends: no
+        update_cache: yes
+
+    - name: Installing KDE theme packages
+      apt:
+        name: "{{ kde_theme_packages }}"
+        state: latest
+        #    install_recommends: no
+        update_cache: yes
+
+    - name: Purge packages from kde
+      apt:
+        name: "{{ kde_packages_purge }}"
+        state: absent
+        purge: yes
+
+    - name: Remove dependencies that are no longer required
+      apt:
+        autoremove: yes
+
+    #============================================================================================================
+    # kde menu actions
+    #============================================================================================================
+    - name: Kde menu action block
+      when: linux_kde_config.add_kde_menu_actions
+      block:
+        - name: Install needed packages
+          apt:
+            name:
+              - qdbus
+              - imagemagick
+            state: present
+            update_cache: yes
+
+        - name: copy menu action binaries
+          copy:
+            src:          "menu_actions/{{ item }}"
+            dest:         "/usr/local/bin/{{ item }}"
+            owner:        root
+            group:        root
+            mode:         0755
+          with_items:
+            - "kim_convert"
+            - "kim_flipflop"
+            - "kim_rotate"
+            - "kim_treatment"
+
+        - name: copy menu action launchers
+          copy:
+            src:          "menu_actions/{{ item }}"
+            dest:         "/usr/share/kservices5/ServiceMenus/{{ item }}"
+            owner:        root
+            group:        root
+            mode:         0644
+          with_items:
+            - "kim_convertandrotate.desktop"
+
+        - name: Run apt-get clean
+          apt:
+            clean: yes
+
+    #============================================================================================================
+    # Elementary breeze
+    #============================================================================================================
+    - name: Install theme
+      when: linux_kde_config.add_kde_elementary_breeze
+      block:
+        - name: Installing Elementary-breeze
+          apt:
+            deb: "{{ linux_kde_elementary_breeze_url }}"

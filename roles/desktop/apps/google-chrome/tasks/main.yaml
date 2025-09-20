@@ -1,0 +1,73 @@
+---
+#============================================================================================================
+# google-chrome Role - Main Tasks
+#============================================================================================================
+- name: Main google-chrome block
+  tags:
+    - google-chrome
+    - chrome
+    - untagged
+  when:
+    - run_role_google_chrome | bool
+  block:
+    - name: Set merged google-chrome configuration
+      ansible.builtin.set_fact:
+        google_chrome_config: "{{ google_chrome_defaults | combine(google_chrome, recursive=true) }}"
+
+    - name: Ensure required packages for apt repository over HTTPS
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+        state: present
+
+    - name: Remove old / legacy google-chrome key files
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/trusted.gpg.d/google.gpg
+        - /etc/apt/trusted.gpg.d/google.asc
+        # add others if you know them
+
+    - name: Remove keys from legacy /etc/apt/trusted.gpg
+      ansible.builtin.apt_key:
+        id: "{{ item }}"
+        state: absent
+        keyring: /etc/apt/trusted.gpg
+      with_items:
+        - 4CCA1EAF950CEE4AB83976DCA040830F7FAC5991  #google
+
+    - name: Download Google signing key and store in keyring
+      get_url:
+        url: "https://dl.google.com/linux/linux_signing_key.pub"
+        dest: "/etc/apt/keyrings/google-chrome.asc"
+        mode: '0644'
+      register: chrome_key_downloaded
+
+    - name: Convert ASCII key to binary .gpg format
+      shell: "gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg  /etc/apt/keyrings/google-chrome.asc"
+      args:
+        creates: /etc/apt/keyrings/google-chrome.gpg
+
+    - name: Add repository
+      apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main"
+        filename: "google-chrome"
+        state: present
+        update_cache: yes
+
+    - name: Ensure google-chrome-stable is installed
+      apt:
+        name: google-chrome-stable
+        state: present
+
+    # ===============================================================
+    # Include profile setup per item
+    # ===============================================================
+    - name: Setup Chrome profiles
+      include_tasks: chrome_profile.yaml
+      loop: "{{ google_chrome_config.extra_profiles }}"
+      loop_control:
+        loop_var: profile
+

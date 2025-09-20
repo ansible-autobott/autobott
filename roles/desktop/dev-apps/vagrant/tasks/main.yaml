@@ -1,0 +1,35 @@
+---
+#============================================================================================================
+# vagrant Role - Main Tasks
+#============================================================================================================
+- name: Main vagrant block
+  tags:
+    - vagrant
+    - untagged
+  when:
+    - run_role_vagrant | bool
+  block:
+    - name: Set merged vagrant configuration
+      ansible.builtin.set_fact:
+        vagrant_config: "{{ vagrant_defaults | combine(vagrant, recursive=true) }}"
+
+    - name: Add HashiCorp GPG key if not already present
+      ansible.builtin.apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+        keyring: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Add HashiCorp apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+        state: present
+        filename: hashicorp_vagrant
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Vagrant
+      ansible.builtin.apt:
+        name: vagrant
+        state: present

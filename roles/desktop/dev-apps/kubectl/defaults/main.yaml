@@ -1,0 +1,14 @@
+---
+#============================================================================================================
+# kubectl Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_kubectl: false
+
+# User override variable - will be combined with defaults
+kubectl: {}
+# Default kubectl configuration structure
+kubectl_defaults:
+  # install azure kubelogin with kubectl https://github.com/Azure/kubelogin/releases
+  kubelogin_version: "v0.0.34"

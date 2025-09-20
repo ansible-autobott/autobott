@@ -1,0 +1,36 @@
+
+kde_packages:
+  # core
+  - kde-plasma-desktop
+  - plasma-nm
+  - fonts-dejavu
+  - fonts-freefont-ttf
+  - sddm-theme-breeze
+  - ffmpegthumbnailer
+  - kwin-addons
+  - kde-config-gtk-style
+  - kde-config-gtk-style-preview
+
+  # apps
+  - ark
+  - kate
+  - okular
+  - okular-extra-backends
+  - smb4k
+  - yakuake
+  - kmix
+  - flameshot
+  - filelight  
+  - qimgv
+
+kde_theme_packages:
+  # themes
+  - kde-style-qtcurve-qt5
+  - gtk2-engines-qtcurve
+  - gtk2-engines-murrine
+  - gtk3-engines-breeze
+
+kde_packages_purge:
+  - plasma-discover
+  - kde-spectacle  
+  - gwenview

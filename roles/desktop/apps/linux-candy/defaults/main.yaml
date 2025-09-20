@@ -1,0 +1,14 @@
+---
+#============================================================================================================
+# linux_candy Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_linux_candy: false
+
+# User override variable - will be combined with defaults
+linux_candy: {}
+# Default linux_candy configuration structure
+linux_candy_defaults:
+  # get url from: https://github.com/andresbott/linux-candy/releases
+  version: 0.1.3

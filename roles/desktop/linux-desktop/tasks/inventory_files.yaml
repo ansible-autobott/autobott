@@ -1,0 +1,51 @@
+# This "function-like" task copies files from an inventory location to the remote
+# giving a lot of power to the inventory to make changes on the target.
+# this should be used scarcely
+
+- name: Copy file with owner and permissions
+  ansible.builtin.copy:
+    src:   "{{ lookup( 'first_found', params ) }}"
+    dest:  "{{ item.destination }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode:  "{{ item.permissions }}"
+  vars:
+    params:
+      files:
+        - "{{ item.file_name }}"
+      paths:
+        - "{{ inventory_dir }}/files/"
+        - "{{ inventory_dir }}/host_vars/{{ inventory_hostname }}/files/"
+  when: item.state == "present"
+
+- name: Template file
+  ansible.builtin.template:
+    src:   "{{ lookup( 'first_found', params ) }}"
+    dest:  "{{ item.destination }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode:  "{{ item.permissions }}"
+  vars:
+    params:
+      files:
+        - "{{ item.file_name }}"
+      paths:
+        - "{{ inventory_dir }}/files/"
+        - "{{ inventory_dir }}/host_vars/{{ inventory_hostname }}/files/"
+    extra_vars: "{{ item.extra_vars | default([]) }}"
+  when: item.state == "templated"
+
+- name: Create link
+  ansible.builtin.file:
+    src: "{{ item.file_name }}"
+    dest:  "{{ item.destination }}"
+    state: link
+  when: item.state == "link"
+
+- name: Remove file
+  ansible.builtin.file:
+    path: "{{ item.destination }}"
+    state: absent
+  when: item.state == "absent"
+
+

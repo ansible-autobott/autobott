@@ -1,0 +1,51 @@
+---
+#============================================================================================================
+# vault Role - Main Tasks
+#============================================================================================================
+- name: Main vault block
+  tags:
+    - vault
+    - untagged
+  when:
+    - run_role_vault | bool
+  block:
+    - name: Set merged vault configuration
+      ansible.builtin.set_fact:
+        vault_config: "{{ vault_defaults | combine(vault, recursive=true) }}"
+
+    - name: get current vault version
+      shell: "vault version | awk '{print $2}' | tr -d 'v'"
+      register: vault_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update vault
+      when: vault_current_version.stdout != vault_config.version
+      block:
+
+        - file:
+            path: "/tmp/vault"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download vault
+          unarchive:
+            src: "https://releases.hashicorp.com/vault/{{ vault_config.version }}/vault_{{ vault_config.version }}_linux_amd64.zip"
+            dest: "/tmp/vault"
+            remote_src: yes
+
+        - name: Move vault
+          command: "mv /tmp/vault/vault /usr/local/bin/vault"
+
+        - file:
+            path: "/tmp/vault"
+            state: absent
+
+        - file:
+            path: "/usr/local/bin/vault"
+            state: file
+            mode: 0755
+            owner: root
+            group: root

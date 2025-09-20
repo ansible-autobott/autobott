@@ -1,0 +1,134 @@
+---
+#============================================================================================================
+# Init repos
+#============================================================================================================
+
+- name: "Compute hash of repo destination"
+  ansible.builtin.set_fact:
+    destination_hash: "{{ destination.path | hash('sha1') }}"
+
+- name: Check if if repo was initialized
+  set_fact:
+    hash_present: "{{ init_repos.repos | selectattr('hash', 'equalto', destination_hash) | list | length > 0 }}"
+
+- debug:
+    msg: "skipping init of repo {{ repo_name }} because it's already initialized"
+  when: hash_present
+
+- name: Init Repo
+  when: not hash_present
+  block:
+
+  - name: Ensure local repo path
+    file:
+      path: "{{ destination.path }}"
+      state: directory
+      mode: '0755'
+    when:
+      - destination.path is defined
+      - not (destination.path is match('^ssh:'))
+
+  - name: init repos for borg 1.x
+    command: borgmatic init --config {{ config_path }}
+    when: borg_major_version == "1"
+    register: borgmatic_init_result
+    changed_when: borgmatic_init_result.stdout != ""
+    no_log: true
+    ignore_errors: true
+
+  - name: init repos for borg 2.x
+    command: borgmatic repo-create --config {{ config_path }}
+    when:
+      - borg_major_version == "2"
+      - borg_ssh_hosts is defined
+      - borg_ssh_hosts | length > 0
+    register: borgmatic_init_result
+    no_log: true
+    ignore_errors: true
+
+  - name: show borgmatic error output
+    debug:
+      msg: "{{ borgmatic_init_result.stderr }}"
+    when:
+      - borgmatic_init_result is failed
+    failed_when: true
+
+  - name: Ensure key export directory exists on remote host
+    file:
+      path: "/tmp/borg_key_exports"
+      state: directory
+      mode: '0700'
+    changed_when: false
+    become: yes
+
+  - name: Export Borg keys from each destination for Borg 1.x
+    command: >
+      borg key export {{ destination.path }}
+      /tmp/borg_key_exports/{{ item.0.name }}_{{ destination.label | default('repo') }}.key
+      --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
+    when:
+      - destination.path is defined
+      - destination.encryption is defined
+      - destination.encryption != 'none'
+      - borg_major_version == "1"
+    become: yes
+    no_log: true
+    changed_when: false
+
+  - name: Export Borg keys from each destination for Borg 2.x
+    command: >
+      borg key export
+        --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
+        --repo "{{ destination.path }}"
+        "/tmp/borg_key_exports/{{ item.0.name }}_{{ destination.label | default('repo') }}.key"
+    with_subelements:
+      - "{{ borgmatic_backups }}"
+      - destination
+    when:
+      - destination.path is defined
+      - destination.encryption is defined
+      - destination.encryption != 'none'
+      - borg_major_version == "2"
+    become: yes
+    no_log: true
+    changed_when: false
+
+  - name: Fetch exported Borg keys to control node
+    fetch:
+      src:  /tmp/borg_key_exports/{{ item.0.name }}_{{ destination.label | default('repo') }}.key
+      dest: "{{ inventory_file | dirname }}/files/borg/{{ inventory_hostname }}/{{ item.0.name }}_{{ destination.label | default('repo') }}.key "
+      flat: yes
+    changed_when: false
+    no_log: true
+    with_subelements:
+      - "{{ borgmatic_backups }}"
+      - destination
+    when:
+      - destination.path is defined
+      - destination.encryption is defined
+      - destination.encryption != 'none'
+
+  - name: Remove exported key from remote host (cleanup)
+    file:
+      path: "/tmp/borg_key_exports/"
+      state: absent
+    changed_when: false
+    become: yes
+
+  # ONCE successfully initialized a repo, we can add it to the fact
+  - name: Add new repo hash
+    set_fact:
+      init_repos: >-
+        {{
+          init_repos | combine({
+            'repos': init_repos.repos | union([{'name': repo_name, 'hash': destination_hash}])
+          })
+        }}
+
+  - name: Write initialized repo in fact
+    copy:
+      dest: /etc/ansible/facts.d/borgmatic_repos_init.fact
+      content: "{{ init_repos | to_nice_json }}"
+      mode: '0644'
+
+

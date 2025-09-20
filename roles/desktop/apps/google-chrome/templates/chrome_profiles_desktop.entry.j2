@@ -1,0 +1,21 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name={{ item.name }}
+GenericName={% if item.desktop.generic_name is defined %}{{ item.desktop.generic_name }}{% else %}{{ item.name }}{% endif %}
+
+Comment={% if item.desktop.desc is defined %}{{ item.desktop.desc }}{% else %}{{ item.name }}{% endif %}
+
+Exec={{linux_desktop_data_path}}/programas/{{ item.name }}/{{ item.name }}.sh
+
+Icon={% if item.desktop.icon is defined %}{{ item.desktop.icon }}{% else %}google-chrome{% endif %}
+
+Terminal=false
+Type=Application
+Categories=Internet
+MimeType=
+Keywords=
+
+
+
+
+

@@ -1,0 +1,24 @@
+---
+#============================================================================================================
+# Golang Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_golang: false
+
+# User override variable - will be combined with defaults
+golang: {}
+# Default Golang configuration structure
+golang_defaults:
+  # go version to install
+  go_version: "1.23.4"
+
+  # get the link from: https://github.com/niemeyer/godeb
+  godeb_url: https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz
+  # get from: https://github.com/goreleaser/goreleaser/releases
+  goreleaser_url: "https://github.com/goreleaser/goreleaser/releases/download/v2.5.0/goreleaser_2.5.0_amd64.deb"
+  # get from: https://github.com/goreleaser/nfpm/releases
+  nfpm_url: "https://github.com/goreleaser/nfpm/releases/download/v2.41.1/nfpm_2.41.1_amd64.deb"
+  # get from https://github.com/golangci/golangci-lint/releases
+  golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v1.62.2/golangci-lint-1.62.2-linux-amd64.deb"
+

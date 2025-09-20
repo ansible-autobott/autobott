@@ -1,0 +1,110 @@
+---
+#============================================================================================================
+# kubectl Role - Main Tasks
+#============================================================================================================
+- name: Main kubectl block
+  tags:
+    - kubectl
+    - untagged
+  when:
+    - run_role_kubectl | bool
+  block:
+    - name: Set merged kubectl configuration
+      ansible.builtin.set_fact:
+        kubectl_config: "{{ kubectl_defaults | combine(kubectl, recursive=true) }}"
+
+    - name: get lastest kubectl version
+      debug:
+        msg: "{{ lookup('url', 'https://storage.googleapis.com/kubernetes-release/release/stable.txt', split_lines=False) | trim  }}"
+      register: kube_lastest_version
+
+    - name: get current kubectl version
+      shell: "kubectl version --client=true --output=json | grep gitVersion | awk '{print $2}' | tr -d '\"' | tr -d ','"
+      register: kube_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update kubectl
+      when: kube_current_version.stdout != kube_lastest_version.msg
+      block:
+
+        - name: Download kubectl
+          get_url:
+            url: "https://storage.googleapis.com/kubernetes-release/release/{{ kube_lastest_version.msg | trim }}/bin/linux/amd64/kubectl"
+            dest: /usr/local/bin/kubectl
+
+        - name: making kubectl executable
+          file:
+            path: /usr/local/bin/kubectl
+            owner: root
+            group: root
+            mode: '0755'
+
+    - name: make sure .bashrc.d exists
+      file:
+        path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+        state: directory
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+        mode: 0750
+
+    - name: Copy .bashrc.d template
+      template:
+        src: kubectl.bashrc
+        dest: "/home/{{linux_desktop_config.user}}/.bashrc.d/10_kubectl.bashrc"
+        mode: 0750
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+
+    - name: Create .kube config dir
+      file:
+        path:         "/home/{{linux_desktop_config.user}}/.kube"
+        state:        directory
+        mode:         0750
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+
+
+    # Install azure kubelogin
+    - name: get current kubelogin version
+      shell: "kubelogin --version | grep hash | awk -F '/' '{print $1}' | awk -F ' ' '{print $3}'"
+      register: kubelogin_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update kubelogin
+      when: kubelogin_current_version.stdout != kubectl_config.kubelogin_version
+      block:
+
+        - file:
+            path: "/tmp/kubelogin"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Ensure unzip is installed
+          apt:
+            name: unzip
+            state: present
+          become: yes
+
+        - name: Download kubelogin
+          unarchive:
+            src: "https://github.com/Azure/kubelogin/releases/download/{{ kubectl_config.kubelogin_version }}/kubelogin-linux-amd64.zip"
+            dest: "/tmp/kubelogin"
+            remote_src: yes
+
+        - name: Move kubelogin
+          command: "mv /tmp/kubelogin/bin/linux_amd64/kubelogin /usr/local/bin/kubelogin"
+
+        - file:
+            path: "/tmp/kubelogin"
+            state: absent
+
+        - file:
+            path: "/usr/local/bin/kubelogin"
+            state: file
+            mode: 0755
+            owner: root
+            group: root

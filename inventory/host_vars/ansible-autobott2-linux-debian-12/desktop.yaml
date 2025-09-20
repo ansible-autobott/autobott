@@ -1,0 +1,34 @@
+# =========================== Desktop ===========================
+run_role_linux_desktop: true
+linux_desktop:
+  user: "vagrant"
+
+run_role_linux_kde: true
+linux_kde:
+  add_kde_elementary_breeze: true
+
+
+# only for Virtualbox VMs
+run_role_vbox_guest: false
+
+# =========================== Developer APPS ===========================
+run_role_golang: true
+run_role_kubectl: true
+run_role_k9s: true
+run_role_node: true
+run_role_vagrant: true
+run_role_vault: true
+run_role_virtualbox: true
+
+# =========================== Regular APPS ===========================
+run_role_freecad: true
+run_role_google_chrome: true
+run_role_jellyfin_player: true
+run_role_pcsx2: true
+run_role_prusa_slicer: true
+run_role_ytdlp: true
+run_role_linux_candy: true
+
+
+
+

@@ -1,0 +1,14 @@
+---
+#============================================================================================================
+# ytdlp Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_ytdlp: false
+
+# User override variable - will be combined with defaults
+ytdlp: {}
+# Default ytdlp configuration structure
+ytdlp_defaults:
+  # https://github.com/yt-dlp/yt-dlp/releases
+  version: "2023.11.16"

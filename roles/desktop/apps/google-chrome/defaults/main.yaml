@@ -1,0 +1,22 @@
+---
+#============================================================================================================
+# google-chrome Role Defaults
+#============================================================================================================
+
+# Main role control variable
+run_role_google_chrome: false
+
+# User override variable - will be combined with defaults
+google_chrome: {}
+# Default google-chrome configuration structure
+google_chrome_defaults:
+  extra_profiles:
+    - name: owa # name
+      destination: /home/vagrant/programs/owa
+      url: "https://outlook.office365.com/mail/inbox" # (optional) default url to open
+      desktop:
+        desc: "Outlook Web Access"
+        generic_name: "Outlook Web Access"
+      bin: true # create link in /bin
+
+

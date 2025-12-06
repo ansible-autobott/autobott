@@ -11,7 +11,7 @@ golang: {}
 # Default Golang configuration structure
 golang_defaults:
   # go version to install
-  go_version: "1.23.4"
+  go_version: "1.25.5"
 
   # get the link from: https://github.com/niemeyer/godeb
   godeb_url: https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz
@@ -20,5 +20,4 @@ golang_defaults:
   # get from: https://github.com/goreleaser/nfpm/releases
   nfpm_url: "https://github.com/goreleaser/nfpm/releases/download/v2.41.1/nfpm_2.41.1_amd64.deb"
   # get from https://github.com/golangci/golangci-lint/releases
-  golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v1.62.2/golangci-lint-1.62.2-linux-amd64.deb"
-
+  golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v2.7.1/golangci-lint-2.7.1-linux-amd64.deb"

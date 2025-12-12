@@ -10,7 +10,7 @@ run_role_stash: false
 stash: {}
 # Default configuration structure
 stash_defaults:
-  version: 0.28.1
+  version: 0.29.3
 
   # User and group configuration
   user:
@@ -38,3 +38,4 @@ stash_defaults:
 stash_checksums:
   "0.27.2": "9ff1a979c7d61cf263cf7b3c1ce0d80dafc4ae8a"
   "0.28.1": "6ae0ac8792fd83defaf35e9dc2c0ea039d4ead79"
+  "0.29.3": "c92105cd9d1028d9b29c59a980a5c7bed1757bd5"

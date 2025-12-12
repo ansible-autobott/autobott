@@ -70,6 +70,11 @@ default case = {{ samba_config.global.default_case }}
 preserve case = {{ samba_config.global.preserve_case | lower }}
 short preserve case = {{ samba_config.global.short_preserve_case | lower }}
 
+####### file permissions #######
+
+unix extensions = yes
+
+
 # ===================================================================================================
 # SHARES
 # ===================================================================================================

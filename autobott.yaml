@@ -74,6 +74,7 @@
     - webservices/homepage
     - webservices/immich
     - webservices/docmost
+    - webservices/etnafinance
 
     # php based
     - webservices/mediawiki

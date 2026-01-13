@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart etnafiance
+  ansible.builtin.systemd:
+    name: etnafiance
+    state: restarted
+  listen: restart etnafiance

@@ -1,0 +1,38 @@
+---
+#============================================================================================================
+# ETNA FINANCE Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_etnafiance: false
+
+# User configuration override (will be merged with etnafiance_defaults)
+etnafiance: {}
+# Default configuration structure
+etnafiance_defaults:
+  version: 0.1.0
+  # User and group configuration
+  user:
+    name: etnafiance
+    uid: # Let system assign UID
+    group: etnafiance
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/etnafiance
+    data_dir: /opt/etnafiance/data
+
+  # Service configuration
+  service:
+    bind_ip: 127.0.0.1
+    port: 8085
+    loglevel: info
+    cookiesHashKey: "He4wazahwo6o...." # MUST BE EXACTLY 64 chars
+    cookiesBlockKey: "He4wazahwo6o...." #  MUST BE EXACTLY 32 chars
+
+# Supported etnafiance versions and checksums
+etnafiance_checksums:
+  "0.1.0": "c7cafad787552dee30fd39ea1f4e22a78ce22bc48a65029bbd8d3341124da158"
+
+

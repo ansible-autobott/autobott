@@ -1,0 +1,113 @@
+---
+#============================================================================================================
+# Etna Fiance Role
+#============================================================================================================
+
+- name: Main Etna Finance installation and configuration
+  tags:
+    - etnafinance
+    - etna
+    - untagged
+  when: run_role_etnafiance | bool
+  block:
+    - name: Set merged etna-fiance configuration
+      ansible.builtin.set_fact:
+        etnafiance_config: "{{ etnafiance_defaults | combine(etnafiance, recursive=true) }}"
+
+    - name: Create etnafiance system group
+      ansible.builtin.group:
+        name: "{{ etnafiance_config.user.group }}"
+        gid: "{{ etnafiance_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create etnafiance system user
+      ansible.builtin.user:
+        name: "{{ etnafiance_config.user.name }}"
+        uid: "{{ etnafiance_config.user.uid | default(omit, true) }}"
+        group: "{{ etnafiance_config.user.group }}"
+        home: "{{ etnafiance_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create etnafiance directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ etnafiance_config.user.name }}"
+        group: "{{ etnafiance_config.user.group }}"
+        mode: 0750
+      loop:
+        - "{{ etnafiance_config.paths.base_dir }}"
+        - "{{ etnafiance_config.paths.data_dir }}"
+
+    - name: Create config file
+      ansible.builtin.template:
+        src: config.yaml
+        dest: "{{ etnafiance_config.paths.data_dir }}/config.yaml"
+        owner: "{{ etnafiance_config.user.name }}"
+        group: "{{ etnafiance_config.user.group }}"
+        mode: "0600"
+      notify:
+        - restart etnafiance
+
+    - name: get current etnafiance version
+      shell: "{{ etnafiance_config.paths.base_dir }}/etnafinance version | head -n 1 | awk '{print $2}'"
+      register: etnafiance_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update etnafiance
+      when: etnafiance_current_version.stdout != etnafiance_config.version
+      block:
+
+
+        - file:
+            path: "/tmp/etnafiance"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download etnafiance
+          unarchive:
+            src: "https://github.com/andresbott/etna-finance/releases/download/v{{ etnafiance_config.version }}/etna-finance_Linux_x86_64_v3.zip"
+            dest: "/tmp/etnafiance"
+            remote_src: yes
+
+        - name: Move etnafiance
+          command: "mv /tmp/etnafiance/etna {{ etnafiance_config.paths.base_dir }}/etnafinance"
+
+        - file:
+            path: "/tmp/etnafiance"
+            state: absent
+
+        - file:
+            path: "{{ etnafiance_config.paths.base_dir }}/etnafinance"
+            state: file
+            owner: "{{ etnafiance_config.user.name }}"
+            group: "{{ etnafiance_config.user.group }}"
+            mode: 0750
+
+
+
+    - name: Configure systemd service
+      ansible.builtin.template:
+        src: etnafinance.service.j2
+        dest: /lib/systemd/system/etnafiance.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart etnafiance
+
+    - name: Enable and start etna-fiance service
+      ansible.builtin.systemd:
+        name: etnafiance
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart etnafiance

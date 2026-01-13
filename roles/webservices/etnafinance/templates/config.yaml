@@ -1,0 +1,24 @@
+Server:
+  Port: {{ etnafiance_config.service.port }}
+  BindIp: "{{ etnafiance_config.service.bind_ip }}"
+
+Observability:
+  Port: 9090
+  BindIp: "localhost"
+
+DataDir: "{{ etnafiance_config.paths.data_dir }}"
+
+Auth:
+  # Hash key and Block key MUST be updated in production and kept secret
+  HashKey:      "{{ etnafiance_config.service.cookiesHashKey }}"
+  BlockKey:     "{{ etnafiance_config.service.cookiesBlockKey }}"
+  UserStore:
+    Type: static
+    Users:
+      - Name: "etna"
+        Pw: "etna"
+        Enabled: true
+
+Env:
+  Loglevel: "{{ etnafiance_config.service.loglevel }}"
+  Production: false

@@ -1,0 +1,28 @@
+[Unit]
+Description=Etna Personal finance app
+Documentation=https://github.com/andresbott/etna-finance
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ etnafiance_config.user.name }}
+Group={{ etnafiance_config.user.group }}
+ExecStart={{ etnafiance_config.paths.base_dir }}/etnafinance start -c {{ etnafiance_config.paths.data_dir }}/config.yaml
+Restart=on-failure
+RestartSec=5
+WorkingDirectory={{ etnafiance_config.paths.data_dir }}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=etnafiance
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ etnafiance_config.paths.data_dir }}
+
+[Install]
+WantedBy=multi-user.target
+

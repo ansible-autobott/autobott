@@ -1,9 +1,15 @@
+- name: Check if {{ item }} is already in known_hosts
+  command: ssh-keygen -F "{{ item }}" -f /root/.ssh/known_hosts
+  register: known_host_check
+  changed_when: false
+  failed_when: false
+
 - name: Get SSH key for {{ item }}
   command: "ssh-keyscan -H {{ item }}"
   register: sshkey_output
   changed_when: false
   failed_when: sshkey_output.rc != 0
-  ignore_errors: yes
+  when: known_host_check.rc != 0
 
 - name: Fail if SSH key for {{ item }} could not be retrieved
   fail:
@@ -11,11 +17,15 @@
       Failed to retrieve SSH key for host '{{ item }}'.
       This usually means the host does not resolve or is unreachable.
       ssh-keyscan stderr: {{ sshkey_output.stderr }}
-  when: sshkey_output.rc != 0
+  when:
+    - known_host_check.rc != 0
+    - sshkey_output.rc != 0
 
 - name: Add {{ item }} to known_hosts
   known_hosts:
     name: "{{ item }}"
     key: "{{ sshkey_output.stdout }}"
     path: "/root/.ssh/known_hosts"
-  when: sshkey_output.rc == 0
+  when:
+    - known_host_check.rc != 0
+    - sshkey_output.rc == 0

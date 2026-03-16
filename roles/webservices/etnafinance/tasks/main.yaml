@@ -69,13 +69,19 @@
             group: root
 
         - name: Download etnafiance
+          get_url:
+            url: "https://github.com/andresbott/etna-finance/releases/download/v{{ etnafiance_config.version }}/etna-finance_Linux_x86_64_v3.zip"
+            dest: "/tmp/etnafiance/etna-finance.zip"
+            checksum: "sha256:{{ etnafiance_checksums[etnafiance_config.version] }}"
+
+        - name: Extract etnafiance
           unarchive:
-            src: "https://github.com/andresbott/etna-finance/releases/download/v{{ etnafiance_config.version }}/etna-finance_Linux_x86_64_v3.zip"
+            src: "/tmp/etnafiance/etna-finance.zip"
             dest: "/tmp/etnafiance"
             remote_src: yes
 
         - name: Move etnafiance
-          command: "mv /tmp/etnafiance/etna {{ etnafiance_config.paths.base_dir }}/etnafinance"
+          command: "mv /tmp/etnafiance/etna-finance {{ etnafiance_config.paths.base_dir }}/etnafinance"
 
         - file:
             path: "/tmp/etnafiance"
@@ -87,6 +93,8 @@
             owner: "{{ etnafiance_config.user.name }}"
             group: "{{ etnafiance_config.user.group }}"
             mode: 0750
+          notify:
+            - restart etnafiance
 
 
 

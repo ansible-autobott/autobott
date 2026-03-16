@@ -12,7 +12,7 @@ mealie: {}
 mealie_defaults:
 
   # https://github.com/getmealie/mealie/releases
-  version: v2.8.0
+  version: v3.11.0
   base_url: localhost:8080
   # User and group configuration
   user:

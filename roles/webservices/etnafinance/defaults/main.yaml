@@ -10,7 +10,7 @@ run_role_etnafiance: false
 etnafiance: {}
 # Default configuration structure
 etnafiance_defaults:
-  version: 0.1.0
+  version: 0.6.2
   # User and group configuration
   user:
     name: etnafiance
@@ -30,9 +30,20 @@ etnafiance_defaults:
     loglevel: info
     cookiesHashKey: "He4wazahwo6o...." # MUST BE EXACTLY 64 chars
     cookiesBlockKey: "He4wazahwo6o...." #  MUST BE EXACTLY 32 chars
+    apiKeys:
+      massive: []
 
 # Supported etnafiance versions and checksums
 etnafiance_checksums:
   "0.1.0": "c7cafad787552dee30fd39ea1f4e22a78ce22bc48a65029bbd8d3341124da158"
+  "0.3.1": "36ed9172a7a951252f2637591a9fbeaaf91a13e4d044ea2a2ae3b8ecfa943465"
+  "0.3.2": "1c316dd9878bfc7b4cc291f0f452821591e79ff7200a492fddb5eb9830846c9f"
+  "0.3.3": "1fd77ab69547d6cbe76c00690b69996041697abe284f799688ca7c49b1f16116"
+  "0.3.4": "04afc1fb465e02edea8130ee43855021e1e6a233c7c3ebe55b2bb88d80383d76"
+  "0.4.0": "b463c110fe509ab1a0deb890a8e4b4c6c67948c325e20bb64b62f06172ab17ae"
+  "0.5.0": "6a1d2b649dbcd0dda4b15ccc7e2187f9e609a14ab9081a09ac4ebf5a0038a9a2"
+  "0.6.0": "122f0b47a1c79f1c7aa16b2bc0c25ec0e0e6676fb07670ef19ba13cde1772058"
+  "0.6.1": "8c713a27889e808208dd522ade27139785a376e19da8b034374e553374d524d8"
+  "0.6.2": "e5ac8bdd6d446b5fd2040b77811cda0e037d44b2dda299f176ae82ad0d96750b"
 
 

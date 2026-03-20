@@ -5,12 +5,12 @@ all:
   children:
     linux_servers:
       hosts:
-        ansible-autobott2-linux-debian-12:
-          ansible_python_interpreter: /usr/bin/python3.11
+        ansible-autobott2-linux-debian-13:
+          ansible_python_interpreter: /usr/bin/python3.13
 
     email_server:
       hosts:
-        ansible-autobott2-linux-debian-12:
+        ansible-autobott2-linux-debian-13:
     linux_desktop:
       hosts:
-        ansible-autobott2-linux-debian-12:
+        ansible-autobott2-linux-debian-13:

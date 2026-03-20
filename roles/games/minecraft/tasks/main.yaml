@@ -23,17 +23,17 @@
       when: java_result is failed
       block:
         - ansible.builtin.apt:
-            name: openjdk-17-jre
+            name: openjdk-21-jre
             state: present
             update_cache: yes
 
         - ansible.builtin.apt:
-            name: openjdk-17-jre
+            name: openjdk-21-jre
             state: absent
 
     - name: Install headless JRE
       ansible.builtin.apt:
-        name: openjdk-17-jre-headless
+        name: openjdk-21-jre-headless
         state: present
         update_cache: yes
 

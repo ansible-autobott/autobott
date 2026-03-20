@@ -3,7 +3,7 @@
 ;;;;;;;;;;;;;;;;;;;
 ; About php.ini   ;
 ;;;;;;;;;;;;;;;;;;;
-; for php 8.2
+; for php {{ php_version }}
 ; PHP's initialization file, generally called php.ini, is responsible for
 ; configuring many of the aspects of PHP's behavior.
 
@@ -1203,9 +1203,6 @@ mysqli.default_user =
 ; file will be able to reveal the password as well.
 ; https://php.net/mysqli.default-pw
 mysqli.default_pw =
-
-; Allow or prevent reconnect
-mysqli.reconnect = Off
 
 ; If this option is enabled, closing a persistent connection will rollback
 ; any pending transactions of this connection, before it is put back

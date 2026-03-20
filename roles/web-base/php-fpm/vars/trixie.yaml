@@ -1,5 +1,5 @@
 ---
-php_version: 8.3
+php_version: 8.4
 php_modules:
   - php-fpm
   - php-xml
@@ -14,6 +14,8 @@ php_modules:
 php_old_remove:
   - /etc/php/8.0
   - /etc/php/8.1
+  - /etc/php/8.2
+  - /etc/php/8.3
   - /etc/logrotate.d/php-fpm8.0
   - /etc/logrotate.d/php-fpm8.1
   - /etc/logrotate.d/php8.0-fpm
@@ -21,8 +23,10 @@ php_old_remove:
   - /var/log/php
   - /var/log/php8.2-fpm.log
   - /var/log/php8.3-fpm.log
+  - /var/log/php8.4-fpm.log
 
 php_old_log_patterns:
+  - "^php8.3-fpm.log"
   - "^php8.2-fpm.log"
   - "^php8.1-fpm.log"
   - "^php8.0-fpm.log"

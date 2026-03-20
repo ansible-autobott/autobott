@@ -9,4 +9,3 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 echo baking image for debian 12
 cd "${SCRIPTPATH}/debian12"
 ./bake.sh
-

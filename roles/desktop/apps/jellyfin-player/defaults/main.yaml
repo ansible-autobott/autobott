@@ -10,5 +10,5 @@ run_role_jellyfin_player: false
 jellyfin_player: {}
 # Default jellyfin_player configuration structure
 jellyfin_player_defaults:
-  # https://github.com/jellyfin/jellyfin-media-player/releases
-  version: "1.10.1" # version without V
+  # https://github.com/jellyfin/jellyfin-desktop/releases
+  version: "1.12.0" # version without V

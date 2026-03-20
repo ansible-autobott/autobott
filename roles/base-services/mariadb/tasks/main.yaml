@@ -22,7 +22,7 @@
           - mariadb-common
           - mariadb-server
           - python3-mysqldb
-      when: ansible_distribution_release in ['bullseye', 'bookworm']
+      when: ansible_distribution_release in ['bullseye', 'bookworm', 'trixie']
 
     - name: Ensure MariaDB packages are installed
       ansible.builtin.apt:
@@ -145,7 +145,7 @@
           - mariadb-common
           - mariadb-server
           - python3-mysqldb
-      when: ansible_distribution_release in ['bullseye', 'bookworm']
+      when: ansible_distribution_release in ['bullseye', 'bookworm', 'trixie']
 
     - name: Ensure MariaDB packages are removed
       ansible.builtin.apt:

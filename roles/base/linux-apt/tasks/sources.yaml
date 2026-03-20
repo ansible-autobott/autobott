@@ -44,10 +44,10 @@
     - name: "Manage additional APT repositories"
       block:
         - name: "Import repository signing keys"
-          ansible.builtin.apt_key:
+          ansible.builtin.get_url:
             url: "{{ item.key_url }}"
-            id: "{{ item.key_id | default(omit) }}"
-            state: present
+            dest: "/usr/share/keyrings/{{ item.name }}.gpg"
+            mode: "0644"
           loop: "{{ linux_apt_data.sources_d | default([]) }}"
           loop_control:
             label: "{{ item.name }}"
@@ -88,15 +88,15 @@
           when: not (item.enabled | default(true) | bool)
 
         - name: "Remove disabled repository keys"
-          ansible.builtin.apt_key:
-            id: "{{ item.key_id | default(omit) }}"
+          ansible.builtin.file:
+            path: "/usr/share/keyrings/{{ item.name }}.gpg"
             state: absent
           loop: "{{ linux_apt_data.sources_d | default([]) }}"
           loop_control:
             label: "{{ item.name }}"
           when:
             - not (item.enabled | default(true) | bool)
-            - item.key_id is defined
+            - item.key_url is defined
 
     - name: "Clean up backup sources"
       block:

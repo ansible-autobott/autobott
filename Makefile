@@ -187,11 +187,11 @@ vagrant-ssh-renew: fix-ssh-key-perm ## remove and re-add previous vagrant ssh en
 
 vagrant-snapshot-save: ## take a snapshot of the vagrant state
 	@cd vagrant && \
-	vagrant snapshot save ansible-autobott-linux-debian-12 automated-snapshot --force
+	vagrant snapshot save ansible-autobott2-linux-debian-13 automated-snapshot --force
 
 vagrant-snapshot-restore: ## restore to snapshot of the vagrant state
 	@cd vagrant && \
-	vagrant snapshot restore ansible-autobott-linux-debian-12 automated-snapshot
+	vagrant snapshot restore ansible-autobott2-linux-debian-13 automated-snapshot
 
 
 ##@ Release

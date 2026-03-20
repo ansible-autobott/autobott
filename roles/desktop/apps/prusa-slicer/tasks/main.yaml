@@ -35,6 +35,7 @@
           get_url:
             url: "{{ prusa_slicer_versions[prusa_slicer_config.version] }}"
             dest: "/opt/prusa_slicer/PrusaSlicer.{{ prusa_slicer_config.version }}.AppImage"
+            mode: 0755
 
         - name: link binary
           file:
@@ -57,7 +58,6 @@
         mode: 0755
         owner: root
         group: root
-        recurse: yes
 
     - name: Create Desktop entry
       copy:

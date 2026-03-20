@@ -42,6 +42,8 @@
       become_user: "{{ linux_desktop_config.user }}"
       shell: >
         bash /tmp/nvm_0.39.1_install.sh
+      environment:
+        NVM_DIR: "/home/{{ linux_desktop_config.user }}/.nvm"
       args:
         creates: "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
 
@@ -71,8 +73,12 @@
       become: yes
       become_user: "{{ linux_desktop_config.user }}"
       shell: "source /home/{{ linux_desktop_config.user }}/.nvm/nvm.sh && nvm install --lts"
+      environment:
+        NVM_DIR: "/home/{{ linux_desktop_config.user }}/.nvm"
       args:
         executable: /bin/bash
+      register: install_node
+      changed_when: "'is already installed' not in (install_node.stdout + install_node.stderr)"
 
 - name: Uninstall Node Version Manager
   when: not (run_role_node | bool)

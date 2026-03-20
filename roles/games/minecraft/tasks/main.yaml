@@ -13,27 +13,20 @@
       ansible.builtin.set_fact:
         minecraft_config: "{{ minecraft_defaults | combine(minecraft, recursive=True) }}"
 
+    - name: Load java package names based on distro release
+      ansible.builtin.include_vars: "{{ item }}"
+      with_first_found:
+        - "{{ ansible_distribution_release }}.yaml"
+
     - name: Check if Java is installed
       ansible.builtin.command: java -version
       register: java_result
       ignore_errors: true
       changed_when: false
 
-    - name: Workaround JRE install bug
-      when: java_result is failed
-      block:
-        - ansible.builtin.apt:
-            name: openjdk-21-jre
-            state: present
-            update_cache: yes
-
-        - ansible.builtin.apt:
-            name: openjdk-21-jre
-            state: absent
-
     - name: Install headless JRE
       ansible.builtin.apt:
-        name: openjdk-21-jre-headless
+        name: "{{ minecraft_java_package }}"
         state: present
         update_cache: yes
 
@@ -212,12 +205,6 @@
         enabled: true
         daemon_reload: true
       notify: restart minecraft
-
-    - name: Minecraft overviewer block
-      ansible.builtin.import_tasks: overviewer.yaml
-      when:
-        - minecraft_config.overviewer.enabled is defined
-        - minecraft_config.overviewer.enabled
 
 #============================================================================================================
 # remove

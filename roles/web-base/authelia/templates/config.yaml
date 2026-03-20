@@ -16,7 +16,7 @@ totp:
     issuer: "{{ authelia_config.totp_issuer }}"
 
 storage:
-    encryption_key: "{{ authelia_config.secrets.storage_encryption_key }}"
+    encryption_key: "{{ authelia_config.secrets.storage_encryption_key | mandatory('authelia_config.secrets.storage_encryption_key must be set (minimum 20 chars)') }}"
     local:
         path: "{{ authelia_config.paths.data_dir }}/authelia.sqlite3"
 
@@ -47,7 +47,7 @@ access_control:
 
 session:
   # since we generate a new secrets on every run, users will be logged out
-  secret: "{{ authelia_config.secrets.session | default((64 | random | to_uuid), true) }}"
+  secret: "{{ authelia_config.secrets.session | mandatory('authelia_config.secrets.session must be set') }}"
   inactivity: {{  authelia_config.timeout.inactivity }}
   expiration: {{  authelia_config.timeout.expiration }}
   remember_me: {{  authelia_config.timeout.remember_me }}

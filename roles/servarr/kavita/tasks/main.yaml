@@ -113,8 +113,10 @@
 
     - name: Set proper permissions excluding the Kavita binary
       ansible.builtin.shell: |
-        find {{ kavita_config.paths.base_dir }}/install/latest/ -type d -exec chmod 0750 {} +
-        find {{ kavita_config.paths.base_dir }}/install/latest/ -type f ! -name 'Kavita' -exec chmod 0640 {} +
+        find {{ kavita_config.paths.base_dir }}/install/latest/ -type d -exec chmod -c 0750 {} +
+        find {{ kavita_config.paths.base_dir }}/install/latest/ -type f ! -name 'Kavita' -exec chmod -c 0640 {} +
+      register: kavita_permissions
+      changed_when: kavita_permissions.stdout != ""
 
     - name: Ensure Kavita binary is executable
       ansible.builtin.file:
@@ -131,7 +133,7 @@
         line: '  "{{ item.property }}": {{ item.value | to_json }},'
       loop:
         - { property: "IpAddresses", value: "{{ kavita_config.service.bind_ip }}" }
-        - { property: "TokenKey", value: "{{ lookup('ansible.builtin.password', '/dev/null length=80 chars=ascii_letters,digits') }}" }
+        - { property: "TokenKey", value: "{{ kavita_config.secrets.token_key | mandatory('kavita_config.secrets.token_key must be set') }}" }
 
     - name: Configure kavita port
       ansible.builtin.lineinfile:

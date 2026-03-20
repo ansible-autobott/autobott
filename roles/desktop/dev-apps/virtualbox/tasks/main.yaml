@@ -19,8 +19,8 @@
         state: absent
 
     - name: "apt | ensure virtualBox linux signing key present"
-      ansible.builtin.get_url:
-        url: https://www.virtualbox.org/download/oracle_vbox_2016.asc
+      ansible.builtin.copy:
+        src: oracle_vbox.gpg
         dest: /usr/share/keyrings/oracle_vbox.gpg
         mode: "0644"
 

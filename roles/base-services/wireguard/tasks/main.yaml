@@ -117,6 +117,7 @@
             enabled: false
           register: wireguard_status
           check_mode: true
+          changed_when: false
           become: true
 
         - name: Stop Wireguard service if running and config changed

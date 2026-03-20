@@ -39,6 +39,7 @@
       ansible.builtin.command: ./lynis audit system -q --profile /opt/lynis/custom.lynis.prf --report-file /opt/lynis/lynis-report.dat
       args:
         chdir: /opt/lynis
+      changed_when: false
 
     - name: Fetch Lynis report
       ansible.builtin.fetch:
@@ -46,6 +47,7 @@
         dest: "./reports/lynis_audit/{{ inventory_hostname }}_{{ ansible_date_time.date }}.dat"
         flat: true
       become: true
+      changed_when: false
 
     - name: Delete Lynis log files
       ansible.builtin.file:
@@ -54,3 +56,4 @@
       loop:
         - /var/log/lynis.log
         - /var/log/lynis-report.dat
+      changed_when: false

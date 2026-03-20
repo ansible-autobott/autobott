@@ -132,18 +132,24 @@ vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap prov
 
 vagrant-run: ## run playbook on vagrant, vars: TAG=<tag> (default all)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
+	@mkdir -p logs
 	@. ./venv/bin/activate && \
 	if [ -n "$$TAG" ]; then \
 		TAG_VAL="-t $$TAG"; \
 	else \
 		TAG_VAL=""; \
 	fi && \
+	TIMESTAMP="$$(date +%Y%m%d-%H%M%S)" && \
+	RAW_LOG="/tmp/ansible-vagrant-$$TIMESTAMP.log" && \
+	LOG_FILE="logs/vagrant-changed-$$TIMESTAMP.log" && \
 	echo "Using tag: $$TAG_VAL" && \
-	ansible-playbook autobott.yaml \
+	echo "Logging to: $$LOG_FILE" && \
+	ANSIBLE_FORCE_COLOR=1 ansible-playbook autobott.yaml \
 		-i inventory/vagrant.yaml \
 		-i vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
 		--extra-vars "ansible_ssh_user='ans'" \
-		$$TAG_VAL
+		$$TAG_VAL 2>&1 | tee >(sed 's/\x1b\[[0-9;]*m//g' | awk '/^TASK \[/{task=$$0; in_dep=0; next} /\[DEPRECATION WARNING\]/{print task; in_dep=1; print; next} in_dep && /^(ok:|changed:|skipping:|failed:|PLAY )/{in_dep=0} in_dep{print; next} /^changed:/{print task; print}' > "$$LOG_FILE"); \
+	wait
 
 vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>, HOST=<host> note: requires enroll
 	@ssh-add ./vagrant/autobott-key # used in sftp connections

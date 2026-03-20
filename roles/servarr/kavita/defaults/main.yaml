@@ -23,6 +23,11 @@ kavita_defaults:
   paths:
     base_dir: /opt/kavita
     data_dir: /opt/kavita/data
+  secrets:
+    # JWT signing secret — must be set in inventory, changing it invalidates all active sessions
+    # generate with: openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 80
+    token_key: ""
+
   # Service configuration
   service:
     bind_ip: 127.0.0.1

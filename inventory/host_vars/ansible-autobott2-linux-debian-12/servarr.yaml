@@ -7,6 +7,9 @@ run_role_jellyfin: true
 # Kavita
 #============================================================================================================
 run_role_kavita: true
+kavita:
+  secrets:
+    token_key: "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_"
 
 #============================================================================================================
 # Transmission

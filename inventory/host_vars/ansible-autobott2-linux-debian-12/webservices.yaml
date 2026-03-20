@@ -17,6 +17,14 @@ caddy:
 #============================================================================================================
 run_role_authelia: true
 authelia:
+
+  secrets:
+    session: "CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE_ME_CHANGE"
+    # generate with: openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 75
+    storage_encryption_key: "CHANGE_ME_CHANGE_ME_CHANGE_ME"
+    # generate with: openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 20
+
+
   # protected site configurations
   sites:
     - name: fe26
@@ -99,6 +107,7 @@ phpmyadmin:
 #============================================================================================================
 run_role_mediawiki: true
 mediawiki:
+  accept_deprecation: true
   wiki:
     name: "demo wiki"
     admin_user: "demo"

@@ -62,6 +62,7 @@
         group: "{{ kavita_config.user.group }}"
         mode: "0750"
         creates: "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}/Kavita/Kavita"
+      register: kavita_extracted
 
     - name: Link Kavita binary to latest
       ansible.builtin.file:
@@ -117,6 +118,7 @@
         find {{ kavita_config.paths.base_dir }}/install/latest/ -type f ! -name 'Kavita' -exec chmod -c 0640 {} +
       register: kavita_permissions
       changed_when: kavita_permissions.stdout != ""
+      when: kavita_extracted is changed
 
     - name: Ensure Kavita binary is executable
       ansible.builtin.file:

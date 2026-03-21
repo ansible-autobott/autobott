@@ -2,19 +2,18 @@
 # Distribution Upgrade Tasks
 # Handles the process of upgrading Debian/Ubuntu to a new release version
 
-- name: "Perform distribution upgrade to {{ linux_apt_defaults.release }}"
+- name: "Perform distribution upgrade to {{ linux_apt_data.release }}"
   tags:
     - "linux-upgrade"
     - "never"
   block:
     - name: "Load distribution-specific variables"
       ansible.builtin.include_vars:
-        file: "{{ lookup('first_found', linux_apt_defaults.release + '.yaml') }}"
-      when: linux_apt_defaults.release is defined
+        file: "{{ linux_apt_data.release }}.yaml"
 
     - name: "Update APT sources for new release"
       ansible.builtin.template:
-        src: "sources.{{ linux_apt_defaults.release }}.j2"
+        src: "sources.{{ linux_apt_data.release }}.j2"
         dest: /etc/apt/sources.list
         owner: root
         group: root
@@ -85,7 +84,7 @@
 
     - name: "Mark distribution upgrade as completed"
       ansible.builtin.debug:
-        msg: "Distribution upgrade to {{ linux_apt_defaults.release }} completed successfully"
+        msg: "Distribution upgrade to {{ linux_apt_data.release }} completed successfully"
       changed_when: true
 
   rescue:
@@ -95,4 +94,4 @@
 
     - name: "Fail with clear message"
       ansible.builtin.fail:
-        msg: "Distribution upgrade to {{ linux_apt_defaults.release }} failed. Manual intervention required."
+        msg: "Distribution upgrade to {{ linux_apt_data.release }} failed. Manual intervention required."

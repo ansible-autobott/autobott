@@ -10,7 +10,7 @@ run_role_etnafiance: false
 etnafiance: {}
 # Default configuration structure
 etnafiance_defaults:
-  version: 0.6.2
+  version: 0.7.0
   # User and group configuration
   user:
     name: etnafiance
@@ -45,5 +45,7 @@ etnafiance_checksums:
   "0.6.0": "122f0b47a1c79f1c7aa16b2bc0c25ec0e0e6676fb07670ef19ba13cde1772058"
   "0.6.1": "8c713a27889e808208dd522ade27139785a376e19da8b034374e553374d524d8"
   "0.6.2": "e5ac8bdd6d446b5fd2040b77811cda0e037d44b2dda299f176ae82ad0d96750b"
+  "0.6.3": "b703de0f11f486ec1ce372b7030e81d28dc5b8a525926d3ac7e8cf3b915263ef"
+  "0.7.0": "1f89efc28763df13c9ae09a79464654ae7e43c2a9c2ce1a024bbcd6f04e06aad"
 
 

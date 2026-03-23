@@ -44,12 +44,12 @@
 
     - name: Configure PHP-FPM
       ansible.builtin.template:
-        src: "php.{{ php_version }}.ini"
+        src: "php.fpm.ini.j2"
         dest: "/etc/php/{{ php_version }}/fpm/php.ini"
         owner: root
         group: root
         mode: "0644"
-        validate: /usr/bin/php8.2 -c %s -m > /dev/null
+        validate: /usr/bin/php{{ php_version }} -c %s -m > /dev/null
       notify: restart php-fpm
 
     - name: Clean package cache

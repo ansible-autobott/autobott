@@ -54,10 +54,15 @@
         state: directory
         owner: "{{ immich_config.user.name }}"
         group: "{{ immich_config.user.group }}"
+        mode: "0750"
       loop:
         - "{{ immich_config.paths.base_dir }}"
         - "{{ immich_config.paths.uploads_dir }}"
-        - "{{ immich_config.paths.db_dir }}"
+
+    - name: Create Immich database directory
+      ansible.builtin.file:
+        path: "{{ immich_config.paths.db_dir }}"
+        state: directory
 
     - name: Create files needed for run docker
       ansible.builtin.template:

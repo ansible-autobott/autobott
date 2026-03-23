@@ -30,32 +30,28 @@
         - /etc/apt/trusted.gpg.d/google.asc
         # add others if you know them
 
-    - name: Remove keys from legacy /etc/apt/trusted.gpg
-      ansible.builtin.apt_key:
-        id: "{{ item }}"
+    - name: Remove legacy /etc/apt/trusted.gpg
+      ansible.builtin.file:
+        path: /etc/apt/trusted.gpg
         state: absent
-        keyring: /etc/apt/trusted.gpg
-      with_items:
-        - 4CCA1EAF950CEE4AB83976DCA040830F7FAC5991  #google
 
-    - name: Download Google signing key and store in keyring
-      get_url:
-        url: "https://dl.google.com/linux/linux_signing_key.pub"
-        dest: "/etc/apt/keyrings/google-chrome.asc"
+    - name: Copy Google signing key to keyring
+      ansible.builtin.copy:
+        src: google-chrome.gpg
+        dest: /etc/apt/keyrings/google-chrome.gpg
         mode: '0644'
-      register: chrome_key_downloaded
-
-    - name: Convert ASCII key to binary .gpg format
-      shell: "gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg  /etc/apt/keyrings/google-chrome.asc"
-      args:
-        creates: /etc/apt/keyrings/google-chrome.gpg
 
     - name: Add repository
       apt_repository:
         repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main"
         filename: "google-chrome"
         state: present
+      register: chrome_repo
+
+    - name: Update apt cache if repository changed
+      apt:
         update_cache: yes
+      when: chrome_repo.changed
 
     - name: Ensure google-chrome-stable is installed
       apt:

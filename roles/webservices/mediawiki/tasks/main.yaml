@@ -9,14 +9,18 @@
     - untagged
   when: run_role_mediawiki | bool
   block:
-    - name: Deprecation warning
-      ansible.builtin.debug:
-        msg: "[DEPRECATED] The role mediawiki will be deprecated and replaced by docmost in the next release"
-      changed_when: true
-
     - name: Set merged configuration
       ansible.builtin.set_fact:
         mediawiki_config: "{{ mediawiki_defaults | combine(mediawiki, recursive=true) }}"
+
+    - name: Deprecation warning
+      ansible.builtin.fail:
+        msg: |
+          [DEPRECATED] The mediawiki role will be removed in the next release and replaced by docmost.
+          To suppress this error and proceed anyway, set in inventory:
+            mediawiki:
+              accept_deprecation: true
+      when: not (mediawiki_config.accept_deprecation | default(false) | bool)
 
     - name: Fail if any required mediawiki_config variables are missing or empty
       fail:
@@ -222,5 +226,7 @@
 
     - name: Set proper permissions
       ansible.builtin.shell: |
-        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type d -exec chmod 0755 {} +
-        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type f -exec chmod 0644 {} +
+        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type d -exec chmod -c 0755 {} +
+        find {{ mediawiki_config.paths.install_dir }}/install/{{ mediawiki_config.version }}/ -type f -exec chmod -c 0644 {} +
+      register: mediawiki_permissions
+      changed_when: mediawiki_permissions.stdout != ""

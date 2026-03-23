@@ -34,12 +34,12 @@
         - name: Download jellyfin-player
 
           ansible.builtin.get_url:
-            url: "https://github.com/jellyfin/jellyfin-media-player/releases/download/v{{ jellyfin_player_config.version }}/jellyfin-media-player_{{ jellyfin_player_config.version }}-1_amd64-bookworm.deb"
+            url: "https://github.com/jellyfin/jellyfin-desktop/releases/download/v{{ jellyfin_player_config.version }}/jellyfin-media-player_{{ jellyfin_player_config.version }}-{{ ansible_distribution_release }}.deb"
             dest: "/tmp/jellyfin-player"
 
         - name: Install  jellyfin-player .deb file
           apt:
-            deb: "/tmp/jellyfin-player/jellyfin-media-player_{{ jellyfin_player_config.version }}-1_amd64-bookworm.deb"
+            deb: "/tmp/jellyfin-player/jellyfin-media-player_{{ jellyfin_player_config.version }}-{{ ansible_distribution_release }}.deb"
 
         - file:
             path: "/tmp/jellyfin-player"

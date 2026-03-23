@@ -10,6 +10,9 @@ run_role_mediawiki: false
 mediawiki: {}
 # Default configuration structure
 mediawiki_defaults:
+  # set to true to acknowledge the deprecation warning and proceed
+  accept_deprecation: false
+
   version: 1.43.0
   download_url: "http://mediawiki.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"
   # User and group configuration

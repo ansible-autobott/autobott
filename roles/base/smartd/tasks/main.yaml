@@ -37,6 +37,7 @@
         name: smartd
         enabled: yes
         state: started
+      changed_when: false
 
 #============================================================================================================
 # NanoSmart
@@ -51,22 +52,31 @@
             state: directory
             mode: '0755'
 
+        - name: Check if nanoSmart is already installed
+          ansible.builtin.stat:
+            path: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}"
+          register: nanosmart_dir
+
         - name: Download nanoSmart zip
           get_url:
             url: "https://github.com/ansible-autobott/nanoSmart/releases/download/{{ smartd_config.nanoSmart.version }}/nanoSmart-{{ smartd_config.nanoSmart.version }}.zip"
             dest: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
             mode: '0644'
+          when: not nanosmart_dir.stat.exists
 
         - name: Unpack nanoSmart zip
           unarchive:
             src: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
             dest: "{{ smartd_config.nanoSmart.path }}"
             remote_src: true
+            creates: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}"
+          when: not nanosmart_dir.stat.exists
 
         - name: Remove downloaded nanoSmart zip
           file:
             path: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
             state: absent
+          changed_when: false
 
         - name: Deploy smart_monitor config
           template:

@@ -61,7 +61,7 @@
         owner: root
         group: root
         mode: "0755"
-        creates: "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}/phpMyAdmin-5.2.0-all-languages"
+        creates: "{{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }}/phpMyAdmin-{{ phpmyadmin_config.version }}-all-languages"
 
     - name: Link phpmyadmin latest
       ansible.builtin.file:
@@ -108,5 +108,7 @@
 
     - name: Set proper permissions
       ansible.builtin.shell: |
-        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type d -exec chmod 0755 {} +
-        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type f -exec chmod 0644 {} +
+        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type d -exec chmod -c 0755 {} +
+        find {{ phpmyadmin_config.install_dir }}/{{ phpmyadmin_config.version }} -type f -exec chmod -c 0644 {} +
+      register: phpmyadmin_permissions
+      changed_when: phpmyadmin_permissions.stdout != ""

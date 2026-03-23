@@ -36,12 +36,12 @@ authelia_defaults:
     metrics: false
 
   secrets:
-    # needs to be more than 20 chars
+    # must be set in inventory, minimum 20 chars
+    # generate with: openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 20
     storage_encryption_key: ""
 
-    # define a session secret so that cookies are valid cross ansible runs-
-    # as default autobott will generate a new random string on every run, invalidating any active session
-    # you can generate it with:  openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 75
+    # must be set in inventory, recommended 75 chars
+    # generate with: openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 75
     session: ""
 
   totp_issuer: "Authelia"

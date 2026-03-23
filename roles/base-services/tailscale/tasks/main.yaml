@@ -21,8 +21,8 @@
         mode: "0644"
 
     - name: Create tailscale APT sources list
-      ansible.builtin.copy:
-        src: sources.list
+      ansible.builtin.template:
+        src: sources.list.j2
         dest: /etc/apt/sources.list.d/tailscale.list
         owner: root
         group: root

@@ -123,6 +123,7 @@
         regexp: '^[ \t]*"umask":'
         line: '    "umask": {{ transmission_config.umask | int }},'
         backup: true
+      changed_when: false
 
     - name: Configure transmission password
       ansible.builtin.lineinfile:

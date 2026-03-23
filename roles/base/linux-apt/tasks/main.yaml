@@ -29,7 +29,7 @@
         file: distupgrade.yaml
 
       when:
-        - linux_apt_data.release | default('') | string
+        - linux_apt_data.release | default('') | length > 0
         - ansible_distribution_release != linux_apt_data.release
         - "'linux-upgrade' in ansible_run_tags"
 

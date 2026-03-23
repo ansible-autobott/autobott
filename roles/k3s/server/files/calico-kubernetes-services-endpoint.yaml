@@ -1,0 +1,12 @@
+---
+# Direct Calico to the API server's real address instead of the ClusterIP.
+# Without this, Calico's CNI installer fails on startup because the
+# ClusterIP (10.43.0.1) isn't reachable before the CNI is installed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubernetes-services-endpoint
+  namespace: kube-system
+data:
+  KUBERNETES_SERVICE_HOST: "127.0.0.1"
+  KUBERNETES_SERVICE_PORT: "6443"

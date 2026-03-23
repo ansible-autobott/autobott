@@ -1,0 +1,16 @@
+#!/bin/sh
+# {{ ansible_managed }}
+# k3s-reset.sh - Reset k3s cluster (wipes all data, keeps binary and config)
+
+[ $(id -u) -eq 0 ] || exec sudo $0 $@
+
+set -ex
+
+/usr/local/bin/k3s-killall.sh
+
+rm -rf /var/lib/rancher/k3s/server/db
+rm -rf /var/lib/rancher/k3s/server/tls
+rm -rf /var/lib/cni
+rm -rf /etc/cni/net.d
+
+systemctl start k3s

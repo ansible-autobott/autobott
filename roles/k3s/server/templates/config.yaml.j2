@@ -1,0 +1,16 @@
+# {{ ansible_managed }}
+---
+write-kubeconfig-mode: "0640"
+flannel-backend: none
+disable-network-policy: true
+cluster-cidr: "{{ k3s_server_config.cluster_cidr }}"
+service-cidr: "{{ k3s_server_config.service_cidr }}"
+cluster-dns: "{{ k3s_server_config.cluster_dns }}"
+{% if k3s_server_config.tls_san | length > 0 %}
+tls-san:
+{% for san in k3s_server_config.tls_san %}
+  - "{{ san }}"
+{% endfor %}
+{% endif %}
+disable:
+  - servicelb

@@ -1,0 +1,39 @@
+---
+#============================================================================================================
+# K3s Server
+#============================================================================================================
+
+# Role execution control
+run_role_k3s_server: false
+
+# User configuration override (will be merged with k3s_server_defaults)
+k3s_server: {}
+
+# Default configuration structure
+k3s_server_defaults:
+  # Extra TLS Subject Alternative Names for the API server certificate
+  # Example: ["my-k3s.example.com", "192.168.1.100"]
+  tls_san: []
+
+  # Cluster CIDR
+  cluster_cidr: 10.42.0.0/16
+
+  # Service CIDR
+  service_cidr: 10.43.0.0/16
+
+  # Cluster DNS address
+  cluster_dns: 10.43.0.10
+
+  # Calico CNI configuration
+  calico:
+    version: 3.29.3
+
+  # Users to add to the k3s-admin group (grants access to kubeconfig)
+  admins: []
+  #admins:
+  #  - jsmith
+  #  - bott
+
+  # Extra arguments passed to k3s server
+  # Example: ["--node-label=environment=production"]
+  extra_args: []

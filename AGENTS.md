@@ -86,6 +86,8 @@ roles/<category>/<role-name>/
   meta/main.yaml       # Role metadata (if needed)
 ```
 
+Some roles include an `About.md` file with detailed architecture decisions and technical context. Always check for this file when working on a role.
+
 Key rules:
 - Every role has a boolean `run_role_<name>: true` in defaults — this is how per-host opt-out works
 - Tasks always use `block:` with `tags: [role_<rolename>]` and `when: run_role_<name>`

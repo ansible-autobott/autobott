@@ -1,0 +1,19 @@
+---
+#============================================================================================================
+# K3s Base
+#============================================================================================================
+
+# Role execution control
+run_role_k3s_base: false
+
+# User configuration override (will be merged with k3s_base_defaults)
+k3s_base: {}
+
+# Default configuration structure
+k3s_base_defaults:
+  version: 1.35.1+k3s1
+
+# Supported k3s versions and checksums (sha256 of the k3s binary)
+k3s_base_checksums:
+  "1.32.3+k3s1": "b19216803650b567bf980888dec39035edaf664339c55bc4462f7a003edbef83"
+  "1.35.1+k3s1": "e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf"

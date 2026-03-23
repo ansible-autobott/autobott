@@ -1,0 +1,142 @@
+---
+#============================================================================================================
+# K3s Server Role
+#============================================================================================================
+# This role configures and starts k3s in server mode.
+# Depends on k3s/base for binary installation.
+
+- name: Main K3s server configuration
+  tags:
+    - k3s_server
+    - k3s
+    - untagged
+  when: run_role_k3s_server | bool
+  block:
+    - name: Set merged k3s_server configuration
+      ansible.builtin.set_fact:
+        k3s_server_config: "{{ k3s_server_defaults | combine(k3s_server, recursive=true) }}"
+
+    #====================================================
+    # Access control
+    #====================================================
+
+    - name: Create k3s-admin group
+      ansible.builtin.group:
+        name: k3s-admin
+        state: present
+
+    - name: Add users to k3s-admin group
+      ansible.builtin.user:
+        name: "{{ item }}"
+        groups: k3s-admin
+        append: true
+      loop: "{{ k3s_server_config.admins }}"
+
+    #====================================================
+    # Config
+    #====================================================
+
+    - name: Create k3s server configuration
+      ansible.builtin.template:
+        src: config.yaml.j2
+        dest: /etc/rancher/k3s/config.yaml
+        owner: root
+        group: root
+        mode: "0600"
+      notify:
+        - restart k3s
+
+    #====================================================
+    # Service
+    #====================================================
+
+    - name: Setup k3s server systemd service
+      ansible.builtin.template:
+        src: k3s.service.j2
+        dest: /lib/systemd/system/k3s.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - reload systemd
+        - restart k3s
+
+    - name: Enable and start k3s server
+      ansible.builtin.systemd:
+        name: k3s
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    #====================================================
+    # Calico CNI
+    #====================================================
+
+    - name: Wait for k3s to be ready
+      ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes
+      register: k3s_ready
+      retries: 30
+      delay: 5
+      until: k3s_ready.rc == 0
+      changed_when: false
+
+    - name: Deploy Calico kubernetes-services-endpoint ConfigMap
+      ansible.builtin.copy:
+        src: files/calico-kubernetes-services-endpoint.yaml
+        dest: /var/lib/rancher/k3s/server/manifests/calico-kubernetes-services-endpoint.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Deploy Calico manifest
+      ansible.builtin.template:
+        src: calico.yaml.j2
+        dest: /var/lib/rancher/k3s/server/manifests/calico.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    #====================================================
+    # Traefik ingress (HTTP-only, localhost)
+    #====================================================
+
+    - name: Configure Traefik for HTTP-only on localhost
+      ansible.builtin.copy:
+        src: files/traefik-config.yaml
+        dest: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    #====================================================
+    # Kill script (standard k3s tooling)
+    #====================================================
+
+    - name: Install k3s-killall script
+      ansible.builtin.template:
+        src: k3s-killall.sh.j2
+        dest: /usr/local/bin/k3s-killall.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install k3s-reset script
+      ansible.builtin.template:
+        src: k3s-reset.sh.j2
+        dest: /usr/local/bin/k3s-reset.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    #====================================================
+    # Shell environment
+    #====================================================
+
+    - name: Set KUBECONFIG for all users via profile.d
+      ansible.builtin.copy:
+        dest: /etc/profile.d/k3s.sh
+        content: |
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+        owner: root
+        group: root
+        mode: "0644"

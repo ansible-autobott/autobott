@@ -99,6 +99,7 @@ phpmyadmin:
 #============================================================================================================
 run_role_mediawiki: true
 mediawiki:
+  accept_deprecation: true
   wiki:
     name: "demo wiki"
     admin_user: "demo"

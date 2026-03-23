@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
+VER=${1:-12}
+
 SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
-
-# debian 12
-echo baking image for debian 12
-cd "${SCRIPTPATH}/debian12"
+echo "baking image for debian ${VER}"
+cd "${SCRIPTPATH}/debian${VER}"
 ./bake.sh

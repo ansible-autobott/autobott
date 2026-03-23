@@ -16,6 +16,7 @@ prepare: ## Prepare the ansible environment for local executions
 
 
 INV ?= ../inventory/main.yaml
+VER ?= 12
 
 
 ##@ Run
@@ -118,8 +119,9 @@ decrypt: ## decrypt vault string; requires INV=inventory path, SECRET='$ANSIBLE_
 
 ##@ Vagrant
 
-vagrant-base: ## Bake the base image for vagrant (only needed once)
-	@cd vagrant/bake-base/ && ./bake-base-box.sh
+vagrant-base: ## Bake the base images for all debian versions (only needed once)
+	@cd vagrant/bake-base/ && ./bake-base-box.sh 12
+	@cd vagrant/bake-base/ && ./bake-base-box.sh 13
 
 # fix included ssh key permissions
 fix-ssh-key-perm:
@@ -127,10 +129,10 @@ fix-ssh-key-perm:
 	@echo "changing permissions of key: $(ROOT_DIR)/vagrant/autobott-key"
 	@chmod 600  $(ROOT_DIR)/vagrant/autobott-key
 
-vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap provisioning
-	@source ./venv/bin/activate && cd vagrant && vagrant up
+vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap provisioning, vars: VER=<12|13> (default 12)
+	@source ./venv/bin/activate && cd vagrant && vagrant up ansible-autobott2-linux-debian-$(VER)
 
-vagrant-run: ## run playbook on vagrant, vars: TAG=<tag> (default all)
+vagrant-run: ## run playbook on vagrant, vars: TAG=<tag> (default all), VER=<12|13> (default 12)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@mkdir -p logs
 	@. ./venv/bin/activate && \
@@ -143,15 +145,17 @@ vagrant-run: ## run playbook on vagrant, vars: TAG=<tag> (default all)
 	RAW_LOG="/tmp/ansible-vagrant-$$TIMESTAMP.log" && \
 	LOG_FILE="logs/vagrant-changed-$$TIMESTAMP.log" && \
 	echo "Using tag: $$TAG_VAL" && \
+	echo "Using debian version: $(VER)" && \
 	echo "Logging to: $$LOG_FILE" && \
 	ANSIBLE_FORCE_COLOR=1 ansible-playbook autobott.yaml \
 		-i inventory/vagrant.yaml \
 		-i vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
 		--extra-vars "ansible_ssh_user='ans'" \
+		-l ansible-autobott2-linux-debian-$(VER) \
 		$$TAG_VAL 2>&1 | tee >(sed 's/\x1b\[[0-9;]*m//g' | awk '/^TASK \[/{task=$$0; in_dep=0; next} /\[DEPRECATION WARNING\]/{print task; in_dep=1; print; next} in_dep && /^(ok:|changed:|skipping:|failed:|PLAY )/{in_dep=0} in_dep{print; next} /^changed:/{print task; print}' > "$$LOG_FILE"); \
 	wait
 
-vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>, HOST=<host> note: requires enroll
+vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>, VER=<12|13> (default 12)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	if [ -n "$$TAG" ]; then \
@@ -160,27 +164,32 @@ vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>
 		TAG_VAL=""; \
 	fi && \
 	echo "Using tag: $$TAG_VAL" && \
+	echo "Using debian version: $(VER)" && \
 	ansible-playbook autobott.yaml -vvv \
 		-i vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
 		-i inventory/vagrant.yaml \
 		--extra-vars "ansible_ssh_user='ans'" \
+		-l ansible-autobott2-linux-debian-$(VER) \
 		$$TAG_VAL
 
-vagrant-run-short: ## run short playbook on vagrant: only run tags that generally require updates or config changes
+vagrant-run-short: ## run short playbook on vagrant: only run tags that generally require updates or config changes, vars: VER=<12|13> (default 12)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	ansible-playbook autobott.yaml \
 		-i vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
 		-i inventory/vagrant.yaml \
-		--extra-vars "ansible_ssh_user='ans'" -t linux-upgrade
+		--extra-vars "ansible_ssh_user='ans'" \
+		-l ansible-autobott2-linux-debian-$(VER) \
+		-t linux-upgrade
 
-vagrant-test: ## run validation tests
+vagrant-test: ## run validation tests, vars: VER=<12|13> (default 12)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	ansible-playbook test.yaml \
 		-i vagrant/.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory \
 		-i inventory/vagrant.yaml \
-		--extra-vars "ansible_ssh_user='ans'"
+		--extra-vars "ansible_ssh_user='ans'" \
+		-l ansible-autobott2-linux-debian-$(VER)
 
 vagrant-destroy: ## Delete all vagrant VMs
 	@cd vagrant && vagrant destroy -f

@@ -88,6 +88,15 @@
         mode: "0600"
       when: autobott_enroll_data.root_bashrc
 
+    - name: Create root shell configuration directory
+      ansible.builtin.file:
+        path: /root/.bashrc.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+      when: autobott_enroll_data.root_bashrc
+
 #============================================================================================================
 # Version Control
 #============================================================================================================

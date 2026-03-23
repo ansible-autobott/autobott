@@ -99,5 +99,10 @@ fi
 
 export PS1="\[\e[1;31m\]\u\[\e[m\]\[\e[1;31m\]@\[\e[m\]\[\e[1;94m\]\h\[\e[m\]\[\e[1;93m\]\w\[\e[m\]\[\e[1;37m\]\\$\[\e[m\] "
 
-
+## make use of bashrc.d structure for additional things
+if [ -d /root/.bashrc.d ] && ls /root/.bashrc.d/*.bashrc &>/dev/null; then
+    for file in /root/.bashrc.d/*.bashrc; do
+        source "$file"
+    done
+fi
 

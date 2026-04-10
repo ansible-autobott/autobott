@@ -1,0 +1,189 @@
+---
+#============================================================================================================
+# Dashi Role
+#============================================================================================================
+
+- name: Main Dashi installation and configuration
+  tags:
+    - dashi
+    - untagged
+  when: run_role_dashi | bool
+  block:
+    - name: Set merged dashi configuration
+      ansible.builtin.set_fact:
+        dashi_config: "{{ dashi_defaults | combine(dashi, recursive=true) }}"
+
+    - name: Create dashi system group
+      ansible.builtin.group:
+        name: "{{ dashi_config.user.group }}"
+        gid: "{{ dashi_config.user.gid | default(omit, true) }}"
+        state: present
+
+    - name: Create dashi system user
+      ansible.builtin.user:
+        name: "{{ dashi_config.user.name }}"
+        uid: "{{ dashi_config.user.uid | default(omit, true) }}"
+        group: "{{ dashi_config.user.group }}"
+        home: "{{ dashi_config.paths.base_dir }}"
+        create_home: false
+        state: present
+
+    - name: Create dashi directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ dashi_config.user.name }}"
+        group: "{{ dashi_config.user.group }}"
+        mode: 0750
+      loop:
+        - "{{ dashi_config.paths.base_dir }}"
+        - "{{ dashi_config.paths.data_dir }}"
+        - "{{ dashi_config.paths.data_dir }}/dashboards"
+        - "{{ dashi_config.paths.data_dir }}/themes"
+
+    - name: Copy dashboards from inventory to data directory
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ dashi_config.paths.data_dir }}/dashboards/{{ item | basename }}"
+        owner: "{{ dashi_config.user.name }}"
+        group: "{{ dashi_config.user.group }}"
+        mode: "0640"
+      loop: "{{ lookup('ansible.builtin.fileglob', inventory_dir + '/files/dashi/dashboards/*', wantlist=True) }}"
+      notify: restart dashi
+
+    - name: Copy themes from inventory to data directory
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ dashi_config.paths.data_dir }}/themes/{{ item | basename }}"
+        owner: "{{ dashi_config.user.name }}"
+        group: "{{ dashi_config.user.group }}"
+        mode: "0640"
+      loop: "{{ lookup('ansible.builtin.fileglob', inventory_dir + '/files/dashi/themes/*', wantlist=True) }}"
+      notify: restart dashi
+
+    - name: Create config file
+      ansible.builtin.template:
+        src: config.yaml
+        dest: "{{ dashi_config.paths.data_dir }}/config.yaml"
+        owner: "{{ dashi_config.user.name }}"
+        group: "{{ dashi_config.user.group }}"
+        mode: "0600"
+      notify:
+        - restart dashi
+
+    - name: get current dashi version
+      shell: "{{ dashi_config.paths.base_dir }}/dashi version | head -n 1 | awk '{print $2}'"
+      register: dashi_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: install or update dashi
+      when: dashi_current_version.stdout != dashi_config.version
+      block:
+
+        - file:
+            path: "/tmp/dashi"
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download dashi
+          get_url:
+            url: "https://github.com/andresbott/dashi/releases/download/v{{ dashi_config.version }}/dashi_Linux_x86_64_v3.zip"
+            dest: "/tmp/dashi/dashi.zip"
+            checksum: "sha256:{{ dashi_checksums[dashi_config.version] }}"
+
+        - name: Extract dashi
+          unarchive:
+            src: "/tmp/dashi/dashi.zip"
+            dest: "/tmp/dashi"
+            remote_src: yes
+
+        - name: Move dashi
+          command: "mv /tmp/dashi/dashi {{ dashi_config.paths.base_dir }}/dashi"
+
+        - file:
+            path: "/tmp/dashi"
+            state: absent
+
+        - file:
+            path: "{{ dashi_config.paths.base_dir }}/dashi"
+            state: file
+            owner: "{{ dashi_config.user.name }}"
+            group: "{{ dashi_config.user.group }}"
+            mode: 0750
+          notify:
+            - restart dashi
+
+    - name: Configure systemd service
+      ansible.builtin.template:
+        src: dashi.service.j2
+        dest: /lib/systemd/system/dashi.service
+        owner: root
+        group: root
+        mode: "0644"
+        validate: /bin/systemd-analyze verify %s
+      notify:
+        - reload systemd
+        - restart dashi
+
+    - name: Enable and start dashi service
+      ansible.builtin.systemd:
+        name: dashi
+        enabled: true
+        daemon_reload: true
+        state: started
+      notify:
+        - reload systemd
+        - restart dashi
+
+- name: Uninstall Dashi
+  tags:
+    - dashi
+    - untagged
+  when: not (run_role_dashi | bool)
+  block:
+    - name: Set merged dashi configuration for uninstall
+      ansible.builtin.set_fact:
+        dashi_config: "{{ dashi_defaults | combine(dashi, recursive=true) }}"
+
+    - name: Stop and disable dashi service
+      ansible.builtin.systemd:
+        name: dashi
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Remove dashi systemd service file
+      ansible.builtin.file:
+        path: /lib/systemd/system/dashi.service
+        state: absent
+      notify: reload systemd
+
+    - name: Remove dashi binary
+      ansible.builtin.file:
+        path: "{{ dashi_config.paths.base_dir }}/dashi"
+        state: absent
+
+    - name: Remove dashi data directory
+      ansible.builtin.file:
+        path: "{{ dashi_config.paths.data_dir }}"
+        state: absent
+      when: dashi_config.delete_data_on_uninstall | default(false) | bool
+
+    - name: Remove dashi base directory
+      ansible.builtin.file:
+        path: "{{ dashi_config.paths.base_dir }}"
+        state: absent
+      when: dashi_config.delete_data_on_uninstall | default(false) | bool
+
+    - name: Remove dashi system user
+      ansible.builtin.user:
+        name: "{{ dashi_config.user.name }}"
+        state: absent
+
+    - name: Remove dashi system group
+      ansible.builtin.group:
+        name: "{{ dashi_config.user.group }}"
+        state: absent

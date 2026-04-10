@@ -156,3 +156,48 @@
         state: started
       notify:
         - reload systemd
+
+- name: Uninstall Homepage
+  tags:
+    - homepage
+    - untagged
+  when: not (run_role_homepage | bool)
+  block:
+    - name: Set merged homepage configuration for uninstall
+      ansible.builtin.set_fact:
+        homepage_config: "{{ homepage_defaults | combine(homepage, recursive=true) }}"
+
+    - name: Stop and disable homepage service (triggers docker compose down)
+      ansible.builtin.systemd:
+        name: homepage
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Remove homepage docker image
+      community.docker.docker_image:
+        name: "ghcr.io/gethomepage/homepage"
+        tag: "{{ homepage_config.version }}"
+        state: absent
+      failed_when: false
+
+    - name: Remove homepage systemd service file
+      ansible.builtin.file:
+        path: /lib/systemd/system/homepage.service
+        state: absent
+      notify: reload systemd
+
+    - name: Remove homepage base directory
+      ansible.builtin.file:
+        path: "{{ homepage_config.paths.base_dir }}"
+        state: absent
+
+    - name: Remove homepage system user
+      ansible.builtin.user:
+        name: "{{ homepage_config.user.name }}"
+        state: absent
+
+    - name: Remove homepage system group
+      ansible.builtin.group:
+        name: "{{ homepage_config.user.group }}"
+        state: absent

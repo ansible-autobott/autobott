@@ -1,0 +1,27 @@
+[Unit]
+Description=Dashi personal landing page
+Documentation=https://github.com/andresbott/dashi
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ dashi_config.user.name }}
+Group={{ dashi_config.user.group }}
+ExecStart={{ dashi_config.paths.base_dir }}/dashi start -c {{ dashi_config.paths.data_dir }}/config.yaml
+Restart=on-failure
+RestartSec=5
+WorkingDirectory={{ dashi_config.paths.data_dir }}
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dashi
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ dashi_config.paths.data_dir }}
+
+[Install]
+WantedBy=multi-user.target

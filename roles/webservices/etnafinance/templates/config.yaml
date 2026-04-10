@@ -44,7 +44,7 @@ DataDir: "{{ etnafiance_config.paths.data_dir }}"
 # -----------------------------------------------------------------------------
 Env:
   # Log level: "debug", "info", "warn", or "error".
-  Loglevel: "{{ etnafiance_config.service.loglevel }}"
+  LogLevel: "{{ etnafiance_config.service.loglevel }}"
   # Production mode. When true, debug tasks are hidden and stricter checks apply.
   Production: false
 
@@ -67,10 +67,22 @@ Settings:
   # Example: ["USD", "EUR"]
   AdditionalCurrencies: ["USD", "EUR"]
 
-  # Enable investment / instruments tracking (portfolio, stocks, unvested assets).
+  # Enable investment instruments tracking (portfolio, stocks, restricted stock assets).
   # Automatically enabled if the database already contains investment accounts.
-  Instruments: true
-  Tools: true
+  InvestmentInstruments: {{ etnafiance_config.settings.investmentInstruments | default(false) | lower }}
+
+  # Enable RSU (Restricted Stock Units) features: vest and forfeit operations,
+  # and restricted stock account type. Automatically enabled if the database already
+  # contains restricted stock accounts or vest/forfeit transactions.
+  # Enabling RSU also enables InvestmentInstruments (required dependency).
+  Rsu: {{ etnafiance_config.settings.rsu | default(false) | lower }}
+
+  # Enable financial simulator (portfolio simulator, real-estate simulator, etc.).
+  FinancialSimulator: {{ etnafiance_config.settings.financialSimulator | default(false) | lower }}
+
+  # Maximum file upload size for transaction attachments, in MB.
+  # 0 or omitted = default (10 MB).
+  # MaxAttachmentSizeMB: 10
 
 # -----------------------------------------------------------------------------
 # Auth — authentication and session management

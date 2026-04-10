@@ -1,0 +1,70 @@
+# =============================================================================
+# dashi configuration file
+# =============================================================================
+# Generated with: dashi config
+#
+# Configuration is loaded in this order (last wins):
+#   1. Built-in defaults
+#   2. .env file (optional)
+#   3. This YAML config file (optional, default: ./config.yaml)
+#   4. Environment variables (prefix: DASHI_)
+#
+# Environment variable format: DASHI_<SECTION>_<KEY>, e.g.:
+#   DASHI_SERVER_VIEWER_PORT=8087
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Server — HTTP servers
+# -----------------------------------------------------------------------------
+Server:
+  # Viewer — public-facing read-only dashboard viewer
+  Viewer:
+    # Set to false to disable the viewer server entirely.
+    Enabled: {{ dashi_config.service.viewer.enabled | default(true) | lower }}
+    # IP address to bind to. Empty string means listen on all interfaces.
+    BindIp: "{{ dashi_config.service.viewer.bind_ip | default('') }}"
+    # Port to listen on.
+    Port: {{ dashi_config.service.viewer.port | default(8087) }}
+  # Editor — dashboard editor with full CRUD access
+  Editor:
+    # Set to false to disable the editor server entirely.
+    Enabled: {{ dashi_config.service.editor.enabled | default(true) | lower }}
+    # IP address to bind to. Empty string means listen on all interfaces.
+    BindIp: "{{ dashi_config.service.editor.bind_ip | default('') }}"
+    # Port to listen on.
+    Port: {{ dashi_config.service.editor.port | default(8088) }}
+
+# -----------------------------------------------------------------------------
+# Observability — metrics / health-check HTTP server
+# -----------------------------------------------------------------------------
+Observability:
+  # Set to false to disable the observability server entirely.
+  Enabled: {{ dashi_config.service.observability_enabled | default(false) | lower }}
+  # IP address to bind to. Empty string means listen on all interfaces.
+  BindIp: "{{ dashi_config.service.observability_bind_ip | default('') }}"
+  # Port to listen on.
+  Port: {{ dashi_config.service.observability_port | default(9090) }}
+
+# -----------------------------------------------------------------------------
+# DataDir — directory for database, sessions, and other data
+# -----------------------------------------------------------------------------
+# Relative paths are resolved from the working directory.
+DataDir: "{{ dashi_config.paths.data_dir }}"
+
+# -----------------------------------------------------------------------------
+# Env — runtime environment settings
+# -----------------------------------------------------------------------------
+Env:
+  # Log level: "debug", "info", "warn", or "error".
+  LogLevel: "{{ dashi_config.service.loglevel }}"
+  # Production mode. When true, debug features are disabled.
+  Production: false
+
+# -----------------------------------------------------------------------------
+# Auth — authentication settings
+# -----------------------------------------------------------------------------
+Auth:
+  # Set to true to require login. When false, all operations use DefaultUser.
+  Enabled: false
+  # Username used for all operations when auth is disabled.
+  DefaultUser: "default"

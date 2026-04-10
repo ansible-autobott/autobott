@@ -1,0 +1,11 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+  listen: reload systemd
+
+- name: Restart dashi
+  ansible.builtin.systemd:
+    name: dashi
+    state: restarted
+  listen: restart dashi

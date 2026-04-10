@@ -72,6 +72,7 @@
     # docker compose based
     - webservices/mealie # https://github.com/mealie-recipes/mealie/discussions/801
     - webservices/homepage
+    - webservices/dashi
     - webservices/immich
     - webservices/docmost
     - webservices/etnafinance

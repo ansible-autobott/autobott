@@ -1,0 +1,49 @@
+---
+#============================================================================================================
+# DASHI Role Defaults
+#============================================================================================================
+
+# Role execution control
+run_role_dashi: false
+
+# User configuration override (will be merged with dashi_defaults)
+dashi: {}
+# Default configuration structure
+dashi_defaults:
+  version: 0.3.1
+  # User and group configuration
+  user:
+    name: dashi
+    uid: # Let system assign UID
+    group: dashi
+    gid: # Let system assign GID
+
+  # Installation paths
+  paths:
+    base_dir: /opt/dashi
+    data_dir: /opt/dashi/data
+
+  # Uninstall options
+  delete_data_on_uninstall: false
+
+  # Service configuration
+  service:
+    viewer:
+      enabled: true
+      bind_ip: "127.0.0.1"
+      port: 8087
+    editor:
+      enabled: true
+      bind_ip: "127.0.0.1"
+      port: 8088
+    loglevel: info
+    observability_enabled: false
+    observability_bind_ip: "127.0.0.1"
+    observability_port: 9090
+
+# Supported dashi versions and checksums
+dashi_checksums:
+  "0.1.1": "37799e9f7a960211773a2a4c81fa148c0219a9c80a2fb0f760ae7da28217cd8e"
+  "0.2.0": "ab6dd50616a3de8784a5ad2fbb077e05c8aef77fb5679e4d876446923fbc7514"
+  "0.2.1": "d92e8ca21871006aa44410bcb5bd7851841d05ca88a8a3e950f8e59330808dfa"
+  "0.3.1": "d79567db90e1f43ad35fc38d49b88e6b18e954e9a2a2357fec00afda771c9cb6"

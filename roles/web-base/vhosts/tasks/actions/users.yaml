@@ -115,4 +115,5 @@
   notify: "restart web server"
   when:
     - not webservice.enabled | default(true)
+    - webservice.delete_data | default(false) | bool == true
     - user_check.rc == 0

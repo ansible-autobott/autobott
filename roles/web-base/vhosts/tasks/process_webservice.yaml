@@ -56,4 +56,6 @@
     owner: root
     group: root
     mode: "0644"
-  when: existing_webservice_hash is not defined or existing_webservice_hash != webservice_hash
+  when:
+    - webservice.enabled | default(true)
+    - existing_webservice_hash is not defined or existing_webservice_hash != webservice_hash

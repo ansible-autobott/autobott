@@ -30,6 +30,9 @@ samba_defaults:
     default_case: "lower"
     preserve_case: true
     short_preserve_case: true
+    # When false, Samba keeps original filenames (e.g. with colons) instead of
+    # converting them to 8.3 DOS format. Can be overridden per share.
+    mangled_names: false
 
   # Default share settings, can be overwritten per share
   share_defaults:
@@ -49,6 +52,9 @@ samba_defaults:
     hide_dot_files: true
     store_dos_attributes: false
     follow_symlinks: true
+    # Prevent Samba from mangling filenames with characters illegal on Windows (e.g. colons).
+    # Set to false to keep original filenames; Windows clients won't be able to open them.
+    mangled_names: false
 
   # list of users that have access to samba
   # Important these are system users, samba role will not create them.

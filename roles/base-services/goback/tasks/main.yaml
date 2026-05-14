@@ -42,8 +42,44 @@
         name: "{{ goback_config.user.name }}"
         group: "{{ goback_config.user.group }}"
         uid: "{{ goback_config.user.uid | default(omit, true) }}"
-        createhome: false
+        home: "{{ goback_config.user.home }}"
+        createhome: true
         system: true
+
+    - name: Create goback .ssh directory
+      ansible.builtin.file:
+        path: "{{ goback_config.user.home }}/.ssh"
+        state: directory
+        owner: "{{ goback_config.user.name }}"
+        group: "{{ goback_config.user.group }}"
+        mode: "0700"
+      when: >
+        (goback_config.user.ssh_key_base64 is defined and goback_config.user.ssh_key_base64 | length > 0)
+        or
+        (goback_config.user.ssh_pub_key is defined and goback_config.user.ssh_pub_key | length > 0)
+
+    - name: Create SSH private key file for goback
+      ansible.builtin.copy:
+        content: "{{ goback_config.user.ssh_key_base64 | b64decode }}"
+        dest: "{{ goback_config.user.home }}/.ssh/id_ed25519"
+        owner: "{{ goback_config.user.name }}"
+        group: "{{ goback_config.user.group }}"
+        mode: "0600"
+      no_log: true
+      when:
+        - goback_config.user.ssh_key_base64 is defined
+        - goback_config.user.ssh_key_base64 | length > 0
+
+    - name: Create SSH public key file for goback
+      ansible.builtin.copy:
+        content: "{{ goback_config.user.ssh_pub_key }}"
+        dest: "{{ goback_config.user.home }}/.ssh/id_ed25519.pub"
+        owner: "{{ goback_config.user.name }}"
+        group: "{{ goback_config.user.group }}"
+        mode: "0644"
+      when:
+        - goback_config.user.ssh_pub_key is defined
+        - goback_config.user.ssh_pub_key | length > 0
 
     #============================================================================================================
     # setup profiles
@@ -89,8 +125,8 @@
             state: link
           with_items:   "{{ goback_profiles }}"
           when:
-            - item.corn_monthly is defined
-            - item.corn_monthly
+            - item.cron_monthly is defined
+            - item.cron_monthly
             - item.enabled
 
         - name: disable monthly backup
@@ -98,7 +134,7 @@
             path: "/etc/goback/backupd.monthly/{{ item.content.name }}.backup.yaml"
             state: absent
           with_items:   "{{ goback_profiles }}"
-          when: item.corn_monthly is not defined or not item.corn_monthly or not item.enabled
+          when: item.cron_monthly is not defined or not item.cron_monthly or not item.enabled
 
         - name: enable weekly backup
           file:
@@ -109,8 +145,8 @@
             state: link
           with_items:   "{{ goback_profiles }}"
           when:
-            - item.corn_weekly is defined
-            - item.corn_weekly
+            - item.cron_weekly is defined
+            - item.cron_weekly
             - item.enabled
 
         - name: disable weekly backup
@@ -118,6 +154,6 @@
             path: "/etc/goback/backupd.weekly/{{ item.content.name}}.backup.yaml"
             state: absent
           with_items:   "{{ goback_profiles }}"
-          when: item.corn_weekly is not defined or not item.corn_weekly or not item.enabled
+          when: item.cron_weekly is not defined or not item.cron_weekly or not item.enabled
 
 

@@ -24,6 +24,9 @@ goback_defaults:
     uid:
     group: goback
     gid:
+    # used to allow goback to connect using sftp
+    ssh_key_base64: ""
+    ssh_pub_key: ""
 
 
 goback_profiles: []
@@ -31,7 +34,7 @@ goback_profiles_sample:
 
   # very minimal profile config, this will place the backups in the default location
   - enabled: True
-    corn_weekly: True
+    cron_weekly: True
     cron_monthly: False
     # content of the goback profile configuration,
     # check the goback documentation for details: https://github.com/andresbott/goback

@@ -1,55 +1,73 @@
 ---
 # caddy config
 
-- name: Check if public_html is a symlink
-  ansible.builtin.stat:
-    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
-  register: public_html_link_stat
+- name: Configure Caddy for enabled webservice {{ webservice.name }}
+  when: webservice.enabled | default(true)
+  block:
+    - name: Check if public_html is a symlink
+      ansible.builtin.stat:
+        path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
+      register: public_html_link_stat
 
-- name: Create public_html directory if not a symlink
-  ansible.builtin.file:
-    path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
-    state: directory
-    owner: "{{ webservice.name }}"
-    group: "{{ webservice.name }}"
-    mode: "0750"
-  when:
-    - not public_html_link_stat.stat.exists or (public_html_link_stat.stat.islnk is defined and not public_html_link_stat.stat.islnk)
+    - name: Create public_html directory if not a symlink
+      ansible.builtin.file:
+        path: "{{ vhosts_root }}/{{ webservice.name }}/home_dir/public_html"
+        state: directory
+        owner: "{{ webservice.name }}"
+        group: "{{ webservice.name }}"
+        mode: "0750"
+      when:
+        - not public_html_link_stat.stat.exists or (public_html_link_stat.stat.islnk is defined and not public_html_link_stat.stat.islnk)
 
-- name: Generate main Caddy site config from template
-  ansible.builtin.template:
-    src: "caddy/main.caddy"
-    dest: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
-    owner: root
-    group: www-data
-    mode: "0640"
-  notify: restart caddy
+    - name: Generate main Caddy site config from template
+      ansible.builtin.template:
+        src: "caddy/main.caddy"
+        dest: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
+        owner: root
+        group: www-data
+        mode: "0640"
+      notify: restart caddy
 
-- name: Enable Caddy site by creating a symlink
-  ansible.builtin.file:
-    src: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
-    dest: "/etc/caddy/sites-enabled/{{ webservice.name }}.caddy"
-    state: link
-    force: true
-  notify: restart caddy
+    - name: Enable Caddy site by creating a symlink
+      ansible.builtin.file:
+        src: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
+        dest: "/etc/caddy/sites-enabled/{{ webservice.name }}.caddy"
+        state: link
+        force: true
+      notify: restart caddy
 
-- name: Add secrets to env file
-  blockinfile:
-    path: /etc/caddy/env
-    block: |
-      
-      # secrets for: {{ webservice.name }}
-      {% for server in webservice.servers | default([]) %}{% if server.enabled | default(true) %}
-      
-      {% if server.tls is defined %}
-      {% if server.tls.type | default('') == "cloudflare" %}
-      {{ webservice.name | upper }}_SERVER{{ loop.index }}_CF={{ server.tls.api_key }}
-      {% endif %}
-      {% endif -%}
+    - name: Add secrets to env file
+      blockinfile:
+        path: /etc/caddy/env
+        block: |
 
-      {% endif %}{% endfor %}
-    create: yes
-    marker: "### {mark} Ansible managed - {{ webservice.name }} ###"
-    owner: root
-    group: root
-    mode: '0600'
+          # secrets for: {{ webservice.name }}
+          {% for server in webservice.servers | default([]) %}{% if server.enabled | default(true) %}
+
+          {% if server.tls is defined %}
+          {% if server.tls.type | default('') == "cloudflare" %}
+          {{ webservice.name | upper }}_SERVER{{ loop.index }}_CF={{ server.tls.api_key }}
+          {% endif %}
+          {% endif -%}
+
+          {% endif %}{% endfor %}
+        create: yes
+        marker: "### {mark} Ansible managed - {{ webservice.name }} ###"
+        owner: root
+        group: root
+        mode: '0600'
+
+- name: Remove Caddy config for disabled webservice {{ webservice.name }}
+  when: not (webservice.enabled | default(true))
+  block:
+    - name: Remove Caddy site symlink for disabled webservice {{ webservice.name }}
+      ansible.builtin.file:
+        path: "/etc/caddy/sites-enabled/{{ webservice.name }}.caddy"
+        state: absent
+      notify: restart caddy
+
+    - name: Remove Caddy site config for disabled webservice {{ webservice.name }}
+      ansible.builtin.file:
+        path: "/etc/caddy/sites-available/{{ webservice.name }}.caddy"
+        state: absent
+      notify: restart caddy

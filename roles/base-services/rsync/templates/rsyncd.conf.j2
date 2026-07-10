@@ -1,0 +1,45 @@
+# Managed by AutoBott (Ansible). Do not edit by hand.
+# See rsyncd.conf(5).
+
+# ===== Global settings =====
+{% if rsync_config.global.motd_file %}
+motd file = {{ rsync_config.global.motd_file }}
+{% endif %}
+{% if rsync_config.global.address %}
+address = {{ rsync_config.global.address }}
+{% endif %}
+port = {{ rsync_config.global.port }}
+max connections = {{ rsync_config.global.max_connections }}
+log file = {{ rsync_config.global.log_file }}
+pid file = {{ rsync_config.global.pid_file }}
+timeout = {{ rsync_config.global.timeout }}
+
+# ===== Modules =====
+{% for mod in rsync_config.modules %}
+{% if mod.path is defined and mod.path != '' %}
+[{{ mod.name }}]
+{% if mod.comment | default(rsync_config.module_defaults.comment) %}
+  comment = {{ mod.comment | default(rsync_config.module_defaults.comment) }}
+{% endif %}
+  path = {{ mod.path }}
+  read only = {{ mod.read_only | default(rsync_config.module_defaults.read_only) | lower }}
+  write only = {{ mod.write_only | default(rsync_config.module_defaults.write_only) | lower }}
+  list = {{ mod.list | default(rsync_config.module_defaults.list) | lower }}
+  use chroot = {{ mod.use_chroot | default(rsync_config.module_defaults.use_chroot) | lower }}
+  uid = {{ mod.uid | default(rsync_config.module_defaults.uid) }}
+  gid = {{ mod.gid | default(rsync_config.module_defaults.gid) }}
+{% set hosts_allow = mod.hosts_allow | default(rsync_config.module_defaults.hosts_allow) %}
+{% if hosts_allow | length > 0 %}
+  hosts allow = {{ hosts_allow | join(', ') }}
+{% endif %}
+{% set hosts_deny = mod.hosts_deny | default(rsync_config.module_defaults.hosts_deny) %}
+{% if hosts_deny | length > 0 %}
+  hosts deny = {{ hosts_deny | join(', ') }}
+{% endif %}
+{% if mod.auth_users is defined and mod.auth_users | length > 0 %}
+  auth users = {{ mod.auth_users | join(', ') }}
+  secrets file = {{ rsync_config.secrets_file }}
+{% endif %}
+
+{% endif %}
+{% endfor %}

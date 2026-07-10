@@ -1,0 +1,59 @@
+---
+#============================================================================================================
+# Rsync (rsyncd) Role Defaults
+#============================================================================================================
+
+# Flag to enable/disable the role
+run_role_rsync: false
+
+# User overrides - will be combined with rsync_defaults
+rsync: {}
+# Default rsync daemon configuration structure
+rsync_defaults:
+  # where the virtual-user secrets file is stored (user:password lines)
+  secrets_file: "/etc/rsyncd.secrets"
+
+  # Global daemon settings
+  global:
+    address: ""                 # "" = bind all interfaces
+    port: "873"
+    max_connections: "0"        # 0 = unlimited
+    log_file: "/var/log/rsyncd.log"
+    pid_file: "/run/rsyncd.pid"
+    motd_file: ""               # "" = no banner
+    timeout: "600"              # I/O timeout in seconds (0 = none)
+
+  # Default module (share) settings, can be overwritten per module
+  module_defaults:
+    comment: ""
+    read_only: true             # rsync's safe default
+    write_only: false
+    list: true                  # show the module in listings
+    use_chroot: true            # rsync default; more secure
+    uid: "root"                 # Unix identity the daemon uses for file access
+    gid: "root"
+    hosts_allow: []             # empty = allow all
+    hosts_deny: []
+    dir_owner: "root"           # module directory ownership (like samba share_owner)
+    dir_group: "root"
+    dir_mode: "0755"
+
+  # Virtual rsync users written to the secrets file.
+  # IMPORTANT: these are NOT system users; they exist only in the secrets file.
+  # Example:
+  # users:
+  #   - name: "backup"
+  #     password: "{{ secrets.users.backup.passwd }}"
+  users: []
+
+  # Module (share) definitions.
+  # `name` and `path` are mandatory; everything else falls back to module_defaults.
+  # Example:
+  # modules:
+  #   - name: "backups"
+  #     comment: "Nightly backups"
+  #     path: "/srv/rsync/backups"
+  #     read_only: false
+  #     auth_users: ["backup"]        # omit/empty => anonymous module (like samba guest_ok)
+  #     hosts_allow: ["10.0.0.0/24"]
+  modules: []

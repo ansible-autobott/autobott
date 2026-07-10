@@ -46,6 +46,25 @@ samba:
       password: "{{ secrets.users.jsmith.passwd }}"
 
 #============================================================================================================
+# Rsync (rsyncd)
+#============================================================================================================
+run_role_rsync: true
+rsync:
+  users:
+    - name: "rsyncuser"
+      password: "testpass123"     # vagrant-only literal; real inventory uses a vaulted secret
+  modules:
+    - name: "backups"
+      comment: "Authenticated read-write module"
+      path: "/srv/rsync/backups"
+      read_only: false
+      auth_users: ["rsyncuser"]
+    - name: "public"
+      comment: "Anonymous read-only module"
+      path: "/srv/rsync/public"
+      read_only: true
+
+#============================================================================================================
 # MariaDb (mysql)
 #============================================================================================================
 run_role_mariadb: true

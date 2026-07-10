@@ -37,7 +37,7 @@
     - name: Write rsync secrets file
       ansible.builtin.template:
         src: rsyncd.secrets.j2
-        dest: "{{ rsync_config.secrets_file }}"
+        dest: /etc/rsyncd.secrets
         owner: root
         group: root
         mode: "0600"

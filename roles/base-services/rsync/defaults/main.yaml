@@ -10,16 +10,11 @@ run_role_rsync: false
 rsync: {}
 # Default rsync daemon configuration structure
 rsync_defaults:
-  # where the virtual-user secrets file is stored (user:password lines)
-  secrets_file: "/etc/rsyncd.secrets"
-
   # Global daemon settings
   global:
     address: ""                 # "" = bind all interfaces
     port: "873"
     max_connections: "0"        # 0 = unlimited
-    log_file: "/var/log/rsyncd.log"
-    pid_file: "/run/rsyncd.pid"
     motd_file: ""               # "" = no banner
     timeout: "600"              # I/O timeout in seconds (0 = none)
 

@@ -10,8 +10,8 @@ address = {{ rsync_config.global.address }}
 {% endif %}
 port = {{ rsync_config.global.port }}
 max connections = {{ rsync_config.global.max_connections }}
-log file = {{ rsync_config.global.log_file }}
-pid file = {{ rsync_config.global.pid_file }}
+log file = /var/log/rsyncd.log
+pid file = /run/rsyncd.pid
 timeout = {{ rsync_config.global.timeout }}
 
 # ===== Modules =====
@@ -38,7 +38,7 @@ timeout = {{ rsync_config.global.timeout }}
 {% endif %}
 {% if mod.auth_users is defined and mod.auth_users | length > 0 %}
   auth users = {{ mod.auth_users | join(', ') }}
-  secrets file = {{ rsync_config.secrets_file }}
+  secrets file = /etc/rsyncd.secrets
 {% endif %}
 
 {% endif %}

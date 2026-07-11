@@ -10,7 +10,7 @@ run_role_etnafiance: false
 etnafiance: {}
 # Default configuration structure
 etnafiance_defaults:
-  version: 0.9.2
+  version: 0.10.3
   # User and group configuration
   user:
     name: etnafiance
@@ -22,6 +22,11 @@ etnafiance_defaults:
   paths:
     base_dir: /opt/etnafiance
     data_dir: /opt/etnafiance/data
+
+  settings:
+    financialSimulator: true
+    rsu: true
+    investmentInstruments: true
 
   # Service configuration
   service:
@@ -35,21 +40,12 @@ etnafiance_defaults:
 
 # Supported etnafiance versions and checksums
 etnafiance_checksums:
-  "0.1.0": "c7cafad787552dee30fd39ea1f4e22a78ce22bc48a65029bbd8d3341124da158"
-  "0.3.1": "36ed9172a7a951252f2637591a9fbeaaf91a13e4d044ea2a2ae3b8ecfa943465"
-  "0.3.2": "1c316dd9878bfc7b4cc291f0f452821591e79ff7200a492fddb5eb9830846c9f"
-  "0.3.3": "1fd77ab69547d6cbe76c00690b69996041697abe284f799688ca7c49b1f16116"
-  "0.3.4": "04afc1fb465e02edea8130ee43855021e1e6a233c7c3ebe55b2bb88d80383d76"
-  "0.4.0": "b463c110fe509ab1a0deb890a8e4b4c6c67948c325e20bb64b62f06172ab17ae"
-  "0.5.0": "6a1d2b649dbcd0dda4b15ccc7e2187f9e609a14ab9081a09ac4ebf5a0038a9a2"
-  "0.6.0": "122f0b47a1c79f1c7aa16b2bc0c25ec0e0e6676fb07670ef19ba13cde1772058"
-  "0.6.1": "8c713a27889e808208dd522ade27139785a376e19da8b034374e553374d524d8"
-  "0.6.2": "e5ac8bdd6d446b5fd2040b77811cda0e037d44b2dda299f176ae82ad0d96750b"
-  "0.6.3": "b703de0f11f486ec1ce372b7030e81d28dc5b8a525926d3ac7e8cf3b915263ef"
-  "0.7.0": "1f89efc28763df13c9ae09a79464654ae7e43c2a9c2ce1a024bbcd6f04e06aad"
-  "0.8.0": "1ae5c952607d9fa5781208f3f31b6026789f55261d599e6f5abdc2a0645c13fe"
-  "0.9.0": "721d2ffc92697916ceddae97dd85b516d92f14f89237393687f5c2d10ef8f9bb"
   "0.9.1": "535dd738f8e9560655c79071107877c0cb72415f4b423833eb04bf896e54fcc0"
   "0.9.2": "9256f4b7f9b96f9ecc07537fefa38f6b0b448168dc53bb1363f1e968c4298547"
+  "0.9.3": "62ffdcf808f1e85ed8f25c8fe82026dd2257a7ed02f28f17e262e5a11e6341e1."
+  "0.10.0": "326c87272b5ba639791395eb81f695e186a3fc91193dbb7cff161b1bca406182"
+  "0.10.1": "c5c5169bef13b4e9088a142c56257faee4e5d00a198d28a5c06b3a087626df25"
+  "0.10.2": "973c15d8da4c5467bccfa262137348d70e076e137eab87bc5959f998d6c51dbd"
+  "0.10.3": "2941a6e3a88485032446c95a4cff3548f2221d3ddf9536099bbed6d19bc67b8a"
 
 

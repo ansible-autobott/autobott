@@ -32,6 +32,11 @@ rsyncd_defaults:
     dir_owner: "root"           # module directory ownership (like samba share_owner)
     dir_group: "root"
     dir_mode: "0755"
+    # Force modes on files/dirs received by the daemon (rsyncd "incoming chmod").
+    # "" = leave rsync's transferred modes untouched (default, backward-compatible).
+    # Uses --chmod syntax. Example to match a samba shared tree (dirs 2770, files 0660):
+    #   incoming_chmod: "D2770,F0660"
+    incoming_chmod: ""
 
   # Virtual rsync users written to the secrets file.
   # IMPORTANT: these are NOT system users; they exist only in the secrets file.
@@ -51,4 +56,7 @@ rsyncd_defaults:
   #     read_only: false
   #     auth_users: ["backup"]        # omit/empty => anonymous module (like samba guest_ok)
   #     hosts_allow: ["10.0.0.0/24"]
+  #     incoming_chmod: "D2770,F0660" # match a samba shared tree; pair with dir_mode/dir_group below
+  #     dir_mode: "2770"              # module root: setgid + group rwx (like samba share)
+  #     dir_group: "smbmedia"
   modules: []

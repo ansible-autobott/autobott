@@ -59,6 +59,9 @@ rsyncd:
       path: "/srv/rsync/backups"
       read_only: false
       auth_users: ["rsyncuser"]
+      uid: "jsmith"                 # daemon writes files as this account (must exist on the host)
+      gid: "jsmith"
+      incoming_chmod: "D2770,F0660" # force incoming dirs to 2770 (setgid) and files to 0660
     - name: "public"
       comment: "Anonymous read-only module"
       path: "/srv/rsync/public"

@@ -27,6 +27,10 @@ timeout = {{ rsyncd_config.global.timeout }}
   use chroot = {{ mod.use_chroot | default(rsyncd_config.module_defaults.use_chroot) | lower }}
   uid = {{ mod.uid | default(rsyncd_config.module_defaults.uid) }}
   gid = {{ mod.gid | default(rsyncd_config.module_defaults.gid) }}
+{% set incoming_chmod = mod.incoming_chmod | default(rsyncd_config.module_defaults.incoming_chmod) %}
+{% if incoming_chmod %}
+  incoming chmod = {{ incoming_chmod }}
+{% endif %}
 {% set hosts_allow = mod.hosts_allow | default(rsyncd_config.module_defaults.hosts_allow) %}
 {% if hosts_allow | length > 0 %}
   hosts allow = {{ hosts_allow | join(', ') }}

@@ -1,0 +1,62 @@
+---
+#============================================================================================================
+# Rsyncd Role Defaults
+#============================================================================================================
+
+# Flag to enable/disable the role
+run_role_rsyncd: false
+
+# User overrides - will be combined with rsyncd_defaults
+rsyncd: {}
+# Default rsync daemon configuration structure
+rsyncd_defaults:
+  # Global daemon settings
+  global:
+    address: ""                 # "" = bind all interfaces
+    port: "873"
+    max_connections: "0"        # 0 = unlimited
+    motd_file: ""               # "" = no banner
+    timeout: "600"              # I/O timeout in seconds (0 = none)
+
+  # Default module (share) settings, can be overwritten per module
+  module_defaults:
+    comment: ""
+    read_only: true             # rsync's safe default
+    write_only: false
+    list: true                  # show the module in listings
+    use_chroot: true            # rsync default; more secure
+    uid: "root"                 # Unix identity the daemon uses for file access
+    gid: "root"
+    hosts_allow: []             # empty = allow all
+    hosts_deny: []
+    dir_owner: "root"           # module directory ownership (like samba share_owner)
+    dir_group: "root"
+    dir_mode: "0755"
+    # Force modes on files/dirs received by the daemon (rsyncd "incoming chmod").
+    # "" = leave rsync's transferred modes untouched (default, backward-compatible).
+    # Uses --chmod syntax. Example to match a samba shared tree (dirs 2770, files 0660):
+    #   incoming_chmod: "D2770,F0660"
+    incoming_chmod: ""
+
+  # Virtual rsync users written to the secrets file.
+  # IMPORTANT: these are NOT system users; they exist only in the secrets file.
+  # Example:
+  # users:
+  #   - name: "backup"
+  #     password: "{{ secrets.users.backup.passwd }}"
+  users: []
+
+  # Module (share) definitions.
+  # `name` and `path` are mandatory; everything else falls back to module_defaults.
+  # Example:
+  # modules:
+  #   - name: "backups"
+  #     comment: "Nightly backups"
+  #     path: "/srv/rsync/backups"
+  #     read_only: false
+  #     auth_users: ["backup"]        # omit/empty => anonymous module (like samba guest_ok)
+  #     hosts_allow: ["10.0.0.0/24"]
+  #     incoming_chmod: "D2770,F0660" # match a samba shared tree; pair with dir_mode/dir_group below
+  #     dir_mode: "2770"              # module root: setgid + group rwx (like samba share)
+  #     dir_group: "smbmedia"
+  modules: []

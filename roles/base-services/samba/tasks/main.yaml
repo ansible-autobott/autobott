@@ -74,6 +74,7 @@
       loop: "{{ samba_config.users }}"
       register: stored_hashes
       ignore_errors: true
+      no_log: true
 
     - set_fact:
         samba_users_need_update: false
@@ -93,6 +94,7 @@
       loop: "{{ samba_config.users }}"
       loop_control:
         index_var: loopIndex
+      no_log: true
 
     # to make idempotent users, we first delete all users, and then create the ones we need.
     - name: Remove all samba users.
@@ -139,6 +141,7 @@
         groups: "{{ samba_config.samba_group }}"
         append: true
       loop: "{{ samba_config.users }}"
+      no_log: true
 
     #====================================================
     # Shares

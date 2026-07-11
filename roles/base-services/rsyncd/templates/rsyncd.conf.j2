@@ -1,0 +1,48 @@
+# Managed by AutoBott (Ansible). Do not edit by hand.
+# See rsyncd.conf(5).
+
+# ===== Global settings =====
+{% if rsyncd_config.global.motd_file %}
+motd file = {{ rsyncd_config.global.motd_file }}
+{% endif %}
+{% if rsyncd_config.global.address %}
+address = {{ rsyncd_config.global.address }}
+{% endif %}
+port = {{ rsyncd_config.global.port }}
+max connections = {{ rsyncd_config.global.max_connections }}
+pid file = /run/rsyncd.pid
+timeout = {{ rsyncd_config.global.timeout }}
+
+# ===== Modules =====
+{% for mod in rsyncd_config.modules %}
+{% if mod.path is defined and mod.path != '' %}
+[{{ mod.name }}]
+{% if mod.comment | default(rsyncd_config.module_defaults.comment) %}
+  comment = {{ mod.comment | default(rsyncd_config.module_defaults.comment) }}
+{% endif %}
+  path = {{ mod.path }}
+  read only = {{ mod.read_only | default(rsyncd_config.module_defaults.read_only) | lower }}
+  write only = {{ mod.write_only | default(rsyncd_config.module_defaults.write_only) | lower }}
+  list = {{ mod.list | default(rsyncd_config.module_defaults.list) | lower }}
+  use chroot = {{ mod.use_chroot | default(rsyncd_config.module_defaults.use_chroot) | lower }}
+  uid = {{ mod.uid | default(rsyncd_config.module_defaults.uid) }}
+  gid = {{ mod.gid | default(rsyncd_config.module_defaults.gid) }}
+{% set incoming_chmod = mod.incoming_chmod | default(rsyncd_config.module_defaults.incoming_chmod) %}
+{% if incoming_chmod %}
+  incoming chmod = {{ incoming_chmod }}
+{% endif %}
+{% set hosts_allow = mod.hosts_allow | default(rsyncd_config.module_defaults.hosts_allow) %}
+{% if hosts_allow | length > 0 %}
+  hosts allow = {{ hosts_allow | join(', ') }}
+{% endif %}
+{% set hosts_deny = mod.hosts_deny | default(rsyncd_config.module_defaults.hosts_deny) %}
+{% if hosts_deny | length > 0 %}
+  hosts deny = {{ hosts_deny | join(', ') }}
+{% endif %}
+{% if mod.auth_users is defined and mod.auth_users | length > 0 %}
+  auth users = {{ mod.auth_users | join(', ') }}
+  secrets file = /etc/rsyncd.secrets
+{% endif %}
+
+{% endif %}
+{% endfor %}

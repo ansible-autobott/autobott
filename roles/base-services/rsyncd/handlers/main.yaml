@@ -1,19 +1,19 @@
 ---
 #============================================================================================================
-# Rsync Role Handlers
+# Rsyncd Role Handlers
 #============================================================================================================
 
-- name: Restart rsync
+- name: Restart rsyncd
   ansible.builtin.service:
     name: "{{ item }}"
     state: restarted
-  listen: restart rsync
-  loop: "{{ rsync_config.services | default(['rsync']) }}"
+  listen: restart rsyncd
+  loop: "{{ rsyncd_config.services | default(['rsync']) }}"
 
-- name: Reload rsync
+- name: Reload rsyncd
   # rsyncd re-reads its config per connection, so a reload is effectively a restart
   ansible.builtin.service:
     name: "{{ item }}"
     state: restarted
-  listen: reload rsync
-  loop: "{{ rsync_config.services | default(['rsync']) }}"
+  listen: reload rsyncd
+  loop: "{{ rsyncd_config.services | default(['rsync']) }}"

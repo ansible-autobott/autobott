@@ -1,15 +1,15 @@
 ---
 #============================================================================================================
-# Rsync (rsyncd) Role Defaults
+# Rsyncd Role Defaults
 #============================================================================================================
 
 # Flag to enable/disable the role
-run_role_rsync: false
+run_role_rsyncd: false
 
-# User overrides - will be combined with rsync_defaults
-rsync: {}
+# User overrides - will be combined with rsyncd_defaults
+rsyncd: {}
 # Default rsync daemon configuration structure
-rsync_defaults:
+rsyncd_defaults:
   # Global daemon settings
   global:
     address: ""                 # "" = bind all interfaces

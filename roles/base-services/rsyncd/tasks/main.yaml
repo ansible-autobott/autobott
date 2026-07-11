@@ -2,16 +2,16 @@
 #============================================================================================================
 # Rsync daemon
 #============================================================================================================
-- name: Main Rsync block
+- name: Main Rsyncd block
   tags:
-    - rsync
+    - rsyncd
     - untagged
   when:
-    - run_role_rsync | bool
+    - run_role_rsyncd | bool
   block:
-    - name: Set merged rsync configuration
+    - name: Set merged rsyncd configuration
       ansible.builtin.set_fact:
-        rsync_config: "{{ rsync_defaults | combine(rsync, recursive=true) }}"
+        rsyncd_config: "{{ rsyncd_defaults | combine(rsyncd, recursive=true) }}"
 
     - name: Install rsync package
       ansible.builtin.apt:
@@ -25,14 +25,14 @@
         src: rsync.default.j2
         dest: /etc/default/rsync
         mode: "0644"
-      notify: restart rsync
+      notify: restart rsyncd
 
     - name: Configure rsync daemon
       ansible.builtin.template:
         src: rsyncd.conf.j2
         dest: /etc/rsyncd.conf
         mode: "0644"
-      notify: restart rsync
+      notify: restart rsyncd
 
     - name: Write rsync secrets file
       ansible.builtin.template:
@@ -42,7 +42,7 @@
         group: root
         mode: "0600"
       no_log: true
-      notify: restart rsync
+      notify: restart rsyncd
 
     - name: Mask rsync socket activation (use always-on service)
       ansible.builtin.systemd:
@@ -62,10 +62,10 @@
       ansible.builtin.file:
         state: directory
         path: "{{ item.path }}"
-        owner: "{{ item.dir_owner | default(rsync_config.module_defaults.dir_owner) }}"
-        group: "{{ item.dir_group | default(rsync_config.module_defaults.dir_group) }}"
-        mode: "{{ item.dir_mode | default(rsync_config.module_defaults.dir_mode) }}"
-      loop: "{{ rsync_config.modules }}"
+        owner: "{{ item.dir_owner | default(rsyncd_config.module_defaults.dir_owner) }}"
+        group: "{{ item.dir_group | default(rsyncd_config.module_defaults.dir_group) }}"
+        mode: "{{ item.dir_mode | default(rsyncd_config.module_defaults.dir_mode) }}"
+      loop: "{{ rsyncd_config.modules }}"
       when: item.path is defined and item.path != ''
 
 #============================================================================================================
@@ -73,12 +73,12 @@
 # The rsync package is intentionally left installed, and module (share) directories are left
 # in place so their data is not destroyed.
 #============================================================================================================
-- name: Rsync teardown block
+- name: Rsyncd teardown block
   tags:
-    - rsync
+    - rsyncd
     - untagged
   when:
-    - not (run_role_rsync | bool)
+    - not (run_role_rsyncd | bool)
   block:
     - name: Check for an existing rsync daemon configuration
       ansible.builtin.stat:
@@ -87,7 +87,7 @@
 
     # /etc/rsyncd.conf is created by this role (the rsync package does not ship it), so its
     # presence marks a host this role previously configured. Gating on it leaves client-only
-    # rsync installs (the default run_role_rsync: false case) completely untouched.
+    # rsync installs (the default run_role_rsyncd: false case) completely untouched.
     - name: Tear down the rsync daemon
       when: rsyncd_conf.stat.exists
       block:
@@ -111,4 +111,3 @@
             - /etc/rsyncd.conf
             - /etc/rsyncd.secrets
             - /etc/default/rsync
-            - /var/log/rsyncd.log

@@ -20,7 +20,7 @@
     - base-services/tailscale
     - base-services/docker
     - base-services/samba
-    - base-services/rsync
+    - base-services/rsyncd
     - base-services/mariadb
 
     # ===============  Backup   =============== #

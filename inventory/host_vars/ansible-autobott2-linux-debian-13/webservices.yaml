@@ -21,10 +21,24 @@ authelia:
   sites:
     - name: fe26
       domain: "fe26.localhost"
-      auth_url: "https://auth.fe26.localhost:8443"
       policy: "two_factor" # one_factor | two_factor
       groups:
         - team1
+
+    # aether: members of the aether-admin group get admin rights inside aether
+    # (see aether.config.auth.proxy_header.admin_group below).
+    - name: aether
+      domain: "aether.localhost"
+      policy: "one_factor" # one_factor | two_factor
+      groups:
+        - aether-admin
+
+  # cookie/session domains. these must cover the protected sites above, otherwise
+  # authelia cannot issue a session and refuses to start.
+  cookies:
+    - name: "authelia_session"
+      domain: "localhost"
+      authelia_url: "https://auth.localhost:8443"
 
   # user definitions
   users:
@@ -36,6 +50,7 @@ authelia:
       groups:
         - team1
         - tema2
+        - aether-admin # grants admin inside aether
       disabled: false
 
     - username: tom
@@ -107,6 +122,49 @@ mediawiki:
     base_url: "https://wiki.localhost:8443"
     secret_key: "changeme"
     site_upgrade_key: "changeme"
+
+#============================================================================================================
+# Aether
+#============================================================================================================
+run_role_aether: true
+# Music server (OpenSubsonic API + web player), installed from the upstream .deb.
+# This demo fronts it with caddy+authelia (see the aether vhost in vhosts.yaml).
+aether:
+  # To let aether read/write a shared media library like the servarr stack, add its
+  # service user to the media group and set a group-writable umask. The group must
+  # already exist (provision it via linux_basic); this demo has no shared media group.
+  # extra_groups:
+  #   - smbmedia
+  # umask: "0007"
+
+  config:
+    server:
+      # Required with proxy-header auth: aether trusts the identity headers on every
+      # request, so it must only be reachable through the proxy that sets them.
+      bind_ip: "127.0.0.1"
+
+    # Authentication (v0.4+). Three methods:
+    #   none         -> no authentication at all (the role default)
+    #   native       -> aether's own login form; needs admin_bootstrap.user + .password
+    #   proxy-header -> identity comes from the reverse proxy, as configured here
+    auth:
+      method: proxy-header
+      proxy_header:
+        # Members of this authelia group become aether admins. Defaults for
+        # user_header/groups_header already match what the authelia vhost forwards
+        # (Remote-User / Remote-Groups), so they are not repeated here.
+        admin_group: "aether-admin"
+        # Only the co-located caddy may assert identity headers. Both loopback forms:
+        # a proxy dialing "localhost" can arrive as ::1.
+        trusted_proxies:
+          - "127.0.0.1"
+          - "::1"
+
+    # Artist image fetching. Providers: fanart.tv and TheAudioDB.
+    # Empty -> the feature stays disabled.
+    artist_images:
+      fanart_api_key: ""
+      theaudiodb_api_key: ""
 
 
 

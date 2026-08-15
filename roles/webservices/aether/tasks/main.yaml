@@ -1,0 +1,246 @@
+---
+#============================================================================================================
+# Aether Role
+#============================================================================================================
+# Installs the aether music server from the upstream .deb (which ships the systemd unit, the aether system
+# user and /var/lib/aether) and then overwrites /etc/aether/config.yaml with a custom, managed config.
+
+- name: Main Aether installation and configuration
+  tags:
+    - aether
+    - untagged
+  when: run_role_aether | bool
+  block:
+    - name: Set merged aether configuration
+      ansible.builtin.set_fact:
+        aether_config: "{{ aether_defaults | combine(aether, recursive=true) }}"
+
+    - name: Set aether deb asset name
+      ansible.builtin.set_fact:
+        aether_deb_file: "aether_{{ aether_config.version }}_linux_amd64_v3.deb"
+
+    # Mirrors aether's own startup validation, so a bad combination fails here with a clear
+    # message instead of leaving the service crash-looping after the config is written.
+    - name: Validate aether authentication settings
+      ansible.builtin.assert:
+        that:
+          - aether_config.config.auth.method in ['none', 'native', 'proxy-header']
+        fail_msg: >-
+          aether.config.auth.method must be one of none, native or proxy-header
+          (got '{{ aether_config.config.auth.method }}').
+        quiet: true
+
+    - name: Validate aether native auth bootstrap credentials
+      ansible.builtin.assert:
+        that:
+          - aether_config.config.auth.admin_bootstrap.user | default('') | length > 0
+          - aether_config.config.auth.admin_bootstrap.password | default('') | length > 0
+        fail_msg: >-
+          auth.method 'native' requires both auth.admin_bootstrap.user and
+          auth.admin_bootstrap.password to be set; aether refuses to start otherwise.
+          The password may be plaintext or a bcrypt hash (`aether user hash`).
+        quiet: true
+      when: aether_config.config.auth.method == 'native'
+
+    # Libraries provisioned from config (v0.5+) need at least name and path, and aether
+    # refuses to start on an invalid default_view or cover_style.
+    - name: Validate aether config-provisioned libraries
+      ansible.builtin.assert:
+        that:
+          - item.name | default('') | length > 0
+          - item.path | default('') | length > 0
+          - item.default_view | default('albums') in ['albums', 'artists']
+          - item.cover_style | default('auto') in ['auto', 'classic', 'bauhaus', 'rings', 'waves', 'poster', 'remix']
+        fail_msg: >-
+          Each entry in aether.config.libraries needs name and path; default_view must be
+          albums or artists and cover_style one of auto, classic, bauhaus, rings, waves,
+          poster or remix (got '{{ item }}').
+        quiet: true
+      loop: "{{ aether_config.config.libraries | default([]) }}"
+      loop_control:
+        label: "{{ item.name | default(item.path) | default('<unnamed>') }}"
+
+    - name: Validate aether proxy-header auth settings
+      ansible.builtin.assert:
+        that:
+          - aether_config.config.auth.proxy_header.user_header | default('') | length > 0
+          - aether_config.config.auth.proxy_header.admin_group | default('') | length > 0
+        fail_msg: >-
+          auth.method 'proxy-header' requires auth.proxy_header.user_header and
+          auth.proxy_header.admin_group to be set; aether refuses to start otherwise.
+        quiet: true
+      when: aether_config.config.auth.method == 'proxy-header'
+
+    # proxy-header trusts identity headers on the request, so aether must not be reachable
+    # directly — anyone who can hit it could otherwise assert any user and group.
+    - name: Warn when aether uses proxy-header auth on a non-loopback bind address
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: aether uses proxy-header authentication but binds to
+          '{{ aether_config.config.server.bind_ip | default("") | default("all interfaces", true) }}'.
+          Anyone able to reach it directly can forge the identity headers. Set
+          aether.config.server.bind_ip to 127.0.0.1 and only expose it through the proxy.
+      when:
+        - aether_config.config.auth.method == 'proxy-header'
+        - aether_config.config.server.bind_ip | default('') not in ['127.0.0.1', '::1', 'localhost']
+
+    - name: Install aether system dependencies
+      ansible.builtin.apt:
+        name: "{{ aether_config.packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+      when: aether_config.packages | default([]) | length > 0
+
+    - name: Get currently installed aether version
+      ansible.builtin.command: "dpkg-query -W -f='${Version}' aether"
+      register: aether_current_version
+      failed_when: false
+      changed_when: false
+
+    - name: Install or update aether
+      when: aether_current_version.stdout != aether_config.version
+      block:
+
+        - name: Create aether download directory
+          ansible.builtin.file:
+            path: /tmp/aether
+            state: directory
+            mode: 0700
+            owner: root
+            group: root
+
+        - name: Download aether deb
+          ansible.builtin.get_url:
+            url: "https://github.com/andresbott/aether/releases/download/v{{ aether_config.version }}/{{ aether_deb_file }}"
+            dest: "/tmp/aether/{{ aether_deb_file }}"
+            checksum: "sha256:{{ aether_checksums[aether_config.version] }}"
+            mode: 0600
+
+        - name: Install aether deb
+          ansible.builtin.apt:
+            deb: "/tmp/aether/{{ aether_deb_file }}"
+
+        - name: Remove aether download directory
+          ansible.builtin.file:
+            path: /tmp/aether
+            state: absent
+
+    - name: Add aether user to additional groups
+      ansible.builtin.user:
+        name: "{{ aether_config.user.name }}"
+        groups: "{{ aether_config.extra_groups }}"
+        append: true
+      notify:
+        - restart aether
+
+    - name: Ensure aether systemd drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/aether.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      when: (aether_config.umask | default('') | length > 0) or (aether_config.readwrite_paths | default([]) | length > 0)
+
+    - name: Create systemd override for aether (umask + ReadWritePaths)
+      ansible.builtin.template:
+        src: systemd.override.conf
+        dest: /etc/systemd/system/aether.service.d/override.conf
+        owner: root
+        group: root
+        mode: "0644"
+      when: (aether_config.umask | default('') | length > 0) or (aether_config.readwrite_paths | default([]) | length > 0)
+      notify:
+        - restart aether
+
+    - name: Write configured artist-image API key files
+      ansible.builtin.copy:
+        content: "{{ aether_config.config.artist_images[item.key] | default('') }}"
+        dest: "{{ item.path }}"
+        owner: root
+        group: "{{ aether_config.user.group }}"
+        mode: "0640"
+      loop:
+        - { key: fanart_api_key, path: "{{ aether_config.paths.fanart_key_file }}" }
+        - { key: theaudiodb_api_key, path: "{{ aether_config.paths.theaudiodb_key_file }}" }
+      when: aether_config.config.artist_images[item.key] | default('') | length > 0
+      no_log: true
+      loop_control:
+        label: "{{ item.path }}"
+      notify:
+        - restart aether
+
+    - name: Remove unset artist-image API key files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop:
+        - { key: fanart_api_key, path: "{{ aether_config.paths.fanart_key_file }}" }
+        - { key: theaudiodb_api_key, path: "{{ aether_config.paths.theaudiodb_key_file }}" }
+      when: aether_config.config.artist_images[item.key] | default('') | length == 0
+      loop_control:
+        label: "{{ item.path }}"
+      notify:
+        - restart aether
+
+    # Only native auth uses this: aether ignores AdminBootstrap in the other modes. The config
+    # references this file with "@<path>", so it must be readable by the aether service user.
+    - name: Write aether bootstrap admin password file
+      ansible.builtin.copy:
+        content: "{{ aether_config.config.auth.admin_bootstrap.password }}"
+        dest: "{{ aether_config.paths.admin_password_file }}"
+        owner: root
+        group: "{{ aether_config.user.group }}"
+        mode: "0640"
+      when: aether_config.config.auth.method == 'native'
+      no_log: true
+      notify:
+        - restart aether
+
+    - name: Remove aether bootstrap admin password file when not using native auth
+      ansible.builtin.file:
+        path: "{{ aether_config.paths.admin_password_file }}"
+        state: absent
+      when: aether_config.config.auth.method != 'native'
+      notify:
+        - restart aether
+
+    - name: Create custom config file
+      ansible.builtin.template:
+        src: config.yaml
+        dest: "{{ aether_config.paths.config_file }}"
+        owner: root
+        group: "{{ aether_config.user.group }}"
+        mode: "0640"
+      notify:
+        - restart aether
+
+    - name: Enable and start aether service
+      ansible.builtin.systemd:
+        name: aether
+        enabled: true
+        daemon_reload: true
+        state: started
+
+- name: Uninstall Aether
+  tags:
+    - aether
+    - untagged
+  when: not (run_role_aether | bool)
+  block:
+    - name: Set merged aether configuration for uninstall
+      ansible.builtin.set_fact:
+        aether_config: "{{ aether_defaults | combine(aether, recursive=true) }}"
+
+    - name: Remove aether package
+      ansible.builtin.apt:
+        name: aether
+        state: absent
+        purge: "{{ aether_config.delete_data_on_uninstall | default(false) | bool }}"
+
+    - name: Remove aether data directory
+      ansible.builtin.file:
+        path: "{{ aether_config.paths.data_dir }}"
+        state: absent
+      when: aether_config.delete_data_on_uninstall | default(false) | bool

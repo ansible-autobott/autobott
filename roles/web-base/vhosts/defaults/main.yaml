@@ -162,6 +162,13 @@ vhosts_sample:
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
         authelia: true
         authelia_port:  9031 # optional, port where authelia is running
+        # optional: paths that skip authelia, for APIs that authenticate themselves
+        # (token/apikey) and would otherwise get authelia's HTML login page.
+        # caddy's "path" matches exactly: list both the prefix and the wildcard to
+        # exclude a whole subtree. everything not listed stays protected.
+        authelia_except_paths:
+          - "/rest"
+          - "/rest/*"
 
 
 

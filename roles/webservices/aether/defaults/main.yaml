@@ -1,0 +1,146 @@
+---
+#============================================================================================================
+# AETHER Role Defaults
+#============================================================================================================
+# Aether is a music server (https://github.com/andresbott/aether). It is installed from the upstream
+# .deb, which ships its own systemd unit, creates the `aether` system user and the /var/lib/aether data
+# directory, and drops a default config at /etc/aether/config.yaml. This role only downloads/installs that
+# .deb and then overwrites the config with a custom, Ansible-managed template.
+
+# Role execution control
+run_role_aether: false
+
+# User configuration override (will be merged with aether_defaults)
+aether: {}
+
+# Default configuration structure
+aether_defaults:
+  version: 0.5.0
+
+  # System packages installed with the role. libchromaprint-tools provides `fpcalc`
+  # (Chromaprint/AcoustID audio fingerprinting), used by aether for track and album identification.
+  packages:
+    - libchromaprint-tools
+
+  # Supplementary groups added to the aether service user so it can read/write shared media
+  # (e.g. the smbmedia group used by the servarr stack). The groups must already exist on the
+  # host — provision them with the linux_basic role.
+  extra_groups: []
+
+  # Start the service with a different umask so files aether creates in the shared media tree
+  # stay group-writable. Set to something like 0007 (files 660, dirs 770); empty -> omitted.
+  umask: ""
+
+  # Extra filesystem paths the service is allowed to write to. The packaged .deb unit runs with
+  # ProtectSystem=strict and ReadWritePaths=/var/lib/aether, so the whole filesystem is read-only
+  # to the service except its data dir. To let aether edit tags/embedded artwork in the media
+  # library, list the library root(s) here; each is rendered as a ReadWritePaths= line in the
+  # systemd drop-in. Paths must already exist on the host. Empty -> none added.
+  readwrite_paths: []
+
+  # Paths owned/created by the .deb package (kept here so tasks and uninstall can reference them).
+  # data_dir is hard-coded into the packaged systemd unit (WorkingDirectory/ReadWritePaths); changing
+  # it here without also editing the unit will break the service.
+  paths:
+    config_dir: /etc/aether
+    config_file: /etc/aether/config.yaml
+    data_dir: /var/lib/aether
+    # Role-managed files holding the artist-image provider API keys. The rendered config points at
+    # these via aether's "@file" syntax so the secrets stay out of config.yaml.
+    fanart_key_file: /etc/aether/fanart.api.key
+    theaudiodb_key_file: /etc/aether/theaudiodb.api.key
+    # Same "@file" trick for the native-auth bootstrap admin password (v0.4+).
+    admin_password_file: /etc/aether/admin.password
+
+  # System user/group created by the .deb (used for config file ownership).
+  user:
+    name: aether
+    group: aether
+
+  # Uninstall options. When true, the package is purged (removing /etc/aether and the aether user) and
+  # the /var/lib/aether database directory is deleted. The .deb never deletes the database on its own.
+  delete_data_on_uninstall: false
+
+  # Custom configuration rendered into /etc/aether/config.yaml
+  config:
+    server:
+      # Public HTTP server (web player + OpenSubsonic API).
+      port: 8075
+      # Bind address. Empty means all interfaces. Set to 127.0.0.1 behind a reverse proxy.
+      bind_ip: "127.0.0.1"
+    observability:
+      # Health / Prometheus metrics endpoints on a separate server. Disabled by default
+      # (v0.2+ can skip starting the backend entirely); set enabled: true to start it, and
+      # keep it off the public interface when you do.
+      enabled: false
+      port: 9009
+      bind_ip: "127.0.0.1"
+    # Music libraries provisioned from the config file (v0.5+). Additive with libraries
+    # created in the admin UI: entries here are materialized at every startup and are
+    # read-only in the UI. Removing an entry does NOT delete the library (it becomes an
+    # ordinary editable one), but changing an entry's path wipes that library's scanned
+    # tracks — the next scan refills it. Only name and path are required per entry;
+    # optional keys: exclude_patterns (list of Go regexes; matching files are skipped),
+    # follow_symlinks (default true), show_artists (default true), default_view
+    # (albums | artists), icon (PrimeIcons name without the "pi pi-" prefix) and
+    # cover_style (auto | classic | bauhaus | rings | waves | poster | remix).
+    # Paths must be readable by the aether service user; add the media group via
+    # extra_groups and list the path in readwrite_paths if aether should edit tags.
+    libraries: []
+    # Authentication (v0.4+). One of:
+    #   none         -> no authentication at all. Trusted LAN only.
+    #   native       -> users live in the aether database; aether renders its own login form.
+    #                   admin_bootstrap seeds the first admin, and only while the user store is
+    #                   empty — changing it later does nothing to an already-seeded install.
+    #   proxy-header -> identity comes from headers set by an authenticating reverse proxy
+    #                   (Authelia/Authentik/oauth2-proxy). admin_bootstrap is ignored.
+    #
+    # For proxy-header the deployment invariants are strict: aether must only be reachable
+    # through the proxy (keep server.bind_ip at 127.0.0.1), the proxy must strip inbound
+    # identity headers, and /rest must bypass the proxy so Subsonic clients can still
+    # authenticate with their apiKey. The vhosts role's authelia part already forwards the
+    # Remote-User/Remote-Groups headers this mode expects.
+    auth:
+      method: none
+      admin_bootstrap:
+        user: admin
+        # Plaintext or a bcrypt hash (generate one with `aether user hash`). The role writes this
+        # to a root-only file and references it from the config with "@file", so the secret never
+        # lands in the world-readable config.yaml. Empty -> no bootstrap password is written.
+        password: ""
+      proxy_header:
+        # Defaults match Authelia (and this repo's caddy authelia snippet). For oauth2-proxy use
+        # X-Forwarded-User / X-Forwarded-Groups.
+        user_header: "Remote-User"
+        groups_header: "Remote-Groups"
+        # Members of this group (per the groups header) get the admin role.
+        admin_group: "aether-admin"
+        # CIDRs / bare IPs allowed to assert identity headers. Empty trusts any peer that can
+        # reach the server. Keep both loopback forms for a co-located proxy: one dialing
+        # "localhost" arrives as ::1, and a missing entry rejects the headers silently.
+        trusted_proxies:
+          - "127.0.0.1"
+          - "::1"
+
+    env:
+      loglevel: info
+      production: true
+    taskrunner:
+      parallelism: 2
+      queue_size: 20
+      history_size: 50
+      tag_read_workers: 0   # 0 -> derived from the CPU count
+      log_dir: ""           # empty -> <data_dir>/task-logs
+    artist_images:
+      # Artist image fetching. Provide at least one provider key to enable it. A value starting with
+      # "@" is read from that file's content, e.g. "@/etc/aether/fanart.api.key".
+      fanart_api_key: ""
+      theaudiodb_api_key: ""
+
+# Supported aether versions and the sha256 checksum of their amd64 (GOAMD64 v3) .deb.
+aether_checksums:
+  "0.1.0": "ef30f04742aebd77def37de6097dd2d233cbfb9ea31a6d3da95c58922bedca85"
+  "0.2.0": "95d31f026bb8ee13e990edbc1f7149f777d94193826f68fa693f8ae8a188dde0"
+  "0.3.0": "e18c9c1ae3ff8ea582a08b2db436935cdb75fa053763b099c4b1d89ba12bb1a4"
+  "0.4.0": "6a37785485d8e38e2b3a85438a9dcea8f561744375739532fd0d772142f984f3"
+  "0.5.0": "45b1571b149f59442f2bb36b401758287ae1bc4cac4677c1a36c975c054b8f64"

@@ -1,0 +1,7 @@
+---
+- name: Restart aether
+  ansible.builtin.systemd:
+    name: aether
+    state: restarted
+    daemon_reload: true
+  listen: restart aether

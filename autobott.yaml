@@ -69,6 +69,7 @@
     # ===============  Web  =============== #
     - webservices/radicale
     - webservices/fe26
+    - webservices/aether
 
     # docker compose based
     - webservices/mealie # https://github.com/mealie-recipes/mealie/discussions/801

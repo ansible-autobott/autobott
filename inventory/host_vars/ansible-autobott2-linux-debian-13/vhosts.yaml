@@ -279,6 +279,24 @@ vhosts:
         type: "proxy"
         proxy_url: "http://127.0.0.1:9997"
 
+      # Aether =============================
+      # music server, protected by authelia (see the authelia block in webservices.yaml).
+      # aether itself is configured with auth.method: proxy-header, so it trusts the
+      # Remote-User/Remote-Groups headers that the forward_auth below injects.
+      - enabled: true
+        domains:
+          - "http://aether.localhost:8080"
+          - "https://aether.localhost:8443"
+        type: "proxy"
+        proxy_url: "http://127.0.0.1:8075"
+        authelia: true
+        # the OpenSubsonic API authenticates itself with per-user api keys, so it must
+        # not be sent to authelia's login page: subsonic clients cannot handle the html
+        # redirect. everything else (the web player) stays protected.
+        authelia_except_paths:
+          - "/rest"
+          - "/rest/*"
+
   - name: monitoring
     enabled: true
     comment: "monitoring services"

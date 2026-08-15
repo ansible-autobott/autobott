@@ -1,8 +1,24 @@
 {% if server.authelia | default(false) %}
+{% if server.authelia_except_paths | default([]) | length > 0 %}
+
+    # Paths excluded from Authelia: they authenticate themselves (e.g. an API using
+    # tokens) and would otherwise be redirected to Authelia's HTML login page.
+    # Note: "path" matches exactly, so list both /api and /api/* to cover a subtree.
+    @authelia_protected {
+        not path {{ server.authelia_except_paths | join(' ') }}
+    }
+
+    forward_auth @authelia_protected 127.0.0.1:{{ server.authelia_port | default(9031) }} {
+        uri /api/authz/forward-auth
+        copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
+    }
+
+{% else %}
 
     forward_auth 127.0.0.1:{{ server.authelia_port | default(9031) }} {
         uri /api/authz/forward-auth
         copy_headers Remote-User Remote-Groups Remote-Email Remote-Name
     }
 
+{% endif %}
 {% endif %}

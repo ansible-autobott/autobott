@@ -1,0 +1,113 @@
+# =============================================================================
+# Aether music server configuration
+# =============================================================================
+# Managed by Ansible (roles/webservices/aether) — manual edits are overwritten.
+#
+# Loaded automatically from /etc/aether/config.yaml. Every value can also be set
+# via environment variables prefixed with AETHER_ (e.g. AETHER_SERVER_PORT=8080),
+# which take precedence over this file.
+# =============================================================================
+
+Server:
+  Port: {{ aether_config.config.server.port | default(8075) }}
+  # Bind address. Empty means all interfaces. Set to 127.0.0.1 when a reverse
+  # proxy (nginx/Traefik/Caddy) fronts the server.
+  BindIp: "{{ aether_config.config.server.bind_ip | default('') }}"
+
+# Observability endpoints (health, Prometheus metrics) on a separate server.
+# Disabled by default (v0.2+); set observability.enabled: true to start it, and keep
+# it off the public interface.
+Observability:
+  Enabled: {{ aether_config.config.observability.enabled | default(false) | lower }}
+  Port: {{ aether_config.config.observability.port | default(9009) }}
+  BindIp: "{{ aether_config.config.observability.bind_ip | default('127.0.0.1') }}"
+
+# Database, cached artwork and task logs live here. Owned by the aether user.
+DataDir: "{{ aether_config.paths.data_dir }}"
+
+{% set libraries = aether_config.config.libraries | default([]) %}
+{% if libraries | length > 0 %}
+# Music libraries provisioned from this file (v0.5+). Additive with UI-created
+# libraries; these entries are materialized at every startup and are read-only in
+# the UI. Removing one here does not delete it — it becomes editable in the UI.
+Libraries:
+{% for lib in libraries %}
+  - Name: "{{ lib.name }}"
+    Path: "{{ lib.path }}"
+{% if lib.exclude_patterns | default([]) | length > 0 %}
+    ExcludePatterns:
+{% for pattern in lib.exclude_patterns %}
+      - "{{ pattern }}"
+{% endfor %}
+{% endif %}
+{% if lib.follow_symlinks is defined %}
+    FollowSymlinks: {{ lib.follow_symlinks | bool | lower }}
+{% endif %}
+{% if lib.show_artists is defined %}
+    ShowArtists: {{ lib.show_artists | bool | lower }}
+{% endif %}
+{% if lib.default_view is defined %}
+    DefaultView: "{{ lib.default_view }}"
+{% endif %}
+{% if lib.icon is defined %}
+    Icon: "{{ lib.icon }}"
+{% endif %}
+{% if lib.cover_style is defined %}
+    CoverStyle: "{{ lib.cover_style }}"
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% set auth = aether_config.config.auth | default({}) %}
+{% set auth_method = auth.method | default('none') %}
+# Authentication (v0.4+): "none", "native" or "proxy-header".
+Auth:
+  Method: "{{ auth_method }}"
+{% if auth_method == 'native' %}
+  # Seeds the first admin, and only while the user store is empty; editing this later
+  # has no effect on an already-seeded install. The password (plaintext or bcrypt hash)
+  # lives in a separate root-owned file, pulled in here with aether's "@file" syntax so
+  # the secret stays out of this config. The role asserts both values are set.
+  AdminBootstrap:
+    User: "{{ auth.admin_bootstrap.user }}"
+    Pw: "@{{ aether_config.paths.admin_password_file }}"
+{% elif auth_method == 'proxy-header' %}
+  # AdminBootstrap is deliberately omitted: it is ignored in this mode. Identity comes
+  # from the proxy's headers; users are created automatically on first sight.
+  ProxyHeader:
+    UserHeader: "{{ auth.proxy_header.user_header | default('Remote-User') }}"
+    GroupsHeader: "{{ auth.proxy_header.groups_header | default('Remote-Groups') }}"
+    AdminGroup: "{{ auth.proxy_header.admin_group | default('aether-admin') }}"
+{% if auth.proxy_header.trusted_proxies | default([]) | length > 0 %}
+    TrustedProxies:
+{% for proxy in auth.proxy_header.trusted_proxies %}
+      - "{{ proxy }}"
+{% endfor %}
+{% else %}
+    # Empty: every peer that can reach the server may assert identity headers.
+    TrustedProxies: []
+{% endif %}
+{% endif %}
+
+Env:
+  # Log level: "debug", "info", "warn", or "error".
+  LogLevel: "{{ aether_config.config.env.loglevel | default('info') }}"
+  # Production mode. When true, debug features are disabled.
+  Production: {{ aether_config.config.env.production | default(true) | lower }}
+
+TaskRunner:
+  Parallelism: {{ aether_config.config.taskrunner.parallelism | default(2) }}
+  QueueSize: {{ aether_config.config.taskrunner.queue_size | default(20) }}
+  HistorySize: {{ aether_config.config.taskrunner.history_size | default(50) }}
+  # 0 -> derived from the CPU count.
+  TagReadWorkers: {{ aether_config.config.taskrunner.tag_read_workers | default(0) }}
+  # Per-execution task logs. Empty -> <DataDir>/task-logs.
+  LogDir: "{{ aether_config.config.taskrunner.log_dir | default('') }}"
+
+# Artist image fetching. Provide at least one provider API key to enable it;
+# with both empty the "fetch-artist-images" task reports "not configured".
+# The role writes each configured key to its own file under /etc/aether and points the
+# config at it with aether's "@file" syntax, keeping the secret out of this file.
+ArtistImages:
+  FanartApiKey: "{{ ('@' ~ aether_config.paths.fanart_key_file) if (aether_config.config.artist_images.fanart_api_key | default('') | length > 0) else '' }}"
+  TheAudioDBApiKey: "{{ ('@' ~ aether_config.paths.theaudiodb_key_file) if (aether_config.config.artist_images.theaudiodb_api_key | default('') | length > 0) else '' }}"

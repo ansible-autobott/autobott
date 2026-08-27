@@ -12,6 +12,20 @@ AutoBott automates the installation and configuration of a full self-hosted stac
 - Productivity: Immich, Docmost, MediaWiki, Homepage
 - Desktop: KDE, developer tools, desktop apps
 
+## Documentation
+
+Full project documentation lives in a **separate `docs` repository**, available
+two ways:
+
+- **Online:** https://ansible-autobott.github.io/docs/
+- **Locally:** a colocated sibling directory next to this repo — `../docs`
+  (on this machine: `/home/bott/.datos/edit/programacion/autobott/docs`).
+
+It is a Hugo site; the Markdown sources live under `../docs/content/docs/`,
+grouped into `Getting Started/`, `Guides/`, and `roles/`. Prefer the local copy
+when it is present (it may be ahead of the published site); otherwise use the
+online version.
+
 ## Development Setup
 
 ```bash
@@ -116,3 +130,5 @@ Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by
 | `Makefile` | All commands — read before running anything |
 | `inventory/vagrant.yaml` | Vagrant test inventory |
 | `utils/vault.sh` | Vault encrypt/decrypt helper |
+| `CLAUDE.md` | Symlink to `AGENTS.md` — Claude Code reads the same guide |
+| `../docs/content/docs/` | Full documentation sources (see [Documentation](#documentation)) |

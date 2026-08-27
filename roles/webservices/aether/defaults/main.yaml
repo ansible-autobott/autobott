@@ -15,7 +15,7 @@ aether: {}
 
 # Default configuration structure
 aether_defaults:
-  version: 0.5.0
+  version: 0.6.0
 
   # System packages installed with the role. libchromaprint-tools provides `fpcalc`
   # (Chromaprint/AcoustID audio fingerprinting), used by aether for track and album identification.
@@ -144,3 +144,4 @@ aether_checksums:
   "0.3.0": "e18c9c1ae3ff8ea582a08b2db436935cdb75fa053763b099c4b1d89ba12bb1a4"
   "0.4.0": "6a37785485d8e38e2b3a85438a9dcea8f561744375739532fd0d772142f984f3"
   "0.5.0": "45b1571b149f59442f2bb36b401758287ae1bc4cac4677c1a36c975c054b8f64"
+  "0.6.0": "d8b0bf0cc1130181a04a07d8cc1ef2773edb27f9e12ccfea4e65286f8e2dfcb8"

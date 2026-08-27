@@ -1,16 +1,21 @@
 ---
 #============================================================================================================
-# K3s Server
+# K3s
 #============================================================================================================
+# Single-node k3s server: binary installation + server configuration (Calico CNI, Traefik HTTP-only).
+# See About.md for the architecture.
 
 # Role execution control
-run_role_k3s_server: false
+run_role_k3s: false
 
-# User configuration override (will be merged with k3s_server_defaults)
-k3s_server: {}
+# User configuration override (will be merged with k3s_defaults)
+k3s: {}
 
 # Default configuration structure
-k3s_server_defaults:
+k3s_defaults:
+  # k3s version to install (must have a matching entry in k3s_checksums)
+  version: 1.35.1+k3s1
+
   # Extra TLS Subject Alternative Names for the API server certificate
   # Example: ["my-k3s.example.com", "192.168.1.100"]
   tls_san: []
@@ -37,3 +42,8 @@ k3s_server_defaults:
   # Extra arguments passed to k3s server
   # Example: ["--node-label=environment=production"]
   extra_args: []
+
+# Supported k3s versions and checksums (sha256 of the k3s binary)
+k3s_checksums:
+  "1.32.3+k3s1": "b19216803650b567bf980888dec39035edaf664339c55bc4462f7a003edbef83"
+  "1.35.1+k3s1": "e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf"

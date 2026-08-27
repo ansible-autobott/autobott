@@ -9,7 +9,7 @@ Wants=network-online.target
 Type=notify
 ExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
-ExecStart=/usr/local/bin/k3s server{% for arg in k3s_server_config.extra_args %} {{ arg }}{% endfor %}
+ExecStart=/usr/local/bin/k3s server{% for arg in k3s_config.extra_args %} {{ arg }}{% endfor %}
 
 ExecStartPost=/bin/chgrp k3s-admin /etc/rancher/k3s/k3s.yaml
 

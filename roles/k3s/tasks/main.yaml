@@ -1,20 +1,87 @@
 ---
 #============================================================================================================
-# K3s Server Role
+# K3s Role
 #============================================================================================================
-# This role configures and starts k3s in server mode.
-# Depends on k3s/base for binary installation.
+# Installs the k3s binary and configures/starts k3s in server mode with Calico CNI
+# and Traefik (HTTP-only). See About.md for the architecture.
 
-- name: Main K3s server configuration
+- name: Main k3s installation
   tags:
-    - k3s_server
     - k3s
     - untagged
-  when: run_role_k3s_server | bool
+  when: run_role_k3s | bool
   block:
-    - name: Set merged k3s_server configuration
+    - name: Set merged k3s configuration
       ansible.builtin.set_fact:
-        k3s_server_config: "{{ k3s_server_defaults | combine(k3s_server, recursive=true) }}"
+        k3s_config: "{{ k3s_defaults | combine(k3s, recursive=true) }}"
+
+    #====================================================
+    # Directories
+    #====================================================
+
+    - name: Create k3s directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      loop:
+        - /etc/rancher/k3s
+        - /var/lib/rancher/k3s
+        - /opt/k3s/install
+
+    #====================================================
+    # Binary Download
+    #====================================================
+
+    - name: Download k3s binary
+      ansible.builtin.get_url:
+        url: "https://github.com/k3s-io/k3s/releases/download/v{{ k3s_config.version | replace('+', '%2B') }}/k3s"
+        dest: "/opt/k3s/install/k3s-{{ k3s_config.version }}"
+        owner: root
+        group: root
+        mode: "0755"
+        checksum: "sha256:{{ k3s_checksums[k3s_config.version] }}"
+
+    - name: Link k3s to /usr/local/bin
+      ansible.builtin.file:
+        src: "/opt/k3s/install/k3s-{{ k3s_config.version }}"
+        dest: /usr/local/bin/k3s
+        state: link
+
+    #====================================================
+    # Cleanup old versions
+    #====================================================
+
+    - name: Find old k3s binaries
+      ansible.builtin.find:
+        paths: /opt/k3s/install
+        patterns: "k3s-*"
+        use_regex: false
+      register: k3s_old_binaries
+
+    - name: Delete outdated k3s binaries
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ k3s_old_binaries.files }}"
+      when: "'k3s-' ~ k3s_config.version not in item.path"
+
+    #====================================================
+    # Symlinks (kubectl, crictl, ctr)
+    #====================================================
+
+    - name: Create k3s tool symlinks
+      ansible.builtin.file:
+        src: /usr/local/bin/k3s
+        dest: "/usr/local/bin/{{ item }}"
+        state: link
+        force: true
+      loop:
+        - kubectl
+        - crictl
+        - ctr
 
     #====================================================
     # Access control
@@ -30,7 +97,7 @@
         name: "{{ item }}"
         groups: k3s-admin
         append: true
-      loop: "{{ k3s_server_config.admins }}"
+      loop: "{{ k3s_config.admins }}"
 
     #====================================================
     # Config

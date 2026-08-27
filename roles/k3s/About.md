@@ -23,7 +23,7 @@ Internet → Caddy (TLS on host) → 127.0.0.1:80 → Traefik (HTTP in cluster) 
 - Traefik's HTTPS (websecure) listener is disabled — Caddy handles TLS.
 - Traefik's HTTP port is bound to `127.0.0.1` via hostPort, so it's only reachable from the host.
 - A local shell user can reach Traefik on localhost, but Traefik only routes traffic based on Ingress rules (hostname/path), limiting exposure.
-- Configuration: `roles/k3s/server/files/traefik-config.yaml` (HelmChartConfig)
+- Configuration: `roles/k3s/files/traefik-config.yaml` (HelmChartConfig)
 
 ### servicelb (Klipper) disabled
 
@@ -47,7 +47,7 @@ Internet → Caddy (TLS on host) → 127.0.0.1:80 → Traefik (HTTP in cluster) 
 ### kubeconfig access control
 
 - `write-kubeconfig-mode: 0640` — only root and the `k3s-admin` group can read the kubeconfig.
-- A `k3s-admin` group is created and users listed in `k3s_server.admins` are added to it.
+- A `k3s-admin` group is created and users listed in `k3s.admins` are added to it.
 - `ExecStartPost` in the systemd service sets the group ownership on every k3s (re)start.
 - `KUBECONFIG` env var is set globally via `/etc/profile.d/k3s.sh` — harmless for users not in the group.
 

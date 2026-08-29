@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # AutoBott is an Ansible project — there is nothing to build. This guard
+      # keeps the published tag in lock-step with autobot_version, the same
+      # invariant `make tag` enforces locally (in case a tag is pushed by hand).
+      - name: Verify tag matches autobot_version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          file_version="$(grep -E '^autobot_version:' roles/base/enroll/defaults/main.yaml | awk '{print $2}')"
+          if [ "$tag" != "$file_version" ]; then
+            echo "::error::Tag $tag does not match autobot_version ($file_version) in roles/base/enroll/defaults/main.yaml"
+            exit 1
+          fi
+          echo "Tag $tag matches autobot_version $file_version"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

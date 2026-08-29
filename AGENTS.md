@@ -57,9 +57,11 @@ make vagrant-destroy
 make encrypt INV=../inventory/main.yaml KEY=mariadb_root_pass VALUE=s3cr3t
 make decrypt INV=../inventory/main.yaml
 
-# Release (requires GITHUB_TOKEN, clean git, on main branch)
-# First bump autobot_version in roles/base/enroll/defaults/main.yaml
-make release version=v0.2.0
+# Release (clean git, on main branch)
+# First bump autobot_version in roles/base/enroll/defaults/main.yaml, then tag.
+# Pushing the tag triggers .github/workflows/release.yml, which publishes the
+# GitHub release (with auto-generated notes).
+make tag version=v0.2.0
 ```
 
 ## Architecture

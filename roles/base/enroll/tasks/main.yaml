@@ -6,6 +6,7 @@
     - enroll
   when:
     - run_role_autobott_enroll
+    - not (run_autobott_write_version | bool)
   become: true
   block:
     - name: Set merged autobott_enroll facts

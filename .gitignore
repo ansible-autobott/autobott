@@ -5,10 +5,6 @@ node_backups/*
 node_tests/*
 *.retry
 
-# Ignore Ansible vault password file
-vault_password
-vault_pass.txt
-.vault_pass.txt
 venv
 
 # ignore borg keys

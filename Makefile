@@ -8,14 +8,66 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 # ======================================================================================
 
 ##@ Prepare
-prepare: ## Prepare the ansible environment for local executions
+SOPS_VERSION ?= v3.13.3
+
+check-tools: ## Verify sops & age are installed; offer to install them if missing
+	@missing=""; \
+	for tool in sops age; do \
+		command -v $$tool >/dev/null 2>&1 || missing="$$missing $$tool"; \
+	done; \
+	if [ -z "$$missing" ]; then \
+		echo "Required tools found: sops, age."; \
+		exit 0; \
+	fi; \
+	echo "Missing required tool(s):$$missing"; \
+	if [ ! -t 0 ]; then \
+		echo "Non-interactive shell; cannot prompt. Install manually:" >&2; \
+		echo "  age  -> sudo apt install age" >&2; \
+		echo "  sops -> https://github.com/getsops/sops/releases ($(SOPS_VERSION) .deb)" >&2; \
+		exit 1; \
+	fi; \
+	read -r -p "Install the missing tool(s) now? [y/N] " ans; \
+	case "$$ans" in \
+		[yY]|[yY][eE][sS]) ;; \
+		*) echo "Aborted. Install the tool(s) and re-run 'make prepare'."; exit 1 ;; \
+	esac; \
+	for tool in $$missing; do \
+		case "$$tool" in \
+			age) \
+				echo ">> Installing age via apt ..."; \
+				sudo apt-get update && sudo apt-get install -y age || exit 1; \
+				;; \
+			sops) \
+				ver="$(SOPS_VERSION)"; arch=$$(dpkg --print-architecture); \
+				deb="sops_$${ver#v}_$${arch}.deb"; \
+				url="https://github.com/getsops/sops/releases/download/$${ver}/$${deb}"; \
+				echo ">> Installing sops $${ver} ($${arch}) from GitHub releases ..."; \
+				tmp=$$(mktemp -d); \
+				if command -v curl >/dev/null 2>&1; then \
+					curl -fLo "$$tmp/$$deb" "$$url"; \
+				elif command -v wget >/dev/null 2>&1; then \
+					wget -qO "$$tmp/$$deb" "$$url"; \
+				else \
+					echo "Error: need curl or wget to download sops." >&2; rm -rf "$$tmp"; exit 1; \
+				fi && sudo apt-get install -y "$$tmp/$$deb" || { rm -rf "$$tmp"; echo "Error: sops install failed." >&2; exit 1; }; \
+				rm -rf "$$tmp"; \
+				;; \
+		esac; \
+	done; \
+	for tool in sops age; do \
+		command -v $$tool >/dev/null 2>&1 || { echo "Error: $$tool still not found after install." >&2; exit 1; }; \
+	done; \
+	echo "All required tools installed."
+
+prepare: check-tools ## Prepare the ansible environment for local executions
 	@python3 -m venv ./venv
 	@source venv/bin/activate && pip install -r ./requirements.txt
+	@source venv/bin/activate && ansible-galaxy collection install community.sops
 	@echo
 	@echo "Don't forget to activate the Venv with 'source venv/bin/activate'"
 
 
-INV ?= ../inventory/main.yaml
+INV ?= inventory/vagrant.yaml
 VER ?= 12
 
 
@@ -35,17 +87,12 @@ enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS 
 		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
 	fi && \
-	INV_DIR=$$(dirname "$(INV)") && \
-	INV_DIR=$$(dirname "$(INV)") && \
-	VAULT_PASS_FILE="$$INV_DIR/vault_pass.txt" && \
 	HOST_VAL="-l $(HOST)" && \
-	VAULT_OPT=$$( [ -f "$$VAULT_PASS_FILE" ] && echo "--vault-password-file=$$VAULT_PASS_FILE" || echo "" ) && \
-	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
 	EXTRA_VARS="ansible_user=$$ANSIBLE_USER" && \
 	if [ -n "$$ANSIBLE_PASS" ]; then \
 		EXTRA_VARS="$$EXTRA_VARS ansible_ssh_pass=$$ANSIBLE_PASS ansible_become_pass=$$ANSIBLE_PASS"; \
 	fi && \
-	ansible-playbook $$VAULT_OPT -i $(INV) -u $(ANSIBLE_USER) -t enroll $$HOST_VAL \
+	ansible-playbook -i $(INV) -u $(ANSIBLE_USER) -t enroll $$HOST_VAL \
 	  --extra-vars "$$EXTRA_VARS" \
 	  --become autobott.yaml
 
@@ -54,68 +101,85 @@ run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
 	fi && \
-	INV_DIR=$$(dirname "$(INV)") && \
-	VAULT_PASS_FILE="$$INV_DIR/vault_pass.txt" && \
 	echo "Running with inventory: $(INV)" && \
  	. ./venv/bin/activate && \
 	TAG_VAL=$$( [ -n "$$TAG" ] && echo "-t $$TAG" || echo "" ) && 	\
 	HOST_VAL=$$( [ -n "$(HOST)" ] && echo "-l $(HOST)" || echo "" ) && \
-	VAULT_OPT=$$( [ -f "$$VAULT_PASS_FILE" ] && echo "--vault-password-file=$$VAULT_PASS_FILE" || echo "" ) && \
 	echo "Using tag: $$TAG_VAL" && \
 	echo "Using host: $$HOST_VAL" && \
-	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
-	ansible-playbook $$VAULT_OPT -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
+	ansible-playbook -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
 
 run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 	@if [ -z "$(INV)" ]; then \
 		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
 	fi && \
-	INV_DIR=$$(dirname "$(INV)") && \
-	VAULT_PASS_FILE="$$INV_DIR/vault_pass.txt" && \
 	echo "Running with inventory: $(INV)" && \
  	. ./venv/bin/activate && \
 	TAG_VAL=$$( [ -n "$$TAG" ] && echo "-t $$TAG" || echo "" ) && 	\
 	HOST_VAL=$$( [ -n "$(HOST)" ] && echo "-l $(HOST)" || echo "" ) && \
-	VAULT_OPT=$$( [ -f "$$VAULT_PASS_FILE" ] && echo "--vault-password-file=$$VAULT_PASS_FILE" || echo "" ) && \
 	echo "Using tag: $$TAG_VAL" && \
 	echo "Using host: $$HOST_VAL" && \
-	[ -n "$$VAULT_OPT" ] && echo "Using vault password file at $$VAULT_PASS_FILE" || true && \
-	ansible-playbook -vvv $$VAULT_OPT -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
+	ansible-playbook -vvv -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
 
 
 ##@ Secrets
-encrypt: ## encrypt secret for the specific inventory, env Vars: INV=inventory_path, KEY=variableName, VALUE=secret
-	@if [ -z "$(KEY)" ]; then \
-		echo "Error: Missing required parameter 'KEY'" >&2; \
-		exit 1; \
-	fi && \
-	if [ -z "$(VALUE)" ]; then \
-		echo "Error: Missing required parameter 'VALUE'" >&2; \
-		exit 1; \
-	fi && \
-	if [ -z "$(INV)" ]; then \
-		echo "Error: Missing required parameter 'INV'" >&2; \
-		exit 1; \
-	fi && \
-	if [ ! -e "$(INV)" ]; then \
-		echo "Error: Inventory path '$(INV)' does not exist." >&2; \
-		exit 1; \
-	fi && \
-	. ./venv/bin/activate && \
-	SECRET='$(VALUE)' ./utils/vault.sh -a encrypt -i "$(INV)" -k "$(KEY)"
 
-decrypt: ## decrypt vault string; requires INV=inventory path, SECRET='$ANSIBLE_VAULT;1.1;AES256 ...'
-	@if [ -z "$(INV)" ]; then \
-		echo "Error: Missing required parameter 'INV'" >&2; \
+# The age private key sops uses lives in the inventory's own directory, as
+# <inventory-dir>/sops_key. INV may be the inventory DIRECTORY (key goes inside
+# it) or an inventory FILE (key goes in the file's directory). Or set
+# SOPS_AGE_KEY_FILE=<path> to point directly at a key file.
+sops_key_dir := $(if $(wildcard $(INV)/.),$(abspath $(INV))/,$(dir $(abspath $(INV))))
+export SOPS_AGE_KEY_FILE ?= $(sops_key_dir)sops_key
+
+age-key: check-tools ## create the age key for an EXTERNAL inventory (<inv-dir>/sops_key); requires INV (not the in-repo sample), never overwrites
+	@if [ ! -e "$(INV)" ]; then \
+		echo "Error: inventory '$(INV)' not found — pass INV=<inventory_path>." >&2; exit 1; \
+	fi
+	@if [ -n "$(filter $(ROOT_DIR)/%,$(abspath $(INV)))" ]; then \
+		echo "Error: refusing to create a key for an in-repo inventory." >&2; \
+		echo "       age-key is for external inventories: INV=<path outside this repo>." >&2; \
+		echo "       The bundled inventory/sops_key is committed as an example." >&2; \
 		exit 1; \
-	fi && \
-	if [ ! -e "$(INV)" ]; then \
-		echo "Error: Inventory path '$(INV)' does not exist." >&2; \
-		exit 1; \
-	fi && \
-	. ./venv/bin/activate && \
-	./utils/vault.sh -a decrypt -i "$(INV)"
+	fi
+	@if [ -f "$(SOPS_AGE_KEY_FILE)" ]; then \
+		echo "Error: key already exists at $(SOPS_AGE_KEY_FILE) — refusing to overwrite." >&2; exit 1; \
+	fi
+	@echo "Creating age key at $(SOPS_AGE_KEY_FILE) ..."
+	@mkdir -p "$(dir $(SOPS_AGE_KEY_FILE))"
+	@age-keygen -o "$(SOPS_AGE_KEY_FILE)"
+	@chmod 600 "$(SOPS_AGE_KEY_FILE)"
+	@echo "Done. Add this public key to your .sops.yaml recipients:"
+	@grep 'public key:' "$(SOPS_AGE_KEY_FILE)"
+
+seal-secrets: ## first-time encrypt a plaintext secrets.sops.yaml in place (migration); vars: INV=inventory_path, HOST=hostname
+	@if [ ! -e "$(INV)" ]; then echo "Error: inventory '$(INV)' not found (pass INV=<inventory_path>)" >&2; exit 1; fi
+	@if [ -z "$(HOST)" ]; then echo "Error: Missing required parameter 'HOST'" >&2; exit 1; fi
+	cd $(sops_key_dir) && sops -e -i host_vars/$(HOST)/secrets.sops.yaml
+
+edit-secrets: ## edit a host's sops secrets in your editor; vars: INV=inventory_path, HOST=hostname
+	@if [ ! -e "$(INV)" ]; then echo "Error: inventory '$(INV)' not found (pass INV=<inventory_path>)" >&2; exit 1; fi
+	@if [ -z "$(HOST)" ]; then echo "Error: Missing required parameter 'HOST'" >&2; exit 1; fi
+	@if [ ! -f "$(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" ]; then echo "Error: sops file not found: $(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" >&2; exit 1; fi
+	@if ! sops filestatus "$(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" 2>/dev/null | grep -q '"encrypted":true'; then echo "Error: $(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml is not sops-encrypted — seal it first: make seal-secrets INV=$(INV) HOST=$(HOST)" >&2; exit 1; fi
+	cd $(sops_key_dir) && sops host_vars/$(HOST)/secrets.sops.yaml
+
+edit-secrets-kate: ## edit a host's sops secrets in Kate (blocking GUI editor); vars: INV=inventory_path, HOST=hostname
+	@if [ ! -e "$(INV)" ]; then echo "Error: inventory '$(INV)' not found (pass INV=<inventory_path>)" >&2; exit 1; fi
+	@if [ -z "$(HOST)" ]; then echo "Error: Missing required parameter 'HOST'" >&2; exit 1; fi
+	@if [ ! -f "$(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" ]; then echo "Error: sops file not found: $(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" >&2; exit 1; fi
+	@if ! sops filestatus "$(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml" 2>/dev/null | grep -q '"encrypted":true'; then echo "Error: $(sops_key_dir)host_vars/$(HOST)/secrets.sops.yaml is not sops-encrypted — seal it first: make seal-secrets INV=$(INV) HOST=$(HOST)" >&2; exit 1; fi
+	cd $(sops_key_dir) && EDITOR='kate -b' sops host_vars/$(HOST)/secrets.sops.yaml
+
+view-secrets: ## decrypt & print a host's sops secrets; vars: INV=inventory_path, HOST=hostname
+	@if [ ! -e "$(INV)" ]; then echo "Error: inventory '$(INV)' not found (pass INV=<inventory_path>)" >&2; exit 1; fi
+	@if [ -z "$(HOST)" ]; then echo "Error: Missing required parameter 'HOST'" >&2; exit 1; fi
+	cd $(sops_key_dir) && sops -d host_vars/$(HOST)/secrets.sops.yaml
+
+rekey: ## re-encrypt all sops secrets after editing .sops.yaml recipients; vars: INV=inventory_path
+	@if [ ! -e "$(INV)" ]; then echo "Error: inventory '$(INV)' not found (pass INV=<inventory_path>)" >&2; exit 1; fi
+	cd $(sops_key_dir) && find host_vars -name 'secrets.sops.yaml' -exec sops updatekeys -y {} \;
+
 
 ##@ Vagrant
 

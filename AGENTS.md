@@ -110,7 +110,7 @@ Key rules:
 
 ### Inventory Structure
 
-Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by category (base.yaml, webservices.yaml, secrets.yaml, etc.). Vault password file: `<INV_DIR>/vault_pass.txt` (never commit this).
+Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by category (base.yaml, webservices.yaml, etc.). Secrets are SOPS-encrypted `secrets.sops.yaml` files, decrypted at runtime by the `community.sops` vars plugin; the age private key lives at `<inventory-dir>/sops_key` (never commit a real key).
 
 ## Adding a New Role
 
@@ -129,6 +129,6 @@ Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by
 | `roles/base/enroll/defaults/main.yaml` | Contains `autobot_version` — bump before release |
 | `Makefile` | All commands — read before running anything |
 | `inventory/vagrant.yaml` | Vagrant test inventory |
-| `utils/vault.sh` | Vault encrypt/decrypt helper |
+| `.sops.yaml` | SOPS creation rules — which age keys encrypt which files; edit secrets via `make edit-secrets` |
 | `CLAUDE.md` | Symlink to `AGENTS.md` — Claude Code reads the same guide |
 | `../docs/content/docs/` | Full documentation sources (see [Documentation](#documentation)) |

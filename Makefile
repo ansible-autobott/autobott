@@ -275,15 +275,8 @@ vagrant-snapshot-restore: ## restore to snapshot of the vagrant state
 
 ##@ Release
 
-check_env: # check for needed envs
-ifndef GITHUB_TOKEN
-	$(error GITHUB_TOKEN is undefined, create one with repo permissions here: https://github.com/settings/tokens/new?scopes=repo,write%3Apackages )
-endif
-	@[ "${version}" ] || ( echo ">> version is not set, usage: make release version=\"v1.2.3\" "; exit 1 )
-	@which jq > /dev/null || ( echo ">> jq is not installed. Please install jq for JSON parsing."; exit 1 )
-
 .PHONY: check-git-clean
-check-git-clean: # check if git repo is clen
+check-git-clean: # check if git repo is clean
 	@git diff --quiet
 
 .PHONY: check-branch
@@ -295,7 +288,7 @@ check-branch:
 	fi
 
 check-autobott-version:
-	@[ "${version}" ] || ( echo ">> version is not set, usage: make check-autobot-version version=\"v1.2.3\" "; exit 1 )
+	@[ "${version}" ] || ( echo ">> version is not set, usage: make tag version=\"v1.2.3\" "; exit 1 )
 	@AUTOBOT_VERSION=$$(grep -E '^autobot_version:' ./roles/base/enroll/defaults/main.yaml | awk '{print $$2}') && \
 	if [ "$$AUTOBOT_VERSION" != "$(version)" ]; then \
 		echo "Error: autobot_version ($$AUTOBOT_VERSION) does not match the release version ($(version))"; \
@@ -304,32 +297,13 @@ check-autobott-version:
 		echo "autobot_version ($$AUTOBOT_VERSION) matches release version ($(version))"; \
 	fi
 
-release:  check_env check-autobott-version check-branch check-git-clean ## release a new version, call with version="v1.2.3", make sure to have valid GH token
-	@[ "${version}" ] || ( echo ">> version is not set, usage: make release version=\"v1.2.3\" "; exit 1 )
-	@echo "Preparing release notes for version $(version)..."
-	@PREV_TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo "") && \
-	if [ -z "$$PREV_TAG" ]; then \
-		echo "No previous tag found, using all commits"; \
-		COMMIT_RANGE=""; \
-	else \
-		COMMIT_RANGE="$$PREV_TAG..HEAD"; \
-	fi && \
-	RELEASE_BODY=$$(git log $$COMMIT_RANGE --pretty=format:'- %s (%an)' | sed 's/"/\\"/g') && \
-	echo "Release notes:\n$$RELEASE_BODY" && \
-	git tag -d $(version) >/dev/null 2>&1 || true && \
-	git tag -a $(version) -m "Release version: $(version)" && \
-	git push --delete origin $(version) >/dev/null 2>&1 || true && \
-	git push origin $(version) && \
-	RELEASE_ID=$$(curl -s -H "Authorization: token $(GITHUB_TOKEN)" \
-		-H "Accept: application/vnd.github.v3+json" \
-		-X POST \
-		-d '{"tag_name":"$(version)","name":"Release $(version)","body":"'"$$RELEASE_BODY"'","draft":false,"prerelease":false}' \
-		"https://api.github.com/repos/ansible-autobott/autobott/releases" | jq -r '.id') && \
-	if [ "$$RELEASE_ID" = "null" ] || [ -z "$$RELEASE_ID" ]; then \
-		echo "Error: Could not create release for tag $(version)"; \
-		exit 1; \
-	fi && \
-	echo "Release $(version) created successfully with ID $$RELEASE_ID"
+.PHONY: tag
+tag: check-branch check-git-clean check-autobott-version ## tag a release and push it; the release workflow then publishes it on GitHub. Usage: make tag version="v1.2.3"
+	@[ "${version}" ] || ( echo ">> version is not set, usage: make tag version=\"v1.2.3\" "; exit 1 )
+	@git tag -d $(version) || true
+	@git tag -a $(version) -m "Release version: $(version)"
+	@git push --delete origin $(version) || true
+	@git push origin $(version) || true
 
 ##@ Test
 lint: ## run ansible lint

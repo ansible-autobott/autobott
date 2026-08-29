@@ -1,0 +1,27 @@
+# SOPS configuration — https://github.com/getsops/sops
+#
+# Maps files to the age recipients allowed to decrypt them. `sops <file>`,
+# `sops -e -i <file>` and `make edit-secrets` consult these rules automatically:
+# sops walks up from the target file's directory to find the nearest .sops.yaml.
+#
+# Adding an operator:
+#   1. They run `make age-key INV=<inventory>` and share their PUBLIC key (age1...).
+#   2. Add it to the `age:` recipients below — a YAML list (one `- age1...` per
+#      line) or a comma-separated string; each recipient can decrypt.
+#   3. Re-encrypt existing files so the new key can read them:
+#        make rekey INV=<inventory>
+#      (or: sops updatekeys inventory/host_vars/<host>/secrets.sops.yaml)
+#
+# The age private key lives next to the inventory it unlocks, at
+# <inventory-dir>/sops_key. In THIS repo that is the bundled sample key
+# inventory/sops_key, committed on purpose as a working example (it only guards
+# throwaway sample secrets) — a real inventory keeps that key gitignored.
+# Encrypted *.sops.yaml files are always safe to commit: only the values are
+# ciphertext; keys/structure stay in plaintext.
+
+creation_rules:
+  - path_regex: inventory/host_vars/.*/secrets\.sops\.yaml$
+    # age recipients (public keys) — a YAML list (one `- age1...` per line) or a
+    # comma-separated string; each recipient can decrypt.
+    age: >-
+      age1jv59tpdyjs99kmrykr9jeqwvsxfdu999rxdk98m2emsjue4l2e8spms3vh

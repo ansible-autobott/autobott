@@ -11,4 +11,4 @@ linux_candy: {}
 # Default linux_candy configuration structure
 linux_candy_defaults:
   # get url from: https://github.com/andresbott/linux-candy/releases
-  version: 0.1.3
+  version: 0.3.0

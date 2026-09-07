@@ -10,6 +10,12 @@ ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 ##@ Prepare
 SOPS_VERSION ?= v3.13.3
 
+# Interpreter used to build ./venv, defaulting to the system python3 (not pinned).
+# 'make prepare' recreates the venv whenever it was built for a different Python
+# version than the current one (e.g. after an OS upgrade bumps python3). Override
+# only for a one-off, e.g. 'make prepare PYTHON=python3.12'.
+PYTHON ?= python3
+
 check-tools: ## Verify sops & age are installed; offer to install them if missing
 	@missing=""; \
 	for tool in sops age; do \
@@ -59,8 +65,24 @@ check-tools: ## Verify sops & age are installed; offer to install them if missin
 	done; \
 	echo "All required tools installed."
 
-prepare: check-tools ## Prepare the ansible environment for local executions
-	@python3 -m venv ./venv
+prepare: check-tools ## Prepare the ansible environment (recreates ./venv if it's incompatible with the current Python)
+	@command -v $(PYTHON) >/dev/null 2>&1 || { \
+		echo "Error: '$(PYTHON)' not found; install it or pass PYTHON=..., e.g. 'make prepare PYTHON=python3'." >&2; exit 1; }
+	@cur=$$($(PYTHON) -c 'import sys; print("%d.%d" % sys.version_info[:2])'); \
+	if [ -f ./venv/pyvenv.cfg ]; then \
+		venvver=$$(sed -n 's/^version *= *\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' ./venv/pyvenv.cfg); \
+		if [ "$$venvver" != "$$cur" ]; then \
+			echo ">> ./venv was built for Python $${venvver:-unknown}, current $(PYTHON) is $$cur; recreating"; \
+			rm -rf ./venv; \
+		fi; \
+	elif [ -d ./venv ]; then \
+		echo ">> ./venv is incomplete (no pyvenv.cfg); recreating"; \
+		rm -rf ./venv; \
+	fi; \
+	if [ ! -d ./venv ]; then \
+		echo ">> creating ./venv with $(PYTHON) ($$cur)"; \
+		$(PYTHON) -m venv ./venv; \
+	fi
 	@source venv/bin/activate && pip install -r ./requirements.txt
 	@source venv/bin/activate && ansible-galaxy collection install community.sops
 	@echo

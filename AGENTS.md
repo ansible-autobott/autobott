@@ -64,6 +64,13 @@ make decrypt INV=../inventory/main.yaml
 make tag version=v0.2.0
 ```
 
+## Before Opening a PR
+
+Review whether the change should ship as a release. If it should, bump `autobot_version` in
+`roles/base/enroll/defaults/main.yaml` **before** opening the PR, so the version bump is part
+of the reviewed diff. Tagging later (`make tag`) triggers `.github/workflows/release.yml`, so
+the version file must already reflect the intended release by the time the PR is merged.
+
 ## Architecture
 
 ### Playbook Structure

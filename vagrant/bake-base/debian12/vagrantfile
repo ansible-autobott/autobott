@@ -18,8 +18,9 @@ Vagrant.configure("2") do |config|
         # set the name of the VM
         v.name = "autobott-debian-12-base"
 
-        # use a linked clone of the imported machine
-        v.linked_clone = true
+        # full clone (not linked) so the final 'vagrant destroy' removes the VM
+        # entirely, leaving no imported base image behind in VirtualBox
+        v.linked_clone = false
     end
 
     config.ssh.insert_key = false

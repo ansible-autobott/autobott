@@ -16,7 +16,6 @@ kde_packages:
   - kate
   - okular
   - okular-extra-backends
-  - smb4k
   - yakuake
   - kmix
   - flameshot

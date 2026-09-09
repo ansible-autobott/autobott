@@ -42,61 +42,32 @@
       failed_when: false
 
     - name: "Manage additional APT repositories"
+      when: linux_apt_data.sources_d | default([]) | length > 0
       block:
-        - name: "Import repository signing keys"
-          ansible.builtin.get_url:
-            url: "{{ item.key_url }}"
-            dest: "/usr/share/keyrings/{{ item.name }}.gpg"
-            mode: "0644"
-          loop: "{{ linux_apt_data.sources_d | default([]) }}"
-          loop_control:
-            label: "{{ item.name }}"
-          when:
-            - item.enabled | default(true) | bool
-            - item.key_url is defined
-            - item.key_url | length > 0
-          register: key_import_result
-          until: key_import_result is success
-          retries: 3
-          delay: 5
-
-        - name: "Add enabled repositories"
-          ansible.builtin.apt_repository:
-            repo: "{{ item.repo }}"
+        - name: "Ensure python3-debian is present (required by deb822_repository)"
+          ansible.builtin.apt:
+            name: python3-debian
             state: present
-            filename: "{{ item.name }}"
             update_cache: true
+
+        - name: "Configure additional repositories"
+          ansible.builtin.deb822_repository:
+            name: "{{ item.name }}"
+            types: "{{ item.types | default('deb') }}"
+            uris: "{{ item.uris }}"
+            suites: "{{ item.suites | default(ansible_distribution_release) }}"
+            components: "{{ item.components | default('main') }}"
+            architectures: "{{ item.architectures | default(omit) }}"
+            signed_by: "{{ item.signed_by | default(omit) }}"
+            state: "{{ 'present' if (item.enabled | default(true) | bool) else 'absent' }}"
             mode: "0644"
           loop: "{{ linux_apt_data.sources_d | default([]) }}"
           loop_control:
             label: "{{ item.name }}"
-          when: item.enabled | default(true) | bool
           register: repo_add_result
           until: repo_add_result is success
           retries: 3
           delay: 5
-
-        - name: "Remove disabled repositories"
-          ansible.builtin.apt_repository:
-            repo: "{{ item.repo }}"
-            state: absent
-            filename: "{{ item.name }}"
-            update_cache: true
-          loop: "{{ linux_apt_data.sources_d | default([]) }}"
-          loop_control:
-            label: "{{ item.name }}"
-          when: not (item.enabled | default(true) | bool)
-
-        - name: "Remove disabled repository keys"
-          ansible.builtin.file:
-            path: "/usr/share/keyrings/{{ item.name }}.gpg"
-            state: absent
-          loop: "{{ linux_apt_data.sources_d | default([]) }}"
-          loop_control:
-            label: "{{ item.name }}"
-          when:
-            - not (item.enabled | default(true) | bool)
-            - item.key_url is defined
 
     - name: "Clean up backup sources"
       block:

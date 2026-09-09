@@ -1,0 +1,99 @@
+---
+# ============================================================================
+# Optional: install and pin selected packages from <release>-backports, each
+# group written to its own preferences.d pin file.
+#   pin_backported_pkg.kernel   -> amd64 kernel (+ AMD GPU firmware if detected)
+#   pin_backported_pkg.firmware -> general firmware (firmware-linux + non-free)
+# ============================================================================
+
+- name: "Set backports suite and empty package lists"
+  ansible.builtin.set_fact:
+    linux_apt_backport_suite: "{{ ansible_distribution_release }}-backports"
+    linux_apt_backport_kernel_pkgs: []
+    linux_apt_backport_firmware_pkgs: []
+
+- name: "Require backports to be enabled when pinning a backport package"
+  ansible.builtin.assert:
+    that: linux_apt_data.use_backports | default(false) | bool
+    fail_msg: "pin_backported_pkg requires use_backports: true (the <release>-backports suite must be present)."
+    quiet: true
+  when: (linux_apt_data.pin_backported_pkg.kernel | default(false) | bool) or (linux_apt_data.pin_backported_pkg.firmware | default(false) | bool)
+
+# --- Kernel group -----------------------------------------------------------
+- name: "Backport kernel — build list and pin"
+  when: linux_apt_data.pin_backported_pkg.kernel | default(false) | bool
+  block:
+    - name: "Detect AMD/ATI GPU (PCI vendor 0x1002)"
+      ansible.builtin.shell: |
+        if grep -qxs 0x1002 /sys/bus/pci/devices/*/vendor; then
+          echo present
+        else
+          echo absent
+        fi
+      register: linux_apt_amd_gpu
+      changed_when: false
+      check_mode: false
+      failed_when: false
+
+    - name: "Build kernel backport list"
+      ansible.builtin.set_fact:
+        linux_apt_backport_kernel_pkgs:
+          - linux-image-amd64
+          - linux-headers-amd64
+
+    - name: "Add AMD GPU firmware when an AMD GPU is present"
+      ansible.builtin.set_fact:
+        linux_apt_backport_kernel_pkgs: "{{ linux_apt_backport_kernel_pkgs + ['firmware-amd-graphics'] }}"
+      when: "'present' in linux_apt_amd_gpu.stdout"
+
+    - name: "Pin kernel backport packages to {{ linux_apt_backport_suite }}"
+      ansible.builtin.template:
+        src: pin-backported-pkg.pref.j2
+        dest: /etc/apt/preferences.d/pin-backported-pkg-kernel
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        pin_pkgs: "{{ linux_apt_backport_kernel_pkgs }}"
+        pin_suite: "{{ linux_apt_backport_suite }}"
+
+- name: "Backport kernel — remove pin when disabled"
+  ansible.builtin.file:
+    path: /etc/apt/preferences.d/pin-backported-pkg-kernel
+    state: absent
+  when: not (linux_apt_data.pin_backported_pkg.kernel | default(false) | bool)
+
+# --- Firmware group ---------------------------------------------------------
+- name: "Backport firmware — build list and pin"
+  when: linux_apt_data.pin_backported_pkg.firmware | default(false) | bool
+  block:
+    - name: "Build firmware backport list"
+      ansible.builtin.set_fact:
+        linux_apt_backport_firmware_pkgs:
+          - firmware-linux
+          - firmware-linux-nonfree
+
+    - name: "Pin firmware backport packages to {{ linux_apt_backport_suite }}"
+      ansible.builtin.template:
+        src: pin-backported-pkg.pref.j2
+        dest: /etc/apt/preferences.d/pin-backported-pkg-firmware
+        owner: root
+        group: root
+        mode: "0644"
+      vars:
+        pin_pkgs: "{{ linux_apt_backport_firmware_pkgs }}"
+        pin_suite: "{{ linux_apt_backport_suite }}"
+
+- name: "Backport firmware — remove pin when disabled"
+  ansible.builtin.file:
+    path: /etc/apt/preferences.d/pin-backported-pkg-firmware
+    state: absent
+  when: not (linux_apt_data.pin_backported_pkg.firmware | default(false) | bool)
+
+# --- Install ----------------------------------------------------------------
+- name: "Install pinned backport packages"
+  ansible.builtin.apt:
+    name: "{{ linux_apt_backport_kernel_pkgs + linux_apt_backport_firmware_pkgs }}"
+    state: present
+    update_cache: true
+  when: (linux_apt_backport_kernel_pkgs | length > 0) or (linux_apt_backport_firmware_pkgs | length > 0)

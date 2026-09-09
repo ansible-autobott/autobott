@@ -13,10 +13,27 @@
       ansible.builtin.set_fact:
         golang_config: "{{ golang_defaults | combine(golang, recursive=true) }}"
 
+    - name: Create Go tooling download directory
+      file:
+        path: /tmp/golang-dl
+        state: directory
+        owner: root
+        group: root
+        mode: 0700
+
     # ============================== Godeb ============================== #
     - name: Download godeb
+      get_url:
+        url: "{{ golang_config.godeb_url }}"
+        dest: /tmp/golang-dl/godeb-amd64.tar.gz
+        checksum: "sha256:{{ golang_config.godeb_sha256 }}"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Install godeb
       unarchive:
-        src: "{{ golang_config.godeb_url }}"
+        src: /tmp/golang-dl/godeb-amd64.tar.gz
         dest: "/usr/local/bin/"
         remote_src: yes
         owner:        root
@@ -47,16 +64,49 @@
         go_current_version.stdout is version( golang_config.go_version, '<')      
 
     # ============================== goreleaser ============================== #
+    - name: Download goreleaser
+      get_url:
+        url: "{{ golang_config.goreleaser_url }}"
+        dest: /tmp/golang-dl/goreleaser.deb
+        checksum: "sha256:{{ golang_config.goreleaser_sha256 }}"
+        owner: root
+        group: root
+        mode: 0644
+
     - name: Install goreleaser
       apt:
-        deb: "{{ golang_config.goreleaser_url }}"
+        deb: /tmp/golang-dl/goreleaser.deb
 
     # ============================== nfpm ============================== #
+    - name: Download nfpm
+      get_url:
+        url: "{{ golang_config.nfpm_url }}"
+        dest: /tmp/golang-dl/nfpm.deb
+        checksum: "sha256:{{ golang_config.nfpm_sha256 }}"
+        owner: root
+        group: root
+        mode: 0644
+
     - name: Install nfpm
       apt:
-        deb: "{{ golang_config.nfpm_url }}"
+        deb: /tmp/golang-dl/nfpm.deb
 
     # ============================== golangci-lint ============================== #
+    - name: Download golangci-lint
+      get_url:
+        url: "{{ golang_config.golangci_lint_url }}"
+        dest: /tmp/golang-dl/golangci-lint.deb
+        checksum: "sha256:{{ golang_config.golangci_lint_sha256 }}"
+        owner: root
+        group: root
+        mode: 0644
+
     - name: Install golangci-lint
       apt:
-        deb: "{{ golang_config.golangci_lint_url }}"
+        deb: /tmp/golang-dl/golangci-lint.deb
+
+    # ============================== Cleanup ============================== #
+    - name: Remove Go tooling download directory
+      file:
+        path: /tmp/golang-dl
+        state: absent

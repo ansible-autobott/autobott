@@ -39,14 +39,25 @@ linux_apt_defaults:
   preference: []
   automatic_updates: true # Enable unattended-upgrades for security updates
 
+  # Install and pin selected packages from <release>-backports (requires
+  # use_backports: true). Independent toggles:
+  #   kernel   - amd64 kernel; also pins firmware-amd-graphics when an AMD GPU
+  #              is auto-detected.
+  #   firmware - general firmware: firmware-linux + firmware-linux-nonfree.
+  pin_backported_pkg:
+    kernel: false
+    firmware: false
+
   # Additional repository configuration
-  # List of additional APT repositories to manage
+  # List of additional APT repositories to manage (deb822 / .sources format)
   # Example structure:
   # sources_d:
-  #   - name: "docker"                                            # Repository identifier
-  #     repo: "deb [arch=amd64] https://download.docker.com/linux/debian bullseye stable"  # Repository definition
-  #     key_url: "https://download.docker.com/linux/debian/gpg"  # Repository signing key URL
-  #     key_id: "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"      # Key fingerprint for verification
-  #     enabled: true                                            # Repository state
-  #     pin_priority: 500                                        # Optional pin priority
-  extra_sources_d: []
+  #   - name: "docker"                                             # -> /etc/apt/sources.list.d/<name>.sources
+  #     uris: "https://download.docker.com/linux/debian"           # Base repository URL(s)
+  #     suites: "{{ ansible_distribution_release }}"               # Optional; defaults to the running release
+  #     components: "stable"                                       # Optional; defaults to "main"
+  #     architectures: "amd64"                                     # Optional
+  #     signed_by: "https://download.docker.com/linux/debian/gpg"  # Key: URL, keyring path, or armored block
+  #     types: "deb"                                               # Optional; defaults to "deb"
+  #     enabled: true                                              # Repository state
+  sources_d: []

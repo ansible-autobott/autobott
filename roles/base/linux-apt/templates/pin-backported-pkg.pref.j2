@@ -1,0 +1,6 @@
+# {{ ansible_managed }}
+# Pin backport packages from {{ pin_suite }} so that once installed they track
+# newer backport versions automatically.
+Package: {{ pin_pkgs | join(' ') }}
+Pin: release n={{ pin_suite }}
+Pin-Priority: 500

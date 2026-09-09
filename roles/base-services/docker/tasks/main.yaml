@@ -30,6 +30,7 @@
         name:
           - curl
           - gnupg
+          - python3-debian
         state: present
         update_cache: true
 
@@ -51,12 +52,21 @@
       when: ansible_distribution in ['Debian', 'Ubuntu']
 
     - name: Add Docker repository
-      ansible.builtin.apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release
-          }} stable"
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: "https://download.docker.com/linux/{{ ansible_distribution | lower }}"
+        suites: "{{ ansible_distribution_release }}"
+        components: stable
+        architectures: amd64
+        signed_by: /etc/apt/keyrings/docker.asc
         state: present
-        filename: docker
-        update_cache: true
+        mode: "0644"
+
+    - name: Remove legacy Docker .list source (migrated to deb822 .sources)
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/docker.list
+        state: absent
 
     - name: Install Docker CE packages
       ansible.builtin.apt:

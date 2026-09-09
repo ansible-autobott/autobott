@@ -19,6 +19,10 @@
       ansible.builtin.include_tasks:
         file: sources.yaml
 
+    - name: "Configure pinned backport packages"
+      ansible.builtin.include_tasks:
+        file: pin-backported-pkg.yaml
+
     - name: "Perform system updates"
       ansible.builtin.include_tasks:
         file: upgrade.yaml

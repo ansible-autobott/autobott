@@ -12,5 +12,17 @@ linux_kde: {}
 linux_kde_defaults:
   add_kde_menu_actions: false
   add_kde_elementary_breeze: false
+  # KDE global menu (appmenu-gtk-module): install the GTK appmenu modules and set
+  # GTK_MODULES so GTK apps export their menu over D-Bus for the Plasma "Global
+  # Menu" widget. Debian 13 (trixie) only; a no-op on other releases. You still
+  # add the Global Menu widget to a panel yourself (it is a per-user Plasma
+  # setting). Note: on some older NVIDIA/X11 setups appmenu-gtk-module can crash
+  # GTK apps, hence this is opt-in.
+  add_kde_global_menu: false
+  # Apply the desktop styling for the primary desktop user: pull in the
+  # elementary-breeze theme (implies add_kde_elementary_breeze) and run the
+  # distro-appropriate kwriteconfig customizations (Plasma 5 -> kwriteconfig.sh,
+  # Plasma 6 -> kwriteconfig6.sh) as that user. Opt-in; re-runs converge.
+  add_kde_style: false
 
 linux_kde_elementary_breeze_url:  "https://github.com/andresbott/elementary-breeze/releases/download/v0.1.4/elementary-breeze_0.1.4_all.deb"

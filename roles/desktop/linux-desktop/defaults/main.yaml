@@ -29,4 +29,29 @@ linux_desktop_defaults:
   #      - var1: "value1"
   #    state: "" # possible values are  "present" (copy) | "templated" (copy+ template)| "link" (symlink) | "absent" (delete)
 
+  #============================================================================================================
+  # ImageMagick
+  #============================================================================================================
+  # Install ImageMagick and/or tune its security policy (/etc/ImageMagick-6/policy.xml).
+  imagemagick:
+    # install the ImageMagick package
+    install: false
+    policy:
+      # path to the policy file (ImageMagick 6 on Debian). The tweaks below are only
+      # applied when this file exists — whether installed here or by another role
+      # (e.g. linux-kde, mediawiki).
+      path: /etc/ImageMagick-6/policy.xml
+      # move the URL/HTTP/HTTPS policies to the 'coder' domain so their SSRF deny is
+      # actually effective (the 'delegate' form Debian sometimes ships is a no-op).
+      # Recommended: true.
+      block_remote: false
+      # resource-governor caps. "" leaves the value already in policy.xml untouched
+      # (i.e. the Debian default shown in parentheses). Raise for heavy image work.
+      memory: "" # e.g. "2GiB"  (Debian default: 256MiB)
+      map: ""    # e.g. "4GiB"  (Debian default: 512MiB)
+      width: ""  # e.g. "20KP"  (Debian default: 16KP)
+      height: "" # e.g. "20KP"  (Debian default: 16KP)
+      area: ""   # e.g. "256MP" (Debian default: 128MP)
+      disk: ""   # e.g. "5GiB"  (Debian default: 1GiB)
+
 

@@ -1,0 +1,21 @@
+# {{ ansible_managed }}
+# AutoBott linux-basic role — kernel limits (linux_basic.limits).
+# This file is managed by Ansible; manual changes are overwritten on the next run.
+#
+# Each block maps an explicit linux_basic.limits.* option to its kernel sysctl key.
+# An option set to "" leaves that key unmanaged.
+{% if linux_basic.limits.fs_inotify_max_user_instances | default("") | string | length %}
+fs.inotify.max_user_instances={{ linux_basic.limits.fs_inotify_max_user_instances }}
+{% endif %}
+{% if linux_basic.limits.fs_inotify_max_user_watches | default("") | string | length %}
+fs.inotify.max_user_watches={{ linux_basic.limits.fs_inotify_max_user_watches }}
+{% endif %}
+{% if linux_basic.limits.vm_overcommit_memory | default("") | string | length %}
+vm.overcommit_memory={{ linux_basic.limits.vm_overcommit_memory }}
+{% endif %}
+{% if linux_basic.limits.net_core_somaxconn | default("") | string | length %}
+net.core.somaxconn={{ linux_basic.limits.net_core_somaxconn }}
+{% endif %}
+{% if linux_basic.limits.vm_swappiness | default("") | string | length %}
+vm.swappiness={{ linux_basic.limits.vm_swappiness }}
+{% endif %}

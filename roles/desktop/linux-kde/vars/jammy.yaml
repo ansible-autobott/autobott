@@ -1,4 +1,8 @@
 
+# Script run by the add_kde_style block (as the desktop user) to apply the KDE
+# kwriteconfig customizations for this release.
+kde_kwriteconfig_script: kwriteconfig.sh
+
 kde_packages:
   # core
   - kde-plasma-desktop

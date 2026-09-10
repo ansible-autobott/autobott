@@ -84,3 +84,59 @@
         mode: 0750
         owner: "{{ linux_desktop_config.user }}"
         group: "{{ linux_desktop_user_main_group }}"
+
+    #============================================================================================================
+    # ImageMagick: install and/or tune /etc/ImageMagick-6/policy.xml
+    #============================================================================================================
+    - name: ImageMagick
+      vars:
+        im: "{{ linux_desktop_config.imagemagick }}"
+      block:
+        - name: Install ImageMagick
+          ansible.builtin.apt:
+            name: imagemagick
+            state: present
+            install_recommends: false
+          when: im.install | bool
+
+        - name: Tune the ImageMagick security policy
+          when: im.policy.path | default('') | length > 0
+          block:
+            - name: Check whether the ImageMagick policy file exists
+              ansible.builtin.stat:
+                path: "{{ im.policy.path }}"
+              register: im_policy_stat
+
+            - name: Enforce ImageMagick policy settings
+              when: im_policy_stat.stat.exists
+              block:
+                # Only rewrites the domain of an existing URL/HTTP/HTTPS policy line;
+                # does nothing if the line is absent, so other protections are preserved.
+                - name: Route remote coders (URL/HTTP/HTTPS) through the 'coder' domain
+                  ansible.builtin.replace:
+                    path: "{{ im.policy.path }}"
+                    regexp: '(<policy +)domain="[a-z]+"( +rights="none" +pattern="{{ item }}")'
+                    replace: '\g<1>domain="coder"\g<2>'
+                  loop:
+                    - URL
+                    - HTTPS
+                    - HTTP
+                  when: im.policy.block_remote | bool
+
+                # Only rewrites the value of an existing resource line; skipped when the
+                # option is left "" (distro default kept).
+                - name: Set ImageMagick resource limits
+                  ansible.builtin.replace:
+                    path: "{{ im.policy.path }}"
+                    regexp: '(<policy +domain="resource" +name="{{ item.name }}" +value=")[^"]*(")'
+                    replace: '\g<1>{{ item.value }}\g<2>'
+                  loop:
+                    - { name: memory, value: "{{ im.policy.memory }}" }
+                    - { name: map, value: "{{ im.policy.map }}" }
+                    - { name: width, value: "{{ im.policy.width }}" }
+                    - { name: height, value: "{{ im.policy.height }}" }
+                    - { name: area, value: "{{ im.policy.area }}" }
+                    - { name: disk, value: "{{ im.policy.disk }}" }
+                  loop_control:
+                    label: "{{ item.name }}={{ item.value }}"
+                  when: item.value | string | length > 0

@@ -181,6 +181,23 @@
         hwclock: "{{ linux_basic.time_rtc }}"
       when: linux_basic.time_rtc | default('') | length > 0
 
+    # Kernel limits
+    - name: Apply kernel limits
+      block:
+        - name: Deploy autobott kernel limits
+          ansible.builtin.template:
+            src: sysctl.conf.j2
+            dest: /etc/sysctl.d/60-autobott.conf
+            owner: root
+            group: root
+            mode: "0644"
+          register: sysctl_conf_changed
+
+        - name: Reload sysctl settings
+          ansible.builtin.command: sysctl --system
+          when: sysctl_conf_changed.changed
+          changed_when: true
+
     - name: Final package cleanup
       ansible.builtin.apt:
         clean: true

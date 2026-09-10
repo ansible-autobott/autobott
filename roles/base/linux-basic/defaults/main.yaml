@@ -132,6 +132,35 @@ linux_basic_defaults:
   users_extra: [] # same as users but allows to define users in two inventory places
 
   #============================================================================================================
+  # Kernel limits (sysctl)
+  #============================================================================================================
+  # Explicit kernel limits managed by this role. Each option below maps to a single
+  # kernel sysctl key; the values are written to /etc/sysctl.d/60-autobott.conf and
+  # applied at runtime with `sysctl --system`. Override per host/group as needed, or
+  # set an option to "" to leave that key unmanaged (kernel/distro default applies).
+  limits:
+    # fs.inotify.max_user_instances — inotify instances per user (kernel default: 128).
+    # Raised so file watchers / IDEs / sync tools don't hit
+    # "ENOSPC: System limit for number of file watchers reached".
+    fs_inotify_max_user_instances: "" # set to 1024 for developer OS
+
+    # fs.inotify.max_user_watches — inotify watches per user. Raise for large media /
+    # photo libraries (Jellyfin, Immich), Syncthing or IDEs watching many files.
+    fs_inotify_max_user_watches: "" # set to e.g. 524288 for media servers / desktops
+
+    # vm.overcommit_memory — set to 1 so Redis/Valkey background saves don't fail under
+    # memory pressure (Immich bundles redis). Host-wide, so it also covers containers.
+    vm_overcommit_memory: "" # set to 1 on hosts running redis/valkey (e.g. Immich)
+    
+    # net.core.somaxconn — TCP listen backlog for busy host services (e.g. the Caddy
+    # reverse proxy). Kernel default is 128 on older kernels, 4096 on newer.
+    net_core_somaxconn: "" # set to e.g. 1024 on busy web/proxy hosts
+
+    # vm.swappiness — how aggressively the kernel swaps. Lower keeps app pages in RAM,
+    # useful on ZFS hosts so it doesn't compete with the ARC.
+    vm_swappiness: "" # set to e.g. 10 on ZFS servers
+
+  #============================================================================================================
   # Mixed
   #============================================================================================================
   cron_email: "" # cron will send errors to this email address

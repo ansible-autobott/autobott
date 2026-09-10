@@ -88,8 +88,110 @@
     # Elementary breeze
     #============================================================================================================
     - name: Install theme
-      when: linux_kde_config.add_kde_elementary_breeze
+      when: linux_kde_config.add_kde_elementary_breeze or linux_kde_config.add_kde_style
       block:
         - name: Installing Elementary-breeze
           apt:
             deb: "{{ linux_kde_elementary_breeze_url }}"
+
+    #============================================================================================================
+    # KDE style customizations
+    #============================================================================================================
+    # Applies the per-user desktop styling for the primary desktop user. The
+    # elementary-breeze theme is installed by the "Install theme" block above
+    # (which also fires for add_kde_style); here we push the distro-appropriate
+    # kwriteconfig script (kde_kwriteconfig_script, from vars/<release>.yaml) and
+    # run it as that user so it writes to their ~/.config. Some settings only
+    # take effect after a re-login.
+    - name: KDE style customizations block
+      when: linux_kde_config.add_kde_style
+      vars:
+        kde_style_home: "/home/{{ linux_desktop_config.user }}"
+      block:
+        - name: Ensure the user local bin directory exists
+          ansible.builtin.file:
+            path: "{{ kde_style_home }}/.local/bin"
+            state: directory
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: "0755"
+
+        - name: Copy the kwriteconfig customization script
+          ansible.builtin.copy:
+            src: "{{ kde_kwriteconfig_script }}"
+            dest: "{{ kde_style_home }}/.local/bin/kde-style-customize.sh"
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: "0755"
+
+        - name: Apply the KDE customizations for the desktop user
+          ansible.builtin.command: "{{ kde_style_home }}/.local/bin/kde-style-customize.sh"
+          become: true
+          become_user: "{{ linux_desktop_config.user }}"
+          environment:
+            HOME: "{{ kde_style_home }}"
+          # kwriteconfig re-asserts the same values on every run; not a change.
+          changed_when: false
+
+    #============================================================================================================
+    # GTK global menu (appmenu-gtk-module) - Debian 13 (trixie) only
+    #============================================================================================================
+    # Installs the GTK appmenu modules and wires up GTK_MODULES so GTK apps export
+    # their menus over D-Bus for the Plasma "Global Menu" widget. The widget itself
+    # is a per-user Plasma panel setting and is not managed here. Skipped on any
+    # release other than trixie.
+    - name: KDE global menu (appmenu) block
+      when:
+        - linux_kde_config.add_kde_global_menu | bool
+        - ansible_distribution_release == "trixie"
+      vars:
+        kde_menu_home: "/home/{{ linux_desktop_config.user }}"
+      block:
+        - name: Install GTK appmenu modules
+          ansible.builtin.apt:
+            name:
+              - appmenu-gtk2-module
+              - appmenu-gtk3-module
+            state: present
+            update_cache: true
+
+        - name: Ensure per-user GTK config directories exist
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: 0755
+          loop:
+            - "{{ kde_menu_home }}/.config"
+            - "{{ kde_menu_home }}/.config/environment.d"
+            - "{{ kde_menu_home }}/.config/gtk-3.0"
+
+        - name: Export GTK_MODULES for the systemd user session (GTK2 + GTK3)
+          ansible.builtin.copy:
+            dest: "{{ kde_menu_home }}/.config/environment.d/appmenu-gtk-module.conf"
+            content: "GTK_MODULES=appmenu-gtk-module\n"
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: 0644
+
+        - name: Load the appmenu module for GTK3 apps
+          community.general.ini_file:
+            path: "{{ kde_menu_home }}/.config/gtk-3.0/settings.ini"
+            section: Settings
+            option: gtk-modules
+            value: appmenu-gtk-module
+            no_extra_spaces: true
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: 0644
+
+        - name: Load the appmenu module for GTK2 apps
+          ansible.builtin.lineinfile:
+            path: "{{ kde_menu_home }}/.gtkrc-2.0"
+            regexp: '^gtk-modules='
+            line: 'gtk-modules="appmenu-gtk-module"'
+            create: true
+            owner: "{{ linux_desktop_config.user }}"
+            group: "{{ linux_desktop_user_main_group }}"
+            mode: 0644

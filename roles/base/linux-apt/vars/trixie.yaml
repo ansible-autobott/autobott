@@ -1,5 +1,12 @@
 ---
 linux_apt_pre_upgrade_pkg_remove: []
 linux_apt_pre_upgrade_pkg_purge: []
-linux_apt_post_upgrade_pkg_purge: []
+# Debian 12 (bookworm) shipped Python 3.11 as the system interpreter; trixie
+# ships 3.13. Purge the superseded 3.11 stack so the old interpreter does not
+# linger after the release upgrade — plain autoremove can leave it behind when a
+# python3.11-* package (e.g. python3.11-venv) is marked manually-installed.
+# Purging -minimal cascades to python3.11 / python3.11-venv; the "Remove obsolete
+# packages" autoremove step then sweeps the orphaned libpython3.11-* libs.
+linux_apt_post_upgrade_pkg_purge:
+  - python3.11-minimal
 linux_apt_post_upgrade_cleanup_files: []

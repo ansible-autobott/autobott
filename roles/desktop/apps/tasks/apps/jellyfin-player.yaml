@@ -1,0 +1,38 @@
+---
+#============================================================================================================
+# jellyfin-player
+#============================================================================================================
+- name: Set merged jellyfin-player configuration
+  ansible.builtin.set_fact:
+    jellyfin_player_config: "{{ jellyfin_player_defaults | combine(apps_config['jellyfin-player'] | default({}, true), recursive=true) }}"
+
+- name: Get current jellyfin-player version
+  ansible.builtin.shell: "jellyfinmediaplayer --version | awk '{print $2}'"
+  register: jellyfin_player_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update jellyfin-player
+  when: jellyfin_player_current_version.stdout != jellyfin_player_config.version
+  block:
+    - name: Create jellyfin-player download dir
+      ansible.builtin.file:
+        path: "/tmp/jellyfin-player"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Download jellyfin-player
+      ansible.builtin.get_url:
+        url: "https://github.com/jellyfin/jellyfin-desktop/releases/download/v{{ jellyfin_player_config.version }}/jellyfin-media-player_{{ jellyfin_player_config.version }}-{{ ansible_distribution_release }}.deb"
+        dest: "/tmp/jellyfin-player"
+
+    - name: Install jellyfin-player .deb file
+      ansible.builtin.apt:
+        deb: "/tmp/jellyfin-player/jellyfin-media-player_{{ jellyfin_player_config.version }}-{{ ansible_distribution_release }}.deb"
+
+    - name: Remove jellyfin-player download dir
+      ansible.builtin.file:
+        path: "/tmp/jellyfin-player"
+        state: absent

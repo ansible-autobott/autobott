@@ -99,8 +99,8 @@ roles/
 
 > The **`desktop/apps`** role unifies all desktop and developer apps: select
 > which to install per host via the `apps_config` mapping. Per-app tasks live in
-> `roles/desktop/apps/tasks/apps/<app>.yaml`, defaults in
-> `roles/desktop/apps/defaults/main/<app>.yaml`.
+> `roles/desktop/apps/tasks/apps/<app>.yaml`; defaults for every app live in
+> `roles/desktop/apps/defaults/main.yaml`.
 
 ### Role Conventions
 

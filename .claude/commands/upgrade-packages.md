@@ -131,13 +131,13 @@ Then edit `roles/web-base/authelia/defaults/main.yaml`: set `version: 4.39.22` a
 These pin a version but do not verify a checksum. Bump the version (and, where noted, add the
 matching download-URL map entry). No hashing needed.
 
-- **desktop/apps/defaults/main/freecad.yaml** — `freecad_defaults.version` + `freecad_versions:` (version → URL
+- **desktop/apps/defaults/main.yaml** (freecad) — `freecad_defaults.version` + `freecad_versions:` (version → URL
   map). Latest: `gh api repos/FreeCAD/FreeCAD/releases/latest --jq .tag_name`. The AppImage
   asset name is not templatable (embeds a py/conda suffix), so find it:
   `gh release view <tag> -R FreeCAD/FreeCAD --json assets --jq '.assets[].browser_download_url'`
   and pick the Linux x86_64 `.AppImage`. Add a `"<version>": "<url>"` entry to
   `freecad_versions` and bump `version`.
-- **desktop/apps/defaults/main/prusa-slicer.yaml** — `prusa_slicer_defaults.version` + `prusa_slicer_versions:`
+- **desktop/apps/defaults/main.yaml** (prusa-slicer) — `prusa_slicer_defaults.version` + `prusa_slicer_versions:`
   map. Latest: `gh api repos/prusa3d/PrusaSlicer/releases/latest --jq .tag_name` → tag is
   `version_2.x.y`, stored version drops the `version_` prefix. Asset URL via
   `gh release view <tag> -R prusa3d/PrusaSlicer --json assets` → pick the
@@ -145,7 +145,7 @@ matching download-URL map entry). No hashing needed.
 - **base/smartd** (nanoSmart) — `smartd_defaults.nanoSmart.version` (stored **with** `v`).
   Latest: `gh api repos/ansible-autobott/nanoSmart/releases/latest --jq .tag_name`. URL is
   templated from the version — just bump the field.
-- **desktop/apps/defaults/main/kubectl.yaml** — `kubectl_defaults.kubelogin_version` (stored **with** `v`).
+- **desktop/apps/defaults/main.yaml** (kubectl) — `kubectl_defaults.kubelogin_version` (stored **with** `v`).
   Latest: `gh api repos/Azure/kubelogin/releases/latest --jq .tag_name`. Just bump the field.
   (kubectl itself is fetched at latest-stable at runtime — nothing to pin.)
 
@@ -162,7 +162,7 @@ matching download-URL map entry). No hashing needed.
   deliberate world/mod-compat decision and the `overviewer` block's `texture_url` tracks the
   MC minor. Report the latest release only:
   `curl -s https://launchermeta.mojang.com/mc/game/version_manifest_v2.json | jq -r .latest.release`.
-- **desktop/apps/defaults/main/pcsx2.yaml (report-only)** — `pcsx2_defaults.version` (`v1.6.0`, legacy stable).
+- **desktop/apps/defaults/main.yaml** (pcsx2, report-only) — `pcsx2_defaults.version` (`v1.6.0`, legacy stable).
   Upstream moved to date-tagged nightly `v2.x` builds with a different asset name; do not
   auto-bump. Report only.
 - **security/lynis**, **desktop/vbox-guest** — not pinned (lynis pulls `master.tar.gz`;

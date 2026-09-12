@@ -5,16 +5,16 @@ all:
   children:
     linux_servers:
       hosts:
-        ansible-autobott2-linux-debian-12:
-          ansible_python_interpreter: /usr/bin/python3
         ansible-autobott2-linux-debian-13:
           ansible_python_interpreter: /usr/bin/python3
+        # ansible-autobott2-linux-debian-14:   # TODO: placeholder, enable when Debian 14 (forky) is available
+        #   ansible_python_interpreter: /usr/bin/python3
 
     email_server:
       hosts:
-        ansible-autobott2-linux-debian-12:
         ansible-autobott2-linux-debian-13:
+        # ansible-autobott2-linux-debian-14:   # TODO: placeholder
     linux_desktop:
       hosts:
-        ansible-autobott2-linux-debian-12:
         ansible-autobott2-linux-debian-13:
+        # ansible-autobott2-linux-debian-14:   # TODO: placeholder

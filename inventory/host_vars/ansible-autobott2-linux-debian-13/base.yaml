@@ -36,7 +36,7 @@ linux_basic:
   packages:
     host_defined:
       - htop
-  hostname: "ansible-autobott2-linux-debian-12"
+  hostname: "ansible-autobott2-linux-debian-13"
   # adding extra host entries to be monitored by monit
   # (this is only needed for domains that are not resolvable by a dns)
   etc_host_entries:

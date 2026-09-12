@@ -47,7 +47,7 @@ make run-verbose INV=../inventory/main.yaml TAG=role_caddy
 # Enroll a new host
 make enroll INV=../inventory/main.yaml HOST=myhost ANSIBLE_USER=root
 
-# Vagrant testing (Debian 12/13 VMs)
+# Vagrant testing (Debian 13 VMs; Debian 14 placeholder)
 make vagrant-up
 make vagrant-run TAG=role_docker        # Test a specific role
 make vagrant-test                        # Run validation tests (test.yaml)

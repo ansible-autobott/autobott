@@ -36,6 +36,10 @@
       ansible.builtin.import_tasks: apps/jellyfin-player.yaml
       when: "'jellyfin-player' in apps_config"
       tags: [jellyfin-player]
+    - name: JDownloader
+      ansible.builtin.import_tasks: apps/jdownloader.yaml
+      when: "'jdownloader' in apps_config"
+      tags: [jdownloader]
     - name: PCSX2
       ansible.builtin.import_tasks: apps/pcsx2.yaml
       when: "'pcsx2' in apps_config"

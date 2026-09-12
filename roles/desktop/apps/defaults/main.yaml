@@ -20,6 +20,7 @@ apps_available:
   - freecad
   - google-chrome
   - jellyfin-player
+  - jdownloader
   - pcsx2
   - prusa-slicer
   - ytdlp
@@ -58,6 +59,14 @@ google_chrome_defaults:
 jellyfin_player_defaults:
   # https://github.com/jellyfin/jellyfin-desktop/releases
   version: "1.12.0" # version without V
+
+# ----- jdownloader -----
+jdownloader_defaults:
+  # JDownloader self-updates on launch, so there is no version to pin — the
+  # official install4j installer always fetches the latest build.
+  # https://jdownloader.org/download/index
+  installer_url: "https://installer.jdownloader.org/JD2Setup_x64.sh"
+  install_dir: /opt/jdownloader
 
 # ----- pcsx2 -----
 pcsx2_defaults:

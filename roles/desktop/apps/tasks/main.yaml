@@ -1,0 +1,26 @@
+---
+#============================================================================================================
+# Unified desktop apps role — main tasks
+#============================================================================================================
+- name: Desktop apps
+  when:
+    - run_role_apps | bool
+  tags:
+    - role_apps
+  block:
+    - name: Validate apps_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - apps_config is mapping
+        fail_msg: "apps_config must be a mapping of app-name -> overrides (or empty), got {{ apps_config | type_debug }}."
+
+    - name: Validate apps_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (apps_config.keys() | list | difference(apps_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in apps_config:
+          {{ apps_config.keys() | list | difference(apps_available) | join(', ') }}.
+          Available: {{ apps_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; added in Tasks 2-4) ---

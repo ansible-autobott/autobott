@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# Unified desktop apps role — control variables
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_apps: true
+
+# App selection. Keys are app names; value is an optional per-app override
+# dict (deep-merged into that app's defaults). Empty value = install with
+# defaults. Example:
+#   apps_config:
+#     freecad:
+#     google-chrome:
+#       extra_profiles: [...]
+apps_config: {}
+
+# Source of truth for validation — every key allowed in apps_config.
+apps_available:
+  - freecad
+  - google-chrome
+  - jellyfin-player
+  - pcsx2
+  - prusa-slicer
+  - ytdlp
+  - linux-candy
+  - golang
+  - k9s
+  - kubectl
+  - node
+  - vagrant
+  - vault
+  - virtualbox

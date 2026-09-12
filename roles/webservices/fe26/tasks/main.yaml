@@ -6,7 +6,6 @@
 - name: Main Fe26 installation and configuration
   tags:
     - fe26
-    - untagged
   when: run_role_fe26 | bool
   block:
     - name: Set merged fe26 configuration

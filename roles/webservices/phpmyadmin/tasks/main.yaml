@@ -6,7 +6,6 @@
 - name: Main Phpmyadmin installation and configuration
   tags:
     - phpmyadmin
-    - untagged
   when: run_role_phpmyadmin | bool
   block:
     - name: Set merged phpmyadmin configuration

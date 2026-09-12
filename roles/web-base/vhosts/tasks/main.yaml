@@ -8,7 +8,6 @@
     - vhosts
     - vhosts-redo
     - vhosts-force
-    - untagged
   when: run_role_vhosts | bool
   block:
     - name: Set merged vhosts configuration

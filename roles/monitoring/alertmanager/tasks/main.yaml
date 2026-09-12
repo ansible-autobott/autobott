@@ -7,7 +7,6 @@
   tags:
     - alertmanager
     - monitoring
-    - untagged
   when: run_role_alertmanager | bool
   block:
     - name: Set merged alertmanager configuration

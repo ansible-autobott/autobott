@@ -6,7 +6,6 @@
 - name: Main Dashi installation and configuration
   tags:
     - dashi
-    - untagged
   when: run_role_dashi | bool
   block:
     - name: Set merged dashi configuration
@@ -141,7 +140,6 @@
 - name: Uninstall Dashi
   tags:
     - dashi
-    - untagged
   when: not (run_role_dashi | bool)
   block:
     - name: Set merged dashi configuration for uninstall

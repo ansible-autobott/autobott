@@ -4,7 +4,6 @@
 - name: Configure basic Linux system
   tags:
     - "tailscale"
-    - "untagged"
   when:
     - run_role_tailscale | bool
   block:
@@ -31,7 +30,7 @@
         name: tailscale
         types: deb
         uris: https://pkgs.tailscale.com/stable/debian
-        suites: "{{ ansible_distribution_release }}"
+        suites: "{{ ansible_facts.distribution_release }}"
         components: main
         signed_by: /etc/apt/keyrings/tailscale-archive-keyring.gpg
         state: present

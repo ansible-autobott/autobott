@@ -6,7 +6,6 @@
 - name: Main Minecraft installation and configuration
   tags:
     - minecraft
-    - untagged
   when: run_role_minecraft | bool
   block:
     - name: Set merged Minecraft defaults with user overrides
@@ -16,7 +15,7 @@
     - name: Load java package names based on distro release
       ansible.builtin.include_vars: "{{ item }}"
       with_first_found:
-        - "{{ ansible_distribution_release }}.yaml"
+        - "{{ ansible_facts.distribution_release }}.yaml"
 
     - name: Check if Java is installed
       ansible.builtin.command: java -version
@@ -212,7 +211,6 @@
 - name: Manage Minecraft service and cron
   tags:
     - minecraft
-    - untagged
   when: not run_role_minecraft
   block:
     - name: Set merged Minecraft defaults with user overrides

@@ -6,7 +6,6 @@
   when: run_role_validation
   tags:
     - validation
-    - untagged
   block:
 
 

@@ -6,7 +6,6 @@
   tags:
     - vbox_guest
     - vbox-guest
-    - untagged
   when:
     - run_role_vbox_guest | bool
   block:

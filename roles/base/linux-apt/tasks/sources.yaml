@@ -6,7 +6,7 @@
   block:
     - name: "Configure main APT sources"
       ansible.builtin.template:
-        src: "sources.{{ ansible_distribution_release }}.j2"
+        src: "sources.{{ ansible_facts.distribution_release }}.j2"
         dest: /etc/apt/sources.list
         owner: root
         group: root
@@ -55,7 +55,7 @@
             name: "{{ item.name }}"
             types: "{{ item.types | default('deb') }}"
             uris: "{{ item.uris }}"
-            suites: "{{ item.suites | default(ansible_distribution_release) }}"
+            suites: "{{ item.suites | default(ansible_facts.distribution_release) }}"
             components: "{{ item.components | default('main') }}"
             architectures: "{{ item.architectures | default(omit) }}"
             signed_by: "{{ item.signed_by | default(omit) }}"

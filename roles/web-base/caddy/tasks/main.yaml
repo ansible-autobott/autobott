@@ -6,7 +6,6 @@
 - name: Main Caddy block
   tags:
     - caddy
-    - untagged
   when:
     - run_role_caddy | bool
     - not remove_caddy | bool
@@ -251,7 +250,6 @@
 - name: Uninstall Caddy block
   tags:
     - caddy
-    - untagged
   when:
     - run_role_caddy | bool
     - remove_caddy | bool

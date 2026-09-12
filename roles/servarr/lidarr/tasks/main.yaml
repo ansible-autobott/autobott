@@ -7,7 +7,6 @@
   tags:
     - lidarr
     - servarr
-    - untagged
   when: run_role_lidarr | bool
   block:
     - name: Set merged lidarr configuration
@@ -122,7 +121,7 @@
       community.general.xml:
         path: "{{ lidarr_config.paths.data_dir }}/config.xml"
         xpath: /Config/Port
-        value: "{{ lidarr_config.service.port | int }}"
+        value: "{{ lidarr_config.service.port | string }}"
       notify: restart lidarr
 
     - name: Set AuthenticationRequired false in config.xml

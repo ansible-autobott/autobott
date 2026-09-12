@@ -54,7 +54,7 @@ linux_apt_defaults:
   # sources_d:
   #   - name: "docker"                                             # -> /etc/apt/sources.list.d/<name>.sources
   #     uris: "https://download.docker.com/linux/debian"           # Base repository URL(s)
-  #     suites: "{{ ansible_distribution_release }}"               # Optional; defaults to the running release
+  #     suites: "{{ ansible_facts.distribution_release }}"               # Optional; defaults to the running release
   #     components: "stable"                                       # Optional; defaults to "main"
   #     architectures: "amd64"                                     # Optional
   #     signed_by: "https://download.docker.com/linux/debian/gpg"  # Key: URL, keyring path, or armored block

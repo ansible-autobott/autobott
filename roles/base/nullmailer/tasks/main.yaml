@@ -5,7 +5,6 @@
 - name: main nullmailer block
   tags:
     - nullmailer
-    - untagged
   when:
     - run_role_nullmailer | bool
   block:
@@ -26,7 +25,7 @@
 #    - name: Write short hostname to /etc/nullmailer/me
 #      ansible.builtin.copy:
 #        dest: /etc/nullmailer/me
-#        content: "{{ ansible_hostname }}"
+#        content: "{{ ansible_facts.hostname }}"
 #        owner: root
 #        group: root
 #        mode: '0644'

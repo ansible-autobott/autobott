@@ -6,7 +6,6 @@
   tags:
     - "linux-apt"
     - "linux-upgrade"
-    - "untagged"
   when:
     - run_role_linux_apt is defined
     - run_role_linux_apt | bool
@@ -34,7 +33,7 @@
 
       when:
         - linux_apt_data.release | default('') | length > 0
-        - ansible_distribution_release != linux_apt_data.release
+        - ansible_facts.distribution_release != linux_apt_data.release
         - "'linux-upgrade' in ansible_run_tags"
 
     - name: "Configure automatic updates"

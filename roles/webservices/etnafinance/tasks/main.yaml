@@ -7,7 +7,6 @@
   tags:
     - etnafinance
     - etna
-    - untagged
   when: run_role_etnafiance | bool
   block:
     - name: Set merged etna-fiance configuration

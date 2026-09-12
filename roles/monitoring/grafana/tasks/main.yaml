@@ -7,7 +7,6 @@
   tags:
     - grafana
     - monitoring
-    - untagged
   when: run_role_grafana | bool
   block:
     - name: Set merged grafana configuration

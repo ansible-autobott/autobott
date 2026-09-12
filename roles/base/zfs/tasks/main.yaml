@@ -4,7 +4,6 @@
 - name: Configure basic Linux system
   tags:
     - "zfs"
-    - "untagged"
   when:
     - run_role_zfs | bool
   block:
@@ -26,4 +25,4 @@
       when: "'contrib' not in apt_cache_policy.stdout"
 
     - name: Include distribution-specific ZFS installation tasks
-      ansible.builtin.include_tasks: "distro/{{ ansible_distribution_release }}.yaml"
+      ansible.builtin.include_tasks: "distro/{{ ansible_facts.distribution_release }}.yaml"

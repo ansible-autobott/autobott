@@ -5,7 +5,6 @@
 - name: Configure users and groups
   tags:
     - "linux-basic"
-    - "untagged"
   block:
     # Group Management
     - name: Create system groups

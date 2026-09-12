@@ -8,7 +8,7 @@
 
 - name: "Set backports suite and empty package lists"
   ansible.builtin.set_fact:
-    linux_apt_backport_suite: "{{ ansible_distribution_release }}-backports"
+    linux_apt_backport_suite: "{{ ansible_facts.distribution_release }}-backports"
     linux_apt_backport_kernel_pkgs: []
     linux_apt_backport_firmware_pkgs: []
 

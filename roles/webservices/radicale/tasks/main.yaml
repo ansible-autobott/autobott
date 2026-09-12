@@ -6,7 +6,6 @@
 - name: Main Radicale installation and configuration
   tags:
     - radicale
-    - untagged
   when: run_role_radicale | bool
   block:
     - name: Set merged radicale configuration

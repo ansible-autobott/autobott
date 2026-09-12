@@ -7,7 +7,6 @@
   tags:
     - kavita
     - servarr
-    - untagged
   when: run_role_kavita | bool
   block:
     - name: Set merged kavita configuration

@@ -218,7 +218,16 @@ fix-ssh-key-perm:
 vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap provisioning, vars: VER=<12|13> (default 12)
 	@source ./venv/bin/activate && cd vagrant && vagrant up ansible-autobott2-linux-debian-$(VER)
 
-vagrant-run: ## run playbook on vagrant, vars: TAG=<tag> (default all), VER=<12|13> (default 12)
+.PHONY: check-vagrant-running
+check-vagrant-running: # fail early (with a clear message) if the target VM (VER) isn't running
+	@state=$$(VAGRANT_CWD=vagrant vagrant status --machine-readable ansible-autobott2-linux-debian-$(VER) 2>/dev/null | awk -F, '$$3 == "state" { print $$4 }'); \
+	if [ "$$state" != "running" ]; then \
+		echo "Error: Vagrant VM 'ansible-autobott2-linux-debian-$(VER)' is '$${state:-unknown}', not running." >&2; \
+		echo "       Start it first:  make vagrant-up VER=$(VER)" >&2; \
+		exit 1; \
+	fi
+
+vagrant-run: check-vagrant-running ## run playbook on vagrant, vars: TAG=<tag> (default all), VER=<12|13> (default 12)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@mkdir -p logs
 	@. ./venv/bin/activate && \

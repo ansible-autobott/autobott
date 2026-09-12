@@ -6,7 +6,6 @@
 - name: Main Authelia block
   tags:
     - authelia
-    - untagged
   when:
     - run_role_authelia | bool
     - not remove_authelia | bool
@@ -146,7 +145,6 @@
 - name: Uninstall Authelia block
   tags:
     - authelia
-    - untagged
   when:
     - run_role_authelia | bool
     - remove_authelia | bool

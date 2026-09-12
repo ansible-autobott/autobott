@@ -6,7 +6,6 @@
 - name: Main Monit installation and configuration
   tags:
     - monit
-    - untagged
   when: run_role_monit | bool
   block:
     - name: Set merged monit configuration
@@ -66,7 +65,7 @@
           set_fact:
             disk_mounts_to_monitor: >-
               {{
-              ansible_mounts
+              ansible_facts.mounts
               | selectattr('fstype', 'match', '^(ext4|xfs|btrfs|zfs)$')
               | selectattr('mount', 'search', '^/')
               | list

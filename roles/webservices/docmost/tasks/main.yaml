@@ -6,7 +6,6 @@
 - name: Main docmost block
   tags:
     - docmost
-    - untagged
   when:
     - run_role_docmost is defined
     - run_role_docmost

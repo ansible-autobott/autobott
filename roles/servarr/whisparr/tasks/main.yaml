@@ -7,7 +7,6 @@
   tags:
     - whisparr
     - servarr
-    - untagged
   when: run_role_whisparr | bool
   block:
     - name: Set merged whisparr configuration
@@ -122,7 +121,7 @@
       community.general.xml:
         path: "{{ whisparr_config.paths.data_dir }}/config.xml"
         xpath: /Config/Port
-        value: "{{ whisparr_config.service.port | int }}"
+        value: "{{ whisparr_config.service.port | string }}"
       notify: restart whisparr
 
     - name: Set AuthenticationRequired false in config.xml

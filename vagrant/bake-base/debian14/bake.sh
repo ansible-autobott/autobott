@@ -2,7 +2,7 @@
 set -e
 
 # clean before starting
-vagrant box remove --force autobott-debian-12-base || true
+vagrant box remove --force autobott-debian-14-base || true
 vagrant destroy -f
 
 
@@ -14,9 +14,8 @@ vagrant up
 
 # package a box and install it locally
 vagrant package
-vagrant box add autobott-debian-12-base ./package.box
+vagrant box add autobott-debian-14-base ./package.box
 
 # clean after done
 rm package.box
 vagrant destroy -f
-

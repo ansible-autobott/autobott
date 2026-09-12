@@ -2,10 +2,11 @@
 # vi: set ft=ruby :
 
 # boxes at https://vagrantcloud.com/search.
-# https://app.vagrantup.com/debian/boxes/bullseye64
-VAGRANT_VM_BASE = "debian/bookworm64"
-# when updating the version, the header files need to be updates in install-guest.sh as well
-VAGRANT_VM_VERSION = "12.20230723.1"
+# TODO: Debian 14 (forky) is not released yet -- no base box exists.
+# When a box is available (e.g. a bento/debian-14 build, like debian13 uses),
+# fill in the coordinates below and remove this notice.
+VAGRANT_VM_BASE = "TODO/debian-14"   # TODO: set the real box name
+VAGRANT_VM_VERSION = "TODO"          # TODO: set the real box version
 
 Vagrant.configure("2") do |config|
 
@@ -16,7 +17,7 @@ Vagrant.configure("2") do |config|
 
     config.vm.provider "virtualbox" do |v|
         # set the name of the VM
-        v.name = "autobott-debian-12-base"
+        v.name = "autobott-debian-14-base"
 
         # full clone (not linked) so the final 'vagrant destroy' removes the VM
         # entirely, leaving no imported base image behind in VirtualBox
@@ -34,5 +35,3 @@ Vagrant.configure("2") do |config|
     config.vm.provision "shell", path: "install-guest.sh"
 
 end
-
-

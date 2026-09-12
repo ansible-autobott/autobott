@@ -4,7 +4,7 @@
 
 Tracking work remaining after the ansible 11 → 14 (ansible-core 2.18 → 2.21) bump.
 
-- [ ] Finish end-to-end Vagrant validation on a **fresh** VM for Debian 12 and 13
+- [ ] Finish end-to-end Vagrant validation on a **fresh** VM for Debian 13
       (`make vagrant-destroy` + `make vagrant-up`, then `make vagrant-run`). The
       last run reached `ok=788` before the next fix — not yet a clean full pass.
 - [ ] Clear remaining ansible-core 2.19 templating fallout as it surfaces:

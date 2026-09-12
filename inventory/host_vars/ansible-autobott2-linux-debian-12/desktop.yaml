@@ -11,23 +11,23 @@ linux_kde:
 # only for Virtualbox VMs
 run_role_vbox_guest: false
 
-# =========================== Developer APPS ===========================
-run_role_golang: true
-run_role_kubectl: true
-run_role_k9s: true
-run_role_node: true
-run_role_vagrant: true
-run_role_vault: true
-run_role_virtualbox: true
-
-# =========================== Regular APPS ===========================
-run_role_freecad: true
-run_role_google_chrome: true
-run_role_jellyfin_player: true
-run_role_pcsx2: true
-run_role_prusa_slicer: true
-run_role_ytdlp: true
-run_role_linux_candy: true
+# =========================== Desktop Apps ===========================
+run_role_apps: true
+apps_config:
+  golang:
+  kubectl:
+  k9s:
+  node:
+  vagrant:
+  vault:
+  virtualbox:
+  freecad:
+  google-chrome:
+  jellyfin-player:
+  pcsx2:
+  prusa-slicer:
+  ytdlp:
+  linux-candy:
 
 
 

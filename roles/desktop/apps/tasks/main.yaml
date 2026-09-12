@@ -28,3 +28,7 @@
       ansible.builtin.import_tasks: apps/freecad.yaml
       when: "'freecad' in apps_config"
       tags: [freecad]
+    - name: Google Chrome
+      ansible.builtin.import_tasks: apps/google-chrome.yaml
+      when: "'google-chrome' in apps_config"
+      tags: [google-chrome, chrome]

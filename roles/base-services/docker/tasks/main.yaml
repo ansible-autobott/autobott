@@ -5,7 +5,6 @@
 - name: Main Docker block
   tags:
     - docker
-    - untagged
   when:
     - run_role_docker | bool
   block:

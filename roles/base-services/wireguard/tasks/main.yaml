@@ -7,7 +7,6 @@
   tags:
     - wireguard
     - servarr
-    - untagged
   when: run_role_wireguard | bool
   block:
     - name: Set merged wireguard configuration

@@ -4,7 +4,6 @@
 - name: Configure basic Linux system
   tags:
     - "zfs"
-    - "untagged"
   when:
     - run_role_zfs | bool
   block:

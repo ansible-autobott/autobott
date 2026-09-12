@@ -7,7 +7,6 @@
   tags:
     - sonarr
     - servarr
-    - untagged
   when: run_role_sonarr | bool
   block:
     - name: Set merged sonarr configuration

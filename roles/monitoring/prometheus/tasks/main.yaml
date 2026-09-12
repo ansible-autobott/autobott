@@ -7,7 +7,6 @@
   tags:
     - prometheus
     - monitoring
-    - untagged
   when: run_role_prometheus | bool
   block:
     - name: Set merged prometheus configuration

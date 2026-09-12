@@ -5,7 +5,6 @@
 - name: Configure SSH security settings
   tags:
     - "linux-basic"
-    - "untagged"
   block:
     - name: Install dynamic SSH banner script
       ansible.builtin.template:

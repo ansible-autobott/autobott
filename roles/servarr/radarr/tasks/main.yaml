@@ -7,7 +7,6 @@
   tags:
     - radarr
     - servarr
-    - untagged
   when: run_role_radarr | bool
   block:
     - name: Set merged radarr configuration

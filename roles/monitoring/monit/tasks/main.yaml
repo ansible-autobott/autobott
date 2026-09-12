@@ -6,7 +6,6 @@
 - name: Main Monit installation and configuration
   tags:
     - monit
-    - untagged
   when: run_role_monit | bool
   block:
     - name: Set merged monit configuration

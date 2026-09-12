@@ -6,7 +6,6 @@
 - name: Main Borg block
   tags:
     - borg
-    - untagged
   when:
     - run_role_borg is defined
     - run_role_borg
@@ -52,7 +51,6 @@
 - name: Main Borg remove
   tags:
     - borg
-    - untagged
   when: >
     run_role_borg is not defined or
     not run_role_borg

@@ -6,7 +6,6 @@
 - name: Main Crowdsec installation and configuration
   tags:
     - crowdsec
-    - untagged
   when: run_role_crowdsec | bool
   block:
     - name: Set merged crowdsec configuration
@@ -100,7 +99,6 @@
 - name: Remove Crowdsec installation and configuration
   tags:
     - crowdsec
-    - untagged
   when: not run_role_crowdsec | bool
   block:
     - name: Ensure Crowdsec and related packages are absent

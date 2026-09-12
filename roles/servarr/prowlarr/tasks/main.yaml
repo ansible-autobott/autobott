@@ -7,7 +7,6 @@
   tags:
     - prowlarr
     - servarr
-    - untagged
   when: run_role_prowlarr | bool
   block:
     - name: Set merged prowlarr configuration

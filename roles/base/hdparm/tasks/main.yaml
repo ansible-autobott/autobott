@@ -5,7 +5,6 @@
 - name: main hdparm block
   tags:
     - hdparm
-    - untagged
   when:
     - run_role_hdparm | bool
   block:

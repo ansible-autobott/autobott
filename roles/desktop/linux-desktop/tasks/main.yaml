@@ -41,7 +41,6 @@
   tags:
     - linux_desktop
     - linux-desktop
-    - untagged
   when:
     - run_role_linux_desktop | bool
   block:

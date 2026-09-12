@@ -6,7 +6,6 @@
 - name: Main mediawiki installation and configuration
   tags:
     - mediawiki
-    - untagged
   when: run_role_mediawiki | bool
   block:
     - name: Set merged configuration

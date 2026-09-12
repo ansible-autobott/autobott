@@ -7,7 +7,6 @@
   tags:
     - jellyfin
     - servarr
-    - untagged
   when:
     - run_role_jellyfin | bool
     - not remove_jellyfin | bool
@@ -102,7 +101,6 @@
 - name: Main Jellyfin block (remove)
   tags:
     - jellyfin
-    - untagged
   when:
     - run_role_jellyfin | bool
     - remove_jellyfin | bool

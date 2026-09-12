@@ -6,7 +6,6 @@
   tags:
     - linux_kde
     - linux-kde
-    - untagged
   when:
     - run_role_linux_kde | bool
   block:

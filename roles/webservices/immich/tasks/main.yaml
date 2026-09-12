@@ -6,7 +6,6 @@
 - name: Main immich block
   tags:
     - immich
-    - untagged
   when:
     - run_role_immich is defined
     - run_role_immich

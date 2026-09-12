@@ -6,7 +6,6 @@
 - name: Main Firewall installation and configuration
   tags:
     - firewall
-    - untagged
   when: run_role_firewall | bool
   block:
     - name: Set merged firewall configuration

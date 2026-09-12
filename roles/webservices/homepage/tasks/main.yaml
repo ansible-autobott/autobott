@@ -6,7 +6,6 @@
 - name: Main Homepage installation and configuration
   tags:
     - homepage
-    - untagged
   when: run_role_homepage | bool
   block:
     - name: Set merged homepage configuration
@@ -160,7 +159,6 @@
 - name: Uninstall Homepage
   tags:
     - homepage
-    - untagged
   when: not (run_role_homepage | bool)
   block:
     - name: Set merged homepage configuration for uninstall

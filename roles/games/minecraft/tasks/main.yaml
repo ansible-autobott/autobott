@@ -6,7 +6,6 @@
 - name: Main Minecraft installation and configuration
   tags:
     - minecraft
-    - untagged
   when: run_role_minecraft | bool
   block:
     - name: Set merged Minecraft defaults with user overrides
@@ -212,7 +211,6 @@
 - name: Manage Minecraft service and cron
   tags:
     - minecraft
-    - untagged
   when: not run_role_minecraft
   block:
     - name: Set merged Minecraft defaults with user overrides

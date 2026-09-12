@@ -6,7 +6,6 @@
 - name: Main MariaDB installation and configuration
   tags:
     - mariadb
-    - untagged
   when:
     - run_role_mariadb is defined
     - run_role_mariadb | bool
@@ -133,7 +132,6 @@
 - name: Main MariaDB removal block
   tags:
     - mariadb
-    - untagged
   when:
     - run_role_mariadb is defined
     - run_role_mariadb | bool

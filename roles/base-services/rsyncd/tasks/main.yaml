@@ -5,7 +5,6 @@
 - name: Main Rsyncd block
   tags:
     - rsyncd
-    - untagged
   when:
     - run_role_rsyncd | bool
   block:
@@ -76,7 +75,6 @@
 - name: Rsyncd teardown block
   tags:
     - rsyncd
-    - untagged
   when:
     - not (run_role_rsyncd | bool)
   block:

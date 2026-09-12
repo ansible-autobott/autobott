@@ -2,7 +2,6 @@
 - name: Enroll system
   tags:
     - role_enroll
-    - untagged
     - enroll
   when:
     - run_role_autobott_enroll
@@ -153,5 +152,4 @@
     - run_autobott_write_version | bool
   tags:
     - role_enroll
-    - untagged
     - enroll

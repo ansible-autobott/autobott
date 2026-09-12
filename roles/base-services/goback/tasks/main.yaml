@@ -6,7 +6,6 @@
 - name: Main Goback block
   tags:
     - goback
-    - untagged
   when:
     - run_role_goback is defined
     - run_role_goback

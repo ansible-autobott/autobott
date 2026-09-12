@@ -5,7 +5,6 @@
 - name: main smartd block
   tags:
     - smartd
-    - untagged
   when:
     - run_role_smartd | bool
     - not remove_smartd | bool
@@ -136,7 +135,6 @@
 - name: main smartd block
   tags:
     - smartd
-    - untagged
   when:
     - run_role_smartd | bool
     - remove_smartd | bool

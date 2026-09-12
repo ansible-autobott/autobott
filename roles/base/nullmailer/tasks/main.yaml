@@ -5,7 +5,6 @@
 - name: main nullmailer block
   tags:
     - nullmailer
-    - untagged
   when:
     - run_role_nullmailer | bool
   block:

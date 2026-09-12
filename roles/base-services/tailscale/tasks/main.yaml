@@ -4,7 +4,6 @@
 - name: Configure basic Linux system
   tags:
     - "tailscale"
-    - "untagged"
   when:
     - run_role_tailscale | bool
   block:

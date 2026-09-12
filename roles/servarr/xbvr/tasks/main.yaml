@@ -7,7 +7,6 @@
   tags:
     - xbvr
     - xbvr
-    - untagged
   when: run_role_xbvr | bool
   block:
     - name: Set merged xbvr configuration

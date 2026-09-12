@@ -6,7 +6,6 @@
 - name: Main romm block
   tags:
     - romm
-    - untagged
   when:
     - run_role_romm is defined
     - run_role_romm

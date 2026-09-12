@@ -8,7 +8,6 @@
 - name: Main Aether installation and configuration
   tags:
     - aether
-    - untagged
   when: run_role_aether | bool
   block:
     - name: Set merged aether configuration
@@ -226,7 +225,6 @@
 - name: Uninstall Aether
   tags:
     - aether
-    - untagged
   when: not (run_role_aether | bool)
   block:
     - name: Set merged aether configuration for uninstall

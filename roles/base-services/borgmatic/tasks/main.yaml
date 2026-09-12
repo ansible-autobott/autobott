@@ -6,7 +6,6 @@
 - name: Main Borgmatic block
   tags:
     - borgmatic
-    - untagged
   when:
     - run_role_borgmatic is defined
     - run_role_borgmatic

@@ -7,7 +7,6 @@
   tags:
     - lidarr
     - servarr
-    - untagged
   when: run_role_lidarr | bool
   block:
     - name: Set merged lidarr configuration

@@ -6,7 +6,6 @@
 - name: Main transmission installation block
   tags:
     - transmission
-    - untagged
   when:
     - run_role_transmission | bool
     - not remove_transmission | bool
@@ -202,7 +201,6 @@
 - name: Main transmission removal block
   tags:
     - transmission
-    - untagged
   when:
     - run_role_transmission | bool
     - remove_transmission | bool

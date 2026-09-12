@@ -7,7 +7,6 @@
   tags:
     - stash
     - stash
-    - untagged
   when: run_role_stash | bool
   block:
     - name: Set merged stash configuration

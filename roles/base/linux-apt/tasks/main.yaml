@@ -6,7 +6,6 @@
   tags:
     - "linux-apt"
     - "linux-upgrade"
-    - "untagged"
   when:
     - run_role_linux_apt is defined
     - run_role_linux_apt | bool

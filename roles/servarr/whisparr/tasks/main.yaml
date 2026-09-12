@@ -7,7 +7,6 @@
   tags:
     - whisparr
     - servarr
-    - untagged
   when: run_role_whisparr | bool
   block:
     - name: Set merged whisparr configuration

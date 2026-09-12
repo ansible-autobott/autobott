@@ -16,7 +16,7 @@
     - name: Load package names based on distro relese
       include_vars: "{{ item }}"
       with_first_found:
-        - "{{ ansible_distribution_release }}.yaml"
+        - "{{ ansible_facts.distribution_release }}.yaml"
 
     - name: Installing KDE
       apt:
@@ -142,7 +142,7 @@
     - name: KDE global menu (appmenu) block
       when:
         - linux_kde_config.add_kde_global_menu | bool
-        - ansible_distribution_release == "trixie"
+        - ansible_facts.distribution_release == "trixie"
       vars:
         kde_menu_home: "/home/{{ linux_desktop_config.user }}"
       block:

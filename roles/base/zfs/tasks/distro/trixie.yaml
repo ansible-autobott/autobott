@@ -5,7 +5,7 @@
 
 - name: Install Linux headers for current kernel
   ansible.builtin.package:
-    name: "linux-headers-{{ ansible_kernel }}"
+    name: "linux-headers-{{ ansible_facts.kernel }}"
     state: present
 
 - name: Install DKMS and related packages

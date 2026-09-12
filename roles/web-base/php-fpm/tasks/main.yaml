@@ -23,8 +23,8 @@
         php_fpm_config: "{{ php_fpm_defaults | combine(php_fpm, recursive=true) }}"
 
     - name: Load distribution-specific variables
-      ansible.builtin.include_vars: "{{ ansible_distribution_release }}.yaml"
-      when: ansible_distribution_release is defined
+      ansible.builtin.include_vars: "{{ ansible_facts.distribution_release }}.yaml"
+      when: ansible_facts.distribution_release is defined
 
     - name: Install PHP-FPM and modules
       ansible.builtin.apt:
@@ -106,8 +106,8 @@
     - remove_php_fpm | bool
   block:
     - name: Load distribution-specific variables
-      ansible.builtin.include_vars: "{{ ansible_distribution_release }}.yaml"
-      when: ansible_distribution_release is defined
+      ansible.builtin.include_vars: "{{ ansible_facts.distribution_release }}.yaml"
+      when: ansible_facts.distribution_release is defined
 
     - name: Check if PHP-FPM service exists
       ansible.builtin.stat:

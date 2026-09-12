@@ -43,7 +43,7 @@
     - name: Fetch Lynis report
       ansible.builtin.fetch:
         src: /opt/lynis/lynis-report.dat
-        dest: "./reports/lynis_audit/{{ inventory_hostname }}_{{ ansible_date_time.date }}.dat"
+        dest: "./reports/lynis_audit/{{ inventory_hostname }}_{{ ansible_facts.date_time.date }}.dat"
         flat: true
       become: true
       changed_when: false

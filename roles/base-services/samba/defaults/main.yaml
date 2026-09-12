@@ -23,7 +23,7 @@ samba_defaults:
   global:
     workgroup: "WORKGROUP"
     netbios_name: ""
-    server_string: "{{ ansible_hostname }}"
+    server_string: "{{ ansible_facts.hostname }}"
     log_level: "3" # values from 0-10, where 10 is verbose
     # file name settings
     case_sensitive: true

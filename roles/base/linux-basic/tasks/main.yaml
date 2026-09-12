@@ -50,7 +50,7 @@
           ansible.builtin.copy:
             dest: /etc/mailname
             content: |
-              {{ linux_basic.fqdn | default(ansible_fqdn) }}
+              {{ linux_basic.fqdn | default(ansible_facts.fqdn) }}
             owner: root
             group: root
             mode: "0644"
@@ -68,7 +68,7 @@
         create: true
         mode: "0644"
         block: |
-          {% set hostname = (linux_basic.fqdn | default(ansible_fqdn)) %}
+          {% set hostname = (linux_basic.fqdn | default(ansible_facts.fqdn)) %}
     
           127.0.1.1 {% if '.' in hostname %}
           {{ hostname }} {{ hostname.split('.')[0] }}

@@ -28,7 +28,7 @@
     name: virtualbox
     types: deb
     uris: https://download.virtualbox.org/virtualbox/debian
-    suites: "{{ ansible_distribution_release }}"
+    suites: "{{ ansible_facts.distribution_release }}"
     components: contrib
     architectures: amd64
     signed_by: /usr/share/keyrings/oracle_vbox.gpg

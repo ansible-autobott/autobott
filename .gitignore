@@ -29,6 +29,9 @@ vagrant/*.log
 host_secrets/common.yaml
 reports/lynis_audit/*.dat
 
+# local convenience config for `make run-local` (copy from run-local.env.example)
+run-local.env
+
 # AI shenanigans
 .tokensave
 docs

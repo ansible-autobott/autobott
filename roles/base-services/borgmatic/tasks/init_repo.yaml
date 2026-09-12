@@ -78,12 +78,14 @@
   - name: Export Borg keys from each destination for Borg 2.x
     command: >
       borg key export
-        --rsh="ssh -i /etc/borgmatic.d/{{ item.0.name }}.pkey"
+        --rsh="ssh -i /etc/borgmatic.d/{{ backup_item.0.name }}.pkey"
         --repo "{{ destination.path }}"
-        "/tmp/borg_key_exports/{{ item.0.name }}_{{ destination.label | default('repo') }}.key"
+        "/tmp/borg_key_exports/{{ backup_item.0.name }}_{{ destination.label | default('repo') }}.key"
     with_subelements:
       - "{{ borgmatic_backups }}"
       - destination
+    loop_control:
+      loop_var: backup_item
     when:
       - destination.path is defined
       - destination.encryption is defined
@@ -95,14 +97,16 @@
 
   - name: Fetch exported Borg keys to control node
     fetch:
-      src:  /tmp/borg_key_exports/{{ item.0.name }}_{{ destination.label | default('repo') }}.key
-      dest: "{{ inventory_file | dirname }}/files/borg/{{ inventory_hostname }}/{{ item.0.name }}_{{ destination.label | default('repo') }}.key "
+      src:  /tmp/borg_key_exports/{{ backup_item.0.name }}_{{ destination.label | default('repo') }}.key
+      dest: "{{ inventory_file | dirname }}/files/borg/{{ inventory_hostname }}/{{ backup_item.0.name }}_{{ destination.label | default('repo') }}.key "
       flat: yes
     changed_when: false
     no_log: true
     with_subelements:
       - "{{ borgmatic_backups }}"
       - destination
+    loop_control:
+      loop_var: backup_item
     when:
       - destination.path is defined
       - destination.encryption is defined

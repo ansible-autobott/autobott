@@ -144,6 +144,37 @@ run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<ta
 	echo "Using host: $$HOST_VAL" && \
 	ansible-playbook -vvv -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
 
+# 'run-local' reads INV/HOST/TAG (and optional EXTRA_ARGS / SOPS_AGE_KEY_FILE) from a
+# git-ignored env file so you don't retype them on every 'make run'. Copy
+# run-local.env.example -> run-local.env and edit it. Override the file: RUN_LOCAL_FILE=<path>.
+RUN_LOCAL_FILE ?= run-local.env
+
+run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (default: run-local.env; see run-local.env.example)
+	@if [ ! -f "$(RUN_LOCAL_FILE)" ]; then \
+		echo "Error: '$(RUN_LOCAL_FILE)' not found." >&2; \
+		echo "       Create it from the template:  cp run-local.env.example $(RUN_LOCAL_FILE)" >&2; \
+		exit 1; \
+	fi
+	@unset SOPS_AGE_KEY_FILE; \
+	set -a; . "$(CURDIR)/$(RUN_LOCAL_FILE)"; set +a; \
+	if [ -z "$$INV" ]; then \
+		echo "Error: 'INV' is not set in $(RUN_LOCAL_FILE)" >&2; \
+		exit 1; \
+	fi; \
+	if [ -z "$$SOPS_AGE_KEY_FILE" ]; then \
+		if [ -d "$$INV" ]; then SOPS_AGE_KEY_FILE="$$INV/sops_key"; \
+		else SOPS_AGE_KEY_FILE="$$(dirname "$$INV")/sops_key"; fi; \
+	fi; \
+	export SOPS_AGE_KEY_FILE; \
+	echo "Running with inventory: $$INV" && \
+	echo "Using sops key:         $$SOPS_AGE_KEY_FILE" && \
+	. ./venv/bin/activate && \
+	TAG_VAL=$$( [ -n "$$TAG" ] && echo "-t $$TAG" || echo "" ) && \
+	HOST_VAL=$$( [ -n "$$HOST" ] && echo "-l $$HOST" || echo "" ) && \
+	echo "Using tag:  $$TAG_VAL" && \
+	echo "Using host: $$HOST_VAL" && \
+	ansible-playbook -i "$$INV" $$TAG_VAL $$HOST_VAL $$EXTRA_ARGS autobott.yaml
+
 
 ##@ Secrets
 
@@ -289,12 +320,6 @@ vagrant-test: ## run validation tests, vars: VER=<13> (default 13)
 
 vagrant-destroy: ## Delete all vagrant VMs
 	@cd vagrant && vagrant destroy -f
-
-vagrant-ssh-renew: fix-ssh-key-perm ## remove and re-add previous vagrant ssh entries to known hosts
-	@ssh-keygen -f "$(HOME)/.ssh/known_hosts" -R "[127.0.0.1]:2222" || true
-	#@ssh-keygen -f "$(HOME)/.ssh/known_hosts" -R "[127.0.0.1]:2200" || true
-	@ssh ans@127.0.0.1 -p 2222 || true
-	#@ssh ans@127.0.0.1 -p 2200 || true
 
 vagrant-snapshot-save: ## take a snapshot of the vagrant state
 	@cd vagrant && \

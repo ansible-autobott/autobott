@@ -78,7 +78,7 @@
               - ""
               - "mysql"
 
-        - name: Check if user '{{ item }}'@'%' exists
+        - name: Check if unwanted MariaDB user exists at host '%'
           ansible.builtin.command: >
             mysql -NBe "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user='{{ item }}' AND host='%');"
           register: user_exists_percent
@@ -87,7 +87,7 @@
           loop_control:
             label: "{{ item }}@%"
 
-        - name: Remove user '{{ item.item }}'@'%'
+        - name: Remove unwanted MariaDB user at host '%'
           ansible.builtin.command: >
             mysql -e "DROP USER IF EXISTS '{{ item.item }}'@'%';"
           when: item.stdout == "1"
@@ -96,7 +96,7 @@
           loop_control:
             label: "{{ item.item }}@%"
 
-        - name: Check if user '{{ item }}'@'localhost' exists
+        - name: Check if unwanted MariaDB user exists at host 'localhost'
           ansible.builtin.command: >
             mysql -NBe "SELECT EXISTS(SELECT 1 FROM mysql.user WHERE user='{{ item }}' AND host='localhost');"
           register: user_exists_local
@@ -105,7 +105,7 @@
           loop_control:
             label: "{{ item }}@localhost"
 
-        - name: Remove user '{{ item.item }}'@'localhost'
+        - name: Remove unwanted MariaDB user at host 'localhost'
           ansible.builtin.command: >
             mysql -e "DROP USER IF EXISTS '{{ item.item }}'@'localhost';"
           when: item.stdout == "1"

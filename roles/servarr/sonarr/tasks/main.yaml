@@ -121,7 +121,7 @@
       community.general.xml:
         path: "{{ sonarr_config.paths.data_dir }}/config.xml"
         xpath: /Config/Port
-        value: "{{ sonarr_config.service.port | int }}"
+        value: "{{ sonarr_config.service.port | string }}"
       notify: restart sonarr
 
     - name: Set AuthenticationRequired false in config.xml

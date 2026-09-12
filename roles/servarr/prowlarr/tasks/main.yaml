@@ -121,7 +121,7 @@
       community.general.xml:
         path: "{{ prowlarr_config.paths.data_dir }}/config.xml"
         xpath: /Config/Port
-        value: "{{ prowlarr_config.service.port | int }}"
+        value: "{{ prowlarr_config.service.port | string }}"
       notify: restart prowlarr
 
     - name: Set AuthenticationRequired false in config.xml

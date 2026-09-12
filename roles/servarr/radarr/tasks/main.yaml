@@ -121,7 +121,7 @@
       community.general.xml:
         path: "{{ radarr_config.paths.data_dir }}/config.xml"
         xpath: /Config/Port
-        value: "{{ radarr_config.service.port | int }}"
+        value: "{{ radarr_config.service.port | string }}"
       notify: restart radarr
 
     - name: Set AuthenticationRequired false in config.xml

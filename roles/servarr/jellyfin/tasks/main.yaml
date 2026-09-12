@@ -73,14 +73,14 @@
       community.general.xml:
         path: /etc/jellyfin/network.xml
         xpath: /NetworkConfiguration/InternalHttpPort
-        value: "{{ jellyfin_config.port | int }}"
+        value: "{{ jellyfin_config.port | string }}"
       notify: restart jellyfin
 
     - name: Set Jellyfin PublicHttpPort in /etc/jellyfin/network.xml
       community.general.xml:
         path: /etc/jellyfin/network.xml
         xpath: /NetworkConfiguration/PublicHttpPort
-        value: "{{ jellyfin_config.port | int }}"
+        value: "{{ jellyfin_config.port | string }}"
       notify: restart jellyfin
 
     - name: Set Jellyfin EnableRemoteAccess in /etc/jellyfin/network.xml

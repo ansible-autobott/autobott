@@ -78,7 +78,7 @@ the version file must already reflect the intended release by the time the PR is
 `autobott.yaml` has 4 plays:
 1. **All hosts** — base, base-services, security foundation
 2. **linux_servers** — web-base, monitoring, servarr, webservices
-3. **linux_desktop** — KDE, dev-apps, apps
+3. **linux_desktop** — KDE, apps
 4. **post-setup** — finalization, version write
 
 ### Role Organization
@@ -92,10 +92,15 @@ roles/
   monitoring/    # prometheus, alertmanager, node_exporter, grafana, monit
   webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
-  desktop/       # linux-desktop, linux-kde, vbox-guest, dev-apps, apps
+  desktop/       # linux-desktop, linux-kde, vbox-guest, apps
   games/         # minecraft
   validation/    # test roles
 ```
+
+> The **`desktop/apps`** role unifies all desktop and developer apps: select
+> which to install per host via the `apps_config` mapping. Per-app tasks live in
+> `roles/desktop/apps/tasks/apps/<app>.yaml`; defaults for every app live in
+> `roles/desktop/apps/defaults/main.yaml`.
 
 ### Role Conventions
 

@@ -1,0 +1,15 @@
+---
+#============================================================================================================
+# linux-candy
+#============================================================================================================
+- name: Set merged linux-candy configuration
+  ansible.builtin.set_fact:
+    linux_candy_config: "{{ linux_candy_defaults | combine(apps_config['linux-candy'] | default({}, true), recursive=true) }}"
+
+- name: Install linux-candy package
+  ansible.builtin.apt:
+    deb: "https://github.com/andresbott/linux-candy/releases/download/v{{ linux_candy_config.version }}/linux-candy_{{ linux_candy_config.version }}_all.deb"
+  register: result
+  until: result is not failed
+  retries: 3
+  delay: 5

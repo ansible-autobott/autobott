@@ -1,0 +1,72 @@
+---
+#============================================================================================================
+# Google Chrome
+#============================================================================================================
+- name: Set merged google-chrome configuration
+  ansible.builtin.set_fact:
+    google_chrome_config: "{{ google_chrome_defaults | combine(apps_config['google-chrome'] | default({}, true), recursive=true) }}"
+
+- name: Ensure required packages for apt repository over HTTPS
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - python3-debian
+    state: present
+
+- name: Remove old / legacy google-chrome key files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/trusted.gpg.d/google.gpg
+    - /etc/apt/trusted.gpg.d/google.asc
+    # add others if you know them
+
+- name: Remove legacy /etc/apt/trusted.gpg
+  ansible.builtin.file:
+    path: /etc/apt/trusted.gpg
+    state: absent
+
+- name: Copy Google signing key to keyring
+  ansible.builtin.copy:
+    src: google-chrome/google-chrome.gpg
+    dest: /etc/apt/keyrings/google-chrome.gpg
+    mode: '0644'
+
+- name: Add repository
+  ansible.builtin.deb822_repository:
+    name: google-chrome
+    types: deb
+    uris: "https://dl.google.com/linux/chrome/deb/"
+    suites: stable
+    components: main
+    architectures: amd64
+    signed_by: /etc/apt/keyrings/google-chrome.gpg
+    state: present
+    mode: "0644"
+  register: chrome_repo
+
+- name: Remove legacy google-chrome .list source (migrated to deb822 .sources)
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/google-chrome.list
+    state: absent
+
+- name: Update apt cache if repository changed
+  ansible.builtin.apt:
+    update_cache: true
+  when: chrome_repo.changed
+
+- name: Ensure google-chrome-stable is installed
+  ansible.builtin.apt:
+    name: google-chrome-stable
+    state: present
+
+# ===============================================================
+# Include profile setup per item
+# ===============================================================
+- name: Setup Chrome profiles
+  ansible.builtin.include_tasks: chrome_profile.yaml
+  loop: "{{ google_chrome_config.extra_profiles }}"
+  loop_control:
+    loop_var: profile

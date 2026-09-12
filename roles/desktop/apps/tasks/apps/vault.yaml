@@ -1,0 +1,46 @@
+---
+#============================================================================================================
+# vault
+#============================================================================================================
+- name: Set merged vault configuration
+  ansible.builtin.set_fact:
+    vault_config: "{{ vault_defaults | combine(apps_config['vault'] | default({}, true), recursive=true) }}"
+
+- name: Get current vault version
+  ansible.builtin.shell: "vault version | awk '{print $2}' | tr -d 'v'"
+  register: vault_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update vault
+  when: vault_current_version.stdout != vault_config.version
+  block:
+    - name: Create vault download dir
+      ansible.builtin.file:
+        path: "/tmp/vault"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Download vault
+      ansible.builtin.unarchive:
+        src: "https://releases.hashicorp.com/vault/{{ vault_config.version }}/vault_{{ vault_config.version }}_linux_amd64.zip"
+        dest: "/tmp/vault"
+        remote_src: true
+
+    - name: Move vault
+      ansible.builtin.command: "mv /tmp/vault/vault /usr/local/bin/vault"
+
+    - name: Remove vault download dir
+      ansible.builtin.file:
+        path: "/tmp/vault"
+        state: absent
+
+    - name: Ensure vault is executable
+      ansible.builtin.file:
+        path: "/usr/local/bin/vault"
+        state: file
+        mode: '0755'
+        owner: root
+        group: root

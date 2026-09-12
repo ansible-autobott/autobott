@@ -1,0 +1,87 @@
+---
+#============================================================================================================
+# Unified desktop apps role — main tasks
+#============================================================================================================
+- name: Desktop apps
+  when:
+    - run_role_apps | bool
+  tags:
+    - role_apps
+  block:
+    - name: Validate apps_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - apps_config is mapping
+        fail_msg: "apps_config must be a mapping of app-name -> overrides (or empty), got {{ apps_config | type_debug }}."
+
+    - name: Validate apps_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (apps_config.keys() | list | difference(apps_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in apps_config:
+          {{ apps_config.keys() | list | difference(apps_available) | join(', ') }}.
+          Available: {{ apps_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; added in Tasks 2-4) ---
+    - name: FreeCAD
+      ansible.builtin.import_tasks: apps/freecad.yaml
+      when: "'freecad' in apps_config"
+      tags: [freecad]
+    - name: Google Chrome
+      ansible.builtin.import_tasks: apps/google-chrome.yaml
+      when: "'google-chrome' in apps_config"
+      tags: [google-chrome, chrome]
+    - name: Jellyfin Player
+      ansible.builtin.import_tasks: apps/jellyfin-player.yaml
+      when: "'jellyfin-player' in apps_config"
+      tags: [jellyfin-player]
+    - name: JDownloader
+      ansible.builtin.import_tasks: apps/jdownloader.yaml
+      when: "'jdownloader' in apps_config"
+      tags: [jdownloader]
+    - name: PCSX2
+      ansible.builtin.import_tasks: apps/pcsx2.yaml
+      when: "'pcsx2' in apps_config"
+      tags: [pcsx2]
+    - name: PrusaSlicer
+      ansible.builtin.import_tasks: apps/prusa-slicer.yaml
+      when: "'prusa-slicer' in apps_config"
+      tags: [prusa-slicer]
+    - name: yt-dlp
+      ansible.builtin.import_tasks: apps/ytdlp.yaml
+      when: "'ytdlp' in apps_config"
+      tags: [ytdlp]
+    - name: k9s
+      ansible.builtin.import_tasks: apps/k9s.yaml
+      when: "'k9s' in apps_config"
+      tags: [k9s]
+    - name: Golang
+      ansible.builtin.import_tasks: apps/golang.yaml
+      when: "'golang' in apps_config"
+      tags: [golang]
+    - name: kubectl
+      ansible.builtin.import_tasks: apps/kubectl.yaml
+      when: "'kubectl' in apps_config"
+      tags: [kubectl]
+    - name: Vagrant
+      ansible.builtin.import_tasks: apps/vagrant.yaml
+      when: "'vagrant' in apps_config"
+      tags: [vagrant]
+    - name: Vault
+      ansible.builtin.import_tasks: apps/vault.yaml
+      when: "'vault' in apps_config"
+      tags: [vault]
+    - name: VirtualBox
+      ansible.builtin.import_tasks: apps/virtualbox.yaml
+      when: "'virtualbox' in apps_config"
+      tags: [virtualbox]
+    - name: linux-candy
+      ansible.builtin.import_tasks: apps/linux-candy.yaml
+      when: "'linux-candy' in apps_config"
+      tags: [linux-candy]
+    # node is special-cased: imported unconditionally so it can uninstall nvm
+    # when 'node' is not selected in apps_config (see apps/node.yaml).
+    - name: Node
+      ansible.builtin.import_tasks: apps/node.yaml
+      tags: [node]

@@ -1,0 +1,136 @@
+---
+#============================================================================================================
+# Unified desktop apps role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_apps: true
+
+# App selection. Keys are app names; value is an optional per-app override
+# dict (deep-merged into that app's defaults). Empty value = install with
+# defaults. Example:
+#   apps_config:
+#     freecad:
+#     google-chrome:
+#       extra_profiles: [...]
+apps_config: {}
+
+# Source of truth for validation — every key allowed in apps_config.
+apps_available:
+  - freecad
+  - google-chrome
+  - jellyfin-player
+  - jdownloader
+  - pcsx2
+  - prusa-slicer
+  - ytdlp
+  - linux-candy
+  - golang
+  - k9s
+  - kubectl
+  - node
+  - vagrant
+  - vault
+  - virtualbox
+
+#============================================================================================================
+# Per-app defaults
+#============================================================================================================
+
+# ----- freecad -----
+freecad_defaults:
+  # https://www.freecad.org/downloads.php?lang=en
+  version: "1.0.2"
+freecad_versions:
+  1.0.2: "https://github.com/FreeCAD/FreeCAD/releases/download/1.0.2/FreeCAD_1.0.2-conda-Linux-x86_64-py311.AppImage"
+
+# ----- google-chrome -----
+google_chrome_defaults:
+  extra_profiles:
+    - name: owa # name
+      destination: /home/vagrant/programs/owa
+      url: "https://outlook.office365.com/mail/inbox" # (optional) default url to open
+      desktop:
+        desc: "Outlook Web Access"
+        generic_name: "Outlook Web Access"
+      bin: true # create link in /bin
+
+# ----- jellyfin-player -----
+jellyfin_player_defaults:
+  # https://github.com/jellyfin/jellyfin-desktop/releases
+  version: "1.12.0" # version without V
+
+# ----- jdownloader -----
+jdownloader_defaults:
+  # JDownloader self-updates on launch, so there is no version to pin — the
+  # official install4j installer always fetches the latest build.
+  # https://jdownloader.org/download/index
+  installer_url: "https://installer.jdownloader.org/JD2Setup_x64.sh"
+  install_dir: /opt/jdownloader
+
+# ----- pcsx2 -----
+pcsx2_defaults:
+  # get from: https://github.com/PCSX2/pcsx2
+  version: v1.6.0
+
+# ----- prusa-slicer -----
+prusa_slicer_defaults:
+  # prusa-slicer version to install
+  version: "2.7.0"
+# download from: https://github.com/prusa3d/PrusaSlicer/releases
+prusa_slicer_versions:
+  2.7.0: "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.0/PrusaSlicer-2.7.0+linux-x64-GTK3-202311231454.AppImage"
+
+# ----- ytdlp -----
+ytdlp_defaults:
+  # https://github.com/yt-dlp/yt-dlp/releases
+  version: "2023.11.16"
+
+# ----- linux-candy -----
+linux_candy_defaults:
+  # get url from: https://github.com/andresbott/linux-candy/releases
+  version: 0.3.0
+
+# ----- golang -----
+golang_defaults:
+  # go version to install
+  go_version: "1.25.5"
+
+  # get the link from: https://github.com/niemeyer/godeb
+  godeb_url: https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz
+  godeb_sha256: f2b3445dda98b31a32381036bf01c7e82df1a5a151e7e838ca1f0d1fb8e80952
+  # get from: https://github.com/goreleaser/goreleaser/releases
+  goreleaser_url: "https://github.com/goreleaser/goreleaser/releases/download/v2.18.1/goreleaser_2.18.1_amd64.deb"
+  goreleaser_sha256: "f9227f77b5f7747dc3ddad211e34bacccde111a95560c5404d47add00d0aa24e"
+  # get from: https://github.com/goreleaser/nfpm/releases
+  nfpm_url: "https://github.com/goreleaser/nfpm/releases/download/v2.47.0/nfpm_2.47.0_amd64.deb"
+  nfpm_sha256: "3f1cf344bd0b57373ca55636a78c08b0491f7293d609a456a9ac3b0b150fda97"
+  # get from https://github.com/golangci/golangci-lint/releases
+  golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v2.13.2/golangci-lint-2.13.2-linux-amd64.deb"
+  golangci_lint_sha256: "7ef9114c71db2e6b8529fc58ef4575b02661f6e0a45aeb50248f2a86f8ea50a9"
+
+# ----- k9s -----
+k9s_defaults:
+  # k9s version to install
+  version: "v0.29.1"
+
+# ----- kubectl -----
+kubectl_defaults:
+  # install azure kubelogin with kubectl https://github.com/Azure/kubelogin/releases
+  kubelogin_version: "v0.0.34"
+
+# ----- node -----
+node_defaults: {}
+
+# ----- vagrant -----
+vagrant_defaults: {}
+
+# ----- vault -----
+vault_defaults:
+  # get url from: https://www.vaultproject.io/downloads
+  version: "1.15.4"
+
+# ----- virtualbox -----
+virtualbox_defaults:
+  # virtualbox version to install
+  pacakge: "virtualbox-7.1"

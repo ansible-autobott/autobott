@@ -24,3 +24,7 @@
           Available: {{ apps_available | join(', ') }}
 
     # --- app catalog (one import_tasks per app; added in Tasks 2-4) ---
+    - name: FreeCAD
+      ansible.builtin.import_tasks: apps/freecad.yaml
+      when: "'freecad' in apps_config"
+      tags: [freecad]

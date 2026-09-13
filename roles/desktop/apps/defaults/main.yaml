@@ -29,6 +29,8 @@ apps_available:
   - go-deps-view
   - todo
   - golang
+  - jenv
+  - maven
   - k9s
   - kubectl
   - node
@@ -116,6 +118,29 @@ golang_defaults:
   # get from https://github.com/golangci/golangci-lint/releases
   golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v2.13.2/golangci-lint-2.13.2-linux-amd64.deb"
   golangci_lint_sha256: "7ef9114c71db2e6b8529fc58ef4575b02661f6e0a45aeb50248f2a86f8ea50a9"
+
+# ----- jenv (Java version manager) -----
+jenv_defaults:
+  # jenv release tag — https://github.com/jenv/jenv/releases
+  version: "0.6.0"
+  sha256: "2897ac544007a2c651bb3c02985143c94f4e1234b9c3c6cb2e436442b17cbc74"
+  # keep JAVA_HOME in sync with the active version (needed by Maven/Gradle/IDEs)
+  enable_export_plugin: true
+  # OpenJDK packages to install and register with `jenv add`.
+  # Set to [] to install jenv only and manage JDKs yourself.
+  jdk_packages:
+    - openjdk-21-jdk
+    - openjdk-17-jdk
+  # Optional default set via `jenv global` (e.g. "21"); "" leaves it unset.
+  global_version: ""
+
+# ----- maven (build tool) -----
+maven_defaults:
+  # Apache Maven version — https://maven.apache.org/download.cgi
+  version: "3.9.16"
+  sha512: "831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6"
+  # archive.apache.org keeps every release (permanent pin); point at a local mirror if desired.
+  base_url: "https://archive.apache.org/dist/maven/maven-3"
 
 # ----- k9s -----
 k9s_defaults:

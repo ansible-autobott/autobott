@@ -60,6 +60,14 @@
       ansible.builtin.import_tasks: apps/golang.yaml
       when: "'golang' in apps_config"
       tags: [golang]
+    - name: jenv
+      ansible.builtin.import_tasks: apps/jenv.yaml
+      when: "'jenv' in apps_config"
+      tags: [jenv]
+    - name: maven
+      ansible.builtin.import_tasks: apps/maven.yaml
+      when: "'maven' in apps_config"
+      tags: [maven]
     - name: kubectl
       ansible.builtin.import_tasks: apps/kubectl.yaml
       when: "'kubectl' in apps_config"

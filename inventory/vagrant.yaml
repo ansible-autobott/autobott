@@ -2,6 +2,11 @@
 all:
   # this is sample inventory representing the Vagrant machines in this repository
   # the real inventory file is generated on the fly by vagrant in .vagrant/provisioners/ansible/inventory
+  vars:
+    # Vagrant VMs are ephemeral and reached over 127.0.0.1:<forwarded-port>; every
+    # re-create changes the host key. Skip host-key checking and keep it out of the
+    # real ~/.ssh/known_hosts, so re-creating a VM never needs a manual known_hosts reset.
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   children:
     linux_servers:
       hosts:

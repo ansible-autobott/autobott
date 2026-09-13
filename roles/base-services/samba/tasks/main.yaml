@@ -67,12 +67,19 @@
         group: root
         mode: "0600"
 
+    - name: Stat stored hash files
+      ansible.builtin.stat:
+        path: "{{ samba_config.users_dir }}/{{ item.name }}"
+      loop: "{{ samba_config.users }}"
+      register: stored_hash_stats
+      no_log: true
+
     - name: Read stored hashes
       ansible.builtin.slurp:
-        src: "{{ samba_config.users_dir }}/{{ item.name }}"
-      loop: "{{ samba_config.users }}"
+        src: "{{ samba_config.users_dir }}/{{ item.item.name }}"
+      loop: "{{ stored_hash_stats.results }}"
       register: stored_hashes
-      ignore_errors: true
+      when: item.stat.exists
       no_log: true
 
     - set_fact:
@@ -86,7 +93,7 @@
         stored_hash: >-
           {{
             (stored_hashes.results[loopIndex].content | b64decode | trim)
-            if (stored_hashes.results[loopIndex] is defined and not stored_hashes.results[loopIndex].failed)
+            if stored_hashes.results[loopIndex].content is defined
             else ''
           }}
       when: stored_hash != expected_hash

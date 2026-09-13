@@ -23,11 +23,14 @@ apps_config:
   virtualbox:
   freecad:
   google-chrome:
-  jellyfin-player:
+  jellium-desktop:
   pcsx2:
   prusa-slicer:
   ytdlp:
   linux-candy:
+  dibs:
+  go-deps-view:
+  todo:
 
 
 

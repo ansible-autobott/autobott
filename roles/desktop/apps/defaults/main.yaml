@@ -19,12 +19,15 @@ apps_config: {}
 apps_available:
   - freecad
   - google-chrome
-  - jellyfin-player
+  - jellium-desktop
   - jdownloader
   - pcsx2
   - prusa-slicer
   - ytdlp
   - linux-candy
+  - dibs
+  - go-deps-view
+  - todo
   - golang
   - k9s
   - kubectl
@@ -55,10 +58,10 @@ google_chrome_defaults:
         generic_name: "Outlook Web Access"
       bin: true # create link in /bin
 
-# ----- jellyfin-player -----
-jellyfin_player_defaults:
-  # https://github.com/jellyfin/jellyfin-desktop/releases
-  version: "1.12.0" # version without V
+# ----- jellium-desktop -----
+jellium_desktop_defaults:
+  # https://github.com/andresbott/jellium-desktop/releases
+  version: "0.1.0" # version without the leading v
 
 # ----- jdownloader -----
 jdownloader_defaults:
@@ -86,10 +89,15 @@ ytdlp_defaults:
   # https://github.com/yt-dlp/yt-dlp/releases
   version: "2023.11.16"
 
-# ----- linux-candy -----
-linux_candy_defaults:
-  # get url from: https://github.com/andresbott/linux-candy/releases
-  version: 0.3.0
+# ----- candy-tools (shared apt repo: dibs, go-deps-view, linux-candy, todo) -----
+# https://candy-tools.github.io/debian-repo/
+# The repo is added once if any of these apps is selected in apps_config,
+# then the selected subset is installed together with `apt install`.
+candy_tools_apps:
+  - dibs
+  - go-deps-view
+  - linux-candy
+  - todo
 
 # ----- golang -----
 golang_defaults:

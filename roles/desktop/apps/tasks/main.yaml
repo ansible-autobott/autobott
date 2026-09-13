@@ -32,10 +32,10 @@
       ansible.builtin.import_tasks: apps/google-chrome.yaml
       when: "'google-chrome' in apps_config"
       tags: [google-chrome, chrome]
-    - name: Jellyfin Player
-      ansible.builtin.import_tasks: apps/jellyfin-player.yaml
-      when: "'jellyfin-player' in apps_config"
-      tags: [jellyfin-player]
+    - name: Jellium Desktop
+      ansible.builtin.import_tasks: apps/jellium-desktop.yaml
+      when: "'jellium-desktop' in apps_config"
+      tags: [jellium-desktop]
     - name: JDownloader
       ansible.builtin.import_tasks: apps/jdownloader.yaml
       when: "'jdownloader' in apps_config"
@@ -76,10 +76,12 @@
       ansible.builtin.import_tasks: apps/virtualbox.yaml
       when: "'virtualbox' in apps_config"
       tags: [virtualbox]
-    - name: linux-candy
-      ansible.builtin.import_tasks: apps/linux-candy.yaml
-      when: "'linux-candy' in apps_config"
-      tags: [linux-candy]
+    # candy-tools: shared apt repo (dibs, go-deps-view, linux-candy, todo).
+    # Repo is added once if any is selected, then the subset is installed together.
+    - name: candy-tools apps
+      ansible.builtin.import_tasks: apps/candy-tools.yaml
+      when: candy_tools_apps | intersect(apps_config.keys() | list) | length > 0
+      tags: [candy-tools, dibs, go-deps-view, linux-candy, todo]
     # node is special-cased: imported unconditionally so it can uninstall nvm
     # when 'node' is not selected in apps_config (see apps/node.yaml).
     - name: Node

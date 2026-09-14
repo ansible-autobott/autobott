@@ -23,83 +23,67 @@
           {{ apps_config.keys() | list | difference(apps_available) | join(', ') }}.
           Available: {{ apps_available | join(', ') }}
 
-    # --- app catalog (one import_tasks per app; added in Tasks 2-4) ---
+    # --- app catalog (one import_tasks per app; selection via apps_config) ---
+    # The whole role is driven by a single tag (role_apps, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
     - name: FreeCAD
       ansible.builtin.import_tasks: apps/freecad.yaml
       when: "'freecad' in apps_config"
-      tags: [freecad]
     - name: Google Chrome
       ansible.builtin.import_tasks: apps/google-chrome.yaml
       when: "'google-chrome' in apps_config"
-      tags: [google-chrome, chrome]
     - name: Jellium Desktop
       ansible.builtin.import_tasks: apps/jellium-desktop.yaml
       when: "'jellium-desktop' in apps_config"
-      tags: [jellium-desktop]
     - name: JDownloader
       ansible.builtin.import_tasks: apps/jdownloader.yaml
       when: "'jdownloader' in apps_config"
-      tags: [jdownloader]
     - name: PCSX2
       ansible.builtin.import_tasks: apps/pcsx2.yaml
       when: "'pcsx2' in apps_config"
-      tags: [pcsx2]
     - name: PrusaSlicer
       ansible.builtin.import_tasks: apps/prusa-slicer.yaml
       when: "'prusa-slicer' in apps_config"
-      tags: [prusa-slicer]
     - name: yt-dlp
       ansible.builtin.import_tasks: apps/ytdlp.yaml
       when: "'ytdlp' in apps_config"
-      tags: [ytdlp]
     - name: k9s
       ansible.builtin.import_tasks: apps/k9s.yaml
       when: "'k9s' in apps_config"
-      tags: [k9s]
     - name: Golang
       ansible.builtin.import_tasks: apps/golang.yaml
       when: "'golang' in apps_config"
-      tags: [golang]
     - name: jenv
       ansible.builtin.import_tasks: apps/jenv.yaml
       when: "'jenv' in apps_config"
-      tags: [jenv]
     - name: maven
       ansible.builtin.import_tasks: apps/maven.yaml
       when: "'maven' in apps_config"
-      tags: [maven]
     - name: kubectl
       ansible.builtin.import_tasks: apps/kubectl.yaml
       when: "'kubectl' in apps_config"
-      tags: [kubectl]
     - name: Vagrant
       ansible.builtin.import_tasks: apps/vagrant.yaml
       when: "'vagrant' in apps_config"
-      tags: [vagrant]
     - name: Vault
       ansible.builtin.import_tasks: apps/vault.yaml
       when: "'vault' in apps_config"
-      tags: [vault]
     - name: VirtualBox
       ansible.builtin.import_tasks: apps/virtualbox.yaml
       when: "'virtualbox' in apps_config"
-      tags: [virtualbox]
     - name: input-remapper
       ansible.builtin.import_tasks: apps/input-remapper.yaml
       when: "'input-remapper' in apps_config"
-      tags: [input-remapper]
     - name: herdr
       ansible.builtin.import_tasks: apps/herdr.yaml
       when: "'herdr' in apps_config"
-      tags: [herdr]
     # candy-tools: shared apt repo (dibs, go-deps-view, linux-candy, todo).
     # Repo is added once if any is selected, then the subset is installed together.
     - name: candy-tools apps
       ansible.builtin.import_tasks: apps/candy-tools.yaml
       when: candy_tools_apps | intersect(apps_config.keys() | list) | length > 0
-      tags: [candy-tools, dibs, go-deps-view, linux-candy, todo]
     # node is special-cased: imported unconditionally so it can uninstall nvm
     # when 'node' is not selected in apps_config (see apps/node.yaml).
     - name: Node
       ansible.builtin.import_tasks: apps/node.yaml
-      tags: [node]

@@ -139,9 +139,36 @@ linux_basic_defaults:
   #        options: # optional escape hatch for any other ssh_config directive
   #          Port: 2222
   #          ProxyJump: bastion
+  #    git_config: # rendered into the user's ~/.gitconfig as an ansible-managed block
+  #      # content outside the block (incl. keys git itself writes) is preserved; git_config: {} removes it
+  #      sections: # [section] key = value; empty values omitted, values escaped only when needed
+  #        user:
+  #          name: "Andrés Bott"
+  #          email: "bott@example.com"
+  #        init:
+  #          defaultBranch: main
+  #      aliases: # list: a string is resolved from git_alias_catalog; a {name: value} is a free-form alias
+  #        - "prune-branches"                       # catalogue: the role supplies the command
+  #        - co: checkout                           # free-form: you supply the command (escaped for you)
+  #        - lg: "log --oneline --graph --decorate"
   #    uid: 2001
   #    gid: 2002
   users_extra: [] # same as users but allows to define users in two inventory places
+
+  #============================================================================================================
+  # Git
+  #============================================================================================================
+  # Catalogue of named git aliases. A user enables one by name via
+  # users[].git_config.aliases: ["prune-branches"]. Extend/override per host.
+  git_alias_catalog:
+    # delete local branches whose upstream is gone (run after fetch --prune)
+    prune-branches: '!git fetch -p && for branch in $(git branch -vv | grep ": gone]" | awk "{print \$1}"); do git branch -D "$branch"; done'
+    co: checkout
+    st: status
+    br: branch
+    last: log -1 HEAD
+    unstage: reset HEAD --
+    lg: log --oneline --graph --decorate --all
 
   #============================================================================================================
   # Kernel limits (sysctl)

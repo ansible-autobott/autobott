@@ -1,0 +1,33 @@
+{# Renders a user's ~/.gitconfig from item.git_config. Wrapped in an
+   ansible-managed block by the calling blockinfile task, so no markers here.
+   sections: [section] key = value; a section is emitted only when it has at
+   least one non-empty value. aliases: a list whose items are either a string
+   (resolved from linux_basic.git_alias_catalog) or a {name: value} mapping
+   (used as-is). Values are quoted/escaped only when needed; empty and
+   undefined values are omitted. #}
+{% macro gitval(v) -%}
+{% set s = (v | string | lower) if (v is boolean) else (v | string) -%}
+{% set needs = (s != s | trim) or ('"' in s) or ('\\' in s) or ('#' in s) or (';' in s) -%}
+{% if needs %}"{{ s | replace('\\', '\\\\') | replace('"', '\\"') }}"{% else %}{{ s }}{% endif %}
+{%- endmacro %}
+{% for section, entries in (item.git_config.sections | default({})).items() %}
+{% set kept = entries | dict2items | rejectattr('value', 'equalto', none) | rejectattr('value', 'equalto', '') | list %}
+{% if kept | length > 0 %}
+[{{ section }}]
+{% for pair in kept %}
+    {{ pair.key }} = {{ gitval(pair.value) }}
+{% endfor %}
+
+{% endif %}
+{% endfor %}
+{% set aliases = item.git_config.aliases | default([]) %}
+{% if aliases | length > 0 %}
+[alias]
+{% for a in aliases %}
+{% if a is string %}
+    {{ a }} = {{ gitval(linux_basic.git_alias_catalog[a]) }}
+{% else %}
+    {{ (a.keys() | list)[0] }} = {{ gitval(a[(a.keys() | list)[0]]) }}
+{% endif %}
+{% endfor %}
+{% endif %}

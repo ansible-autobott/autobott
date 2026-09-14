@@ -67,7 +67,7 @@
       ansible.builtin.git:
         repo: "{{ item.repo }}"
         dest: "{{ item.dest if item.dest.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.dest }}"
-        version: "{{ item.version | default(omit) }}"
+        version: "{{ item.version | default('') or omit }}"
         update: false
       become: true
       become_user: "{{ linux_desktop_config.user }}"

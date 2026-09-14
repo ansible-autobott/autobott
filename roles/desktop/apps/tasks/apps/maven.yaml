@@ -12,28 +12,35 @@
   ansible.builtin.set_fact:
     maven_config: "{{ maven_defaults | combine(apps_config['maven'] | default({}, true), recursive=true) }}"
 
-- name: Download Maven release tarball
-  ansible.builtin.get_url:
-    url: "{{ maven_config.base_url }}/{{ maven_config.version }}/binaries/apache-maven-{{ maven_config.version }}-bin.tar.gz"
-    dest: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
-    checksum: "sha512:{{ maven_config.sha512 }}"
-    owner: root
-    group: root
-    mode: '0644'
+- name: Check whether this Maven version is already installed
+  ansible.builtin.stat:
+    path: "/opt/apache-maven-{{ maven_config.version }}/bin/mvn"
+  register: maven_installed
 
-- name: Install Maven into /opt
-  ansible.builtin.unarchive:
-    src: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
-    dest: /opt
-    remote_src: true
-    owner: root
-    group: root
-    creates: "/opt/apache-maven-{{ maven_config.version }}/bin/mvn"
+- name: Install Maven from the release tarball
+  when: not maven_installed.stat.exists
+  block:
+    - name: Download Maven release tarball
+      ansible.builtin.get_url:
+        url: "{{ maven_config.base_url }}/{{ maven_config.version }}/binaries/apache-maven-{{ maven_config.version }}-bin.tar.gz"
+        dest: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
+        checksum: "sha512:{{ maven_config.sha512 }}"
+        owner: root
+        group: root
+        mode: '0644'
 
-- name: Remove the Maven tarball
-  ansible.builtin.file:
-    path: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
-    state: absent
+    - name: Install Maven into /opt
+      ansible.builtin.unarchive:
+        src: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
+        dest: /opt
+        remote_src: true
+        owner: root
+        group: root
+
+    - name: Remove the Maven tarball
+      ansible.builtin.file:
+        path: "/tmp/apache-maven-{{ maven_config.version }}-bin.tar.gz"
+        state: absent
 
 - name: Point /opt/maven at the installed version
   ansible.builtin.file:

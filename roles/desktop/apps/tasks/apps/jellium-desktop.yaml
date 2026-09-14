@@ -19,7 +19,7 @@
   changed_when: false
 
 - name: Install or update jellium-desktop
-  when: jellium_desktop_current_version.stdout != jellium_desktop_config.version
+  when: not (jellium_desktop_current_version.stdout | default('')).startswith(jellium_desktop_config.version)
   block:
     - name: Create jellium-desktop download dir
       ansible.builtin.file:

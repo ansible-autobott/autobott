@@ -27,30 +27,37 @@
     group: "{{ linux_desktop_config.user }}"
     mode: '0755'
 
-- name: Download jenv release tarball
-  ansible.builtin.get_url:
-    url: "https://github.com/jenv/jenv/archive/refs/tags/{{ jenv_config.version }}.tar.gz"
-    dest: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
-    checksum: "sha256:{{ jenv_config.sha256 }}"
-    owner: root
-    group: root
-    mode: '0644'
+- name: Check whether jenv is already installed
+  ansible.builtin.stat:
+    path: "{{ jenv_bin }}"
+  register: jenv_installed
 
-- name: Install jenv from tarball
-  ansible.builtin.unarchive:
-    src: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
-    dest: "{{ jenv_home }}"
-    remote_src: true
-    extra_opts:
-      - --strip-components=1
-    owner: "{{ linux_desktop_config.user }}"
-    group: "{{ linux_desktop_config.user }}"
-    creates: "{{ jenv_bin }}"
+- name: Install jenv from the release tarball
+  when: not jenv_installed.stat.exists
+  block:
+    - name: Download jenv release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/jenv/jenv/archive/refs/tags/{{ jenv_config.version }}.tar.gz"
+        dest: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        checksum: "sha256:{{ jenv_config.sha256 }}"
+        owner: root
+        group: root
+        mode: '0644'
 
-- name: Remove the jenv tarball
-  ansible.builtin.file:
-    path: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
-    state: absent
+    - name: Install jenv from tarball
+      ansible.builtin.unarchive:
+        src: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        dest: "{{ jenv_home }}"
+        remote_src: true
+        extra_opts:
+          - --strip-components=1
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
+
+    - name: Remove the jenv tarball
+      ansible.builtin.file:
+        path: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        state: absent
 
 # ============================== Shell hook ============================== #
 - name: Make sure .bashrc.d exists

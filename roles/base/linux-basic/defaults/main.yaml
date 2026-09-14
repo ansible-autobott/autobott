@@ -127,6 +127,18 @@ linux_basic_defaults:
   #      - "ssh-rsa AAAAB.... doctor@desktop"
   #    ssh_key_revoked:
   #      - "ssh-rsa AAAAB.... doctor@desktop"
+  #    ssh_config: # entries rendered into the user's ~/.ssh/config as an ansible-managed block
+  #      # only keys with a non-empty value are written; set ssh_config: [] to remove the block
+  #      - comment: "Personal GitHub (default)" # optional comment line above the entry
+  #        host: github.com                     # required: the Host pattern
+  #        hostname: github.com
+  #        user: git
+  #        identity_file: ~/.ssh/private_id_ed25519
+  #        identities_only: true
+  #        add_keys_to_agent: true
+  #        options: # optional escape hatch for any other ssh_config directive
+  #          Port: 2222
+  #          ProxyJump: bastion
   #    uid: 2001
   #    gid: 2002
   users_extra: [] # same as users but allows to define users in two inventory places

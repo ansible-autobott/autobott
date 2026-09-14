@@ -90,6 +90,37 @@
           loop: "{{ linux_basic.users | union(linux_basic.users_extra)  | subelements('ssh_key_revoked', skip_missing=True)  }}"
           when: item.0.enabled | default(false)
 
+        - name: Ensure .ssh directory exists for users with ssh_config
+          ansible.builtin.file:
+            path: "{{ item.home | default( '/home/' ~ item.username ) }}/.ssh"
+            state: directory
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0700"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
+          when:
+            - item.enabled | default(false)
+            - item.ssh_config | default([]) | length > 0
+          loop_control:
+            label: "{{ item.username }}"
+
+        - name: Configure user SSH client config
+          ansible.builtin.blockinfile:
+            path: "{{ item.home | default( '/home/' ~ item.username ) }}/.ssh/config"
+            create: true
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0600"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - SSH CONFIG"
+            block: "{{ lookup('template', 'ssh_config.j2') }}"
+            state: "{{ 'present' if (item.ssh_config | default([]) | length > 0) else 'absent' }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
+          when:
+            - item.enabled | default(false)
+            - item.ssh_config is defined
+          loop_control:
+            label: "{{ item.username }}"
+
         - name: Configure user shell environment
           ansible.builtin.template:
             src: bashrc.j2

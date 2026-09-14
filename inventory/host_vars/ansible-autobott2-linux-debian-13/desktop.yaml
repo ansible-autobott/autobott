@@ -2,6 +2,9 @@
 run_role_linux_desktop: true
 linux_desktop:
   user: "vagrant"
+  git_repos:
+    - repo: "https://github.com/octocat/Hello-World.git"
+      dest: "src/hello-world" # relative to the user's home
 
 run_role_linux_kde: true
 linux_kde:
@@ -31,6 +34,10 @@ apps_config:
   dibs:
   go-deps-view:
   todo:
+  jenv:
+  maven:
+  herdr:
+  input-remapper:
 
 
 

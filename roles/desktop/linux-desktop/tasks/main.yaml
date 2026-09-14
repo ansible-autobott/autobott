@@ -55,6 +55,25 @@
       with_items: "{{ linux_desktop_config.folders }}"
 
     #============================================================================================================
+    # Git repositories: clone repos into the user's home dir (clone-only; existing clones left untouched)
+    #============================================================================================================
+    - name: Ensure git is installed for cloning repositories
+      ansible.builtin.apt:
+        name: git
+        state: present
+      when: linux_desktop_config.git_repos | length > 0
+
+    - name: Clone git repositories into the home dir
+      ansible.builtin.git:
+        repo: "{{ item.repo }}"
+        dest: "{{ item.dest if item.dest.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.dest }}"
+        version: "{{ item.version | default(omit) }}"
+        update: false
+      become: true
+      become_user: "{{ linux_desktop_config.user }}"
+      with_items: "{{ linux_desktop_config.git_repos }}"
+
+    #============================================================================================================
     # Inventory files: copy files defined in the inventory to the host
     #============================================================================================================
     - name: inventory files

@@ -1,0 +1,7 @@
+{# Renders ~/.config/input-remapper-2/config.json — autoload is built from
+   input_remapper_config.presets so it stays in sync with the deployed presets. #}
+{% set autoload = {} %}
+{% for preset in input_remapper_config.presets %}
+{% set _ = autoload.update({preset.device: preset.name}) %}
+{% endfor %}
+{{ {"version": input_remapper_config.version, "autoload": autoload} | to_nice_json }}

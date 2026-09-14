@@ -84,6 +84,14 @@
       ansible.builtin.import_tasks: apps/virtualbox.yaml
       when: "'virtualbox' in apps_config"
       tags: [virtualbox]
+    - name: input-remapper
+      ansible.builtin.import_tasks: apps/input-remapper.yaml
+      when: "'input-remapper' in apps_config"
+      tags: [input-remapper]
+    - name: herdr
+      ansible.builtin.import_tasks: apps/herdr.yaml
+      when: "'herdr' in apps_config"
+      tags: [herdr]
     # candy-tools: shared apt repo (dibs, go-deps-view, linux-candy, todo).
     # Repo is added once if any is selected, then the subset is installed together.
     - name: candy-tools apps

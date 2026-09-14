@@ -1,0 +1,40 @@
+[
+    {
+        "input_combination": [
+            {
+                "type": 2,
+                "code": 6,
+                "origin_hash": "55cb1ef27eb908f8e91b200670ba57c9",
+                "analog_threshold": 1
+            },
+            {
+                "type": 2,
+                "code": 12,
+                "origin_hash": "55cb1ef27eb908f8e91b200670ba57c9",
+                "analog_threshold": 1
+            }
+        ],
+        "target_uinput": "keyboard",
+        "output_symbol": "Control_L + Next",
+        "mapping_type": "key_macro"
+    },
+    {
+        "input_combination": [
+            {
+                "type": 2,
+                "code": 6,
+                "origin_hash": "55cb1ef27eb908f8e91b200670ba57c9",
+                "analog_threshold": -1
+            },
+            {
+                "type": 2,
+                "code": 12,
+                "origin_hash": "55cb1ef27eb908f8e91b200670ba57c9",
+                "analog_threshold": -1
+            }
+        ],
+        "target_uinput": "keyboard",
+        "output_symbol": "Control_L+Prior",
+        "mapping_type": "key_macro"
+    }
+]

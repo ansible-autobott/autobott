@@ -37,6 +37,8 @@ apps_available:
   - vagrant
   - vault
   - virtualbox
+  - input-remapper
+  - herdr
 
 #============================================================================================================
 # Per-app defaults
@@ -167,3 +169,27 @@ vault_defaults:
 virtualbox_defaults:
   # virtualbox version to install
   pacakge: "virtualbox-7.1"
+
+# ----- input-remapper (input device remapping) -----
+input_remapper_defaults:
+  # https://github.com/sezanzeb/input-remapper/releases
+  version: "2.2.1"
+  base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
+  sha256: "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
+  # Deploy the example user config below into the desktop user's
+  # ~/.config/input-remapper-2/ (set false to install the app only).
+  deploy_config: true
+  # Presets rendered per user. Each entry deploys `template` to
+  # presets/<device>/<name>.json and is added to autoload in config.json.
+  # Seeded with the current example (M500s mouse tilt-wheel -> Ctrl+PgUp/PgDn).
+  presets:
+    - device: "Logitech Advanced Corded Mouse M500s"
+      name: "new preset"
+      template: "input-remapper/presets/m500s.json"
+
+# ----- herdr (runtime platform for coding agents) -----
+herdr_defaults:
+  # https://github.com/herdrdev/herdr/releases  (version without leading v)
+  version: "0.9.0"
+  base_url: "https://github.com/herdrdev/herdr/releases/download"
+  sha256: "4fa1a01158dd8043da92d31b270780b0dcc10603038d9b61cac4d81ab63fb71f"

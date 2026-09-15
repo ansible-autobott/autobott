@@ -86,6 +86,25 @@ linux_basic:
         - "ssh-rsa AAAAB2.... doctor@desktop"
       ssh_key_revoked:
         - "ssh-rsa AAAAB.... doctor@desktop"
+      ssh_config:
+        - comment: "Personal GitHub (default)"
+          host: github.com
+          hostname: github.com
+          user: git
+          identity_file: ~/.ssh/id_ed25519
+          identities_only: true
+          add_keys_to_agent: true
+      git_config:
+        sections:
+          user:
+            name: "The Doctor"
+            email: "jsmith@example.com"
+          init:
+            defaultBranch: main
+        aliases:
+          - "prune-branches"        # resolved from the role's git_alias_catalog
+          - co: checkout            # free-form alias
+          - lg: "log --oneline --graph --decorate"
 #============================================================================================================
 # Nullmailer
 #============================================================================================================

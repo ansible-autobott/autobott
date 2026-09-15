@@ -1,0 +1,30 @@
+{# Renders a user's ~/.ssh/config entries. Wrapped in an ansible-managed
+   block by the calling blockinfile task, so no markers are emitted here.
+   A directive is written only when its key is defined AND non-empty. #}
+{% for entry in item.ssh_config | default([]) if (entry.host | default('') | length > 0) %}
+{% if entry.comment | default('') | length > 0 %}
+# {{ entry.comment }}
+{% endif %}
+Host {{ entry.host }}
+{% if entry.hostname | default('') | length > 0 %}
+    HostName {{ entry.hostname }}
+{% endif %}
+{% if entry.user | default('') | length > 0 %}
+    User {{ entry.user }}
+{% endif %}
+{% if entry.identity_file | default('') | length > 0 %}
+    IdentityFile {{ entry.identity_file }}
+{% endif %}
+{% if entry.identities_only is defined and entry.identities_only != '' %}
+    IdentitiesOnly {{ 'yes' if entry.identities_only | bool else 'no' }}
+{% endif %}
+{% if entry.add_keys_to_agent is defined and entry.add_keys_to_agent != '' %}
+    AddKeysToAgent {{ 'yes' if entry.add_keys_to_agent | bool else 'no' }}
+{% endif %}
+{% for key, value in (entry.options | default({})).items() if (value is not none and (value | string) | length > 0) %}
+    {{ key }} {{ value }}
+{% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}

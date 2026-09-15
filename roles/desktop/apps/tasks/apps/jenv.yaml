@@ -1,0 +1,140 @@
+---
+#============================================================================================================
+# jenv — Java version manager (per-user, installed under the desktop user's home)
+# https://github.com/jenv/jenv
+#
+# Installs jenv from a pinned GitHub release tarball, hooks it into the user's
+# shell via ~/.bashrc.d/jenv.bashrc and enables the export plugin (JAVA_HOME).
+# jenv itself never installs JDKs, so we also apt-install the configured
+# openjdk packages and register each with `jenv add` — giving the user working
+# multi-version switching (jenv global / jenv local) out of the box.
+#============================================================================================================
+- name: Set merged jenv configuration
+  ansible.builtin.set_fact:
+    jenv_config: "{{ jenv_defaults | combine(apps_config['jenv'] | default({}, true), recursive=true) }}"
+
+- name: Set jenv paths
+  ansible.builtin.set_fact:
+    jenv_home: "/home/{{ linux_desktop_config.user }}/.jenv"
+    jenv_bin: "/home/{{ linux_desktop_config.user }}/.jenv/bin/jenv"
+
+# ============================== Install jenv ============================== #
+- name: Ensure ~/.jenv exists
+  ansible.builtin.file:
+    path: "{{ jenv_home }}"
+    state: directory
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_config.user }}"
+    mode: '0755'
+
+- name: Check whether jenv is already installed
+  ansible.builtin.stat:
+    path: "{{ jenv_bin }}"
+  register: jenv_installed
+
+- name: Install jenv from the release tarball
+  when: not jenv_installed.stat.exists
+  block:
+    - name: Download jenv release tarball
+      ansible.builtin.get_url:
+        url: "https://github.com/jenv/jenv/archive/refs/tags/{{ jenv_config.version }}.tar.gz"
+        dest: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        checksum: "sha256:{{ jenv_config.sha256 }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install jenv from tarball
+      ansible.builtin.unarchive:
+        src: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        dest: "{{ jenv_home }}"
+        remote_src: true
+        extra_opts:
+          - --strip-components=1
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
+
+    - name: Remove the jenv tarball
+      ansible.builtin.file:
+        path: "/tmp/jenv-{{ jenv_config.version }}.tar.gz"
+        state: absent
+
+# ============================== Shell hook ============================== #
+- name: Make sure .bashrc.d exists
+  ansible.builtin.file:
+    path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+    state: directory
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_config.user }}"
+    mode: '0750'
+
+- name: Copy jenv .bashrc.d hook
+  ansible.builtin.template:
+    src: jenv/jenv.bashrc
+    dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/jenv.bashrc"
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_config.user }}"
+    mode: '0750'
+
+# ============================== export plugin (JAVA_HOME) ============================== #
+- name: Enable jenv export plugin (keeps JAVA_HOME in sync)
+  become: true
+  become_user: "{{ linux_desktop_config.user }}"
+  ansible.builtin.command: "{{ jenv_bin }} enable-plugin export"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  args:
+    creates: "{{ jenv_home }}/plugins/export"
+  when: jenv_config.enable_export_plugin | bool
+
+# ============================== JDKs ============================== #
+- name: Install OpenJDK packages
+  ansible.builtin.apt:
+    name: "{{ jenv_config.jdk_packages }}"
+    state: present
+    update_cache: true
+  when: jenv_config.jdk_packages | length > 0
+
+- name: Discover installed OpenJDK homes
+  ansible.builtin.find:
+    paths: /usr/lib/jvm
+    file_type: directory
+    patterns: 'java-*-openjdk-*'
+    recurse: false
+  register: jenv_jvm_dirs
+  when: jenv_config.jdk_packages | length > 0
+
+- name: Register installed JDKs with jenv
+  become: true
+  become_user: "{{ linux_desktop_config.user }}"
+  ansible.builtin.command: "{{ jenv_bin }} add {{ item.path }}"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  loop: "{{ jenv_jvm_dirs.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: jenv_add
+  changed_when: "'added' in jenv_add.stdout"
+  when: jenv_config.jdk_packages | length > 0
+
+# ============================== Optional default version ============================== #
+- name: Get current jenv global version
+  become: true
+  become_user: "{{ linux_desktop_config.user }}"
+  ansible.builtin.command: "{{ jenv_bin }} global"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  register: jenv_current_global
+  changed_when: false
+  when: jenv_config.global_version | length > 0
+
+- name: Set jenv global version
+  become: true
+  become_user: "{{ linux_desktop_config.user }}"
+  ansible.builtin.command: "{{ jenv_bin }} global {{ jenv_config.global_version }}"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  changed_when: true
+  when:
+    - jenv_config.global_version | length > 0
+    - jenv_current_global.stdout | default('') | trim != jenv_config.global_version

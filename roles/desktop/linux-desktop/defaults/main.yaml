@@ -15,6 +15,16 @@ linux_desktop_defaults:
   folders:
     - "Screenshots"
   #============================================================================================================
+  # Git repositories
+  #============================================================================================================
+  # Clone git repositories into the desktop user's home dir. Repos are cloned only when
+  # missing; existing clones are left untouched (no pull on re-run). git is installed
+  # automatically when this list is non-empty.
+  git_repos: []
+  #  - repo: "https://github.com/user/dotfiles.git"  # required: clone URL
+  #    dest: "src/dotfiles"                           # required: path, relative to home unless it starts with /
+  #    version: ""                                    # optional: branch/tag/commit to check out (default: remote HEAD)
+  #============================================================================================================
   # Inventory files
   #============================================================================================================
   # files present on the inventory and copied over to the destination

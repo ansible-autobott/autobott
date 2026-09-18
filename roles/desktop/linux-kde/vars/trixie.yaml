@@ -12,6 +12,9 @@ kde_packages:
   - sddm-theme-breeze
   - ffmpegthumbnailer
   - kwin-addons
+  # extra Plasma widgets used by the AutoBott panel template
+  # (kickerdash / Application Dashboard, quicklaunch, ...)
+  - plasma-widgets-addons
   - kde-config-gtk-style
   - kde-config-gtk-style-preview
 
@@ -38,3 +41,10 @@ kde_packages_purge:
   - plasma-discover
   - kde-spectacle
   - gwenview
+
+# Plasma "Add Panel" layout template installed by the linux_kde add_kde_style
+# block. Names both the source dir under files/plasma-layout-templates/ and the
+# install dir under /usr/share/plasma/layout-templates/. Defined only for this
+# Plasma 6 release; it is intentionally absent from the Plasma 5 (bookworm) vars
+# so the panel install no-ops there.
+kde_panel_layout_template: org.autobott.plasma.desktop.panel

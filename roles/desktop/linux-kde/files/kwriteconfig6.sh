@@ -49,9 +49,20 @@ kwriteconfig6 --file dolphinrc --group 'TabBar' --key 'TabBarVisibility' 'Always
 # Konsole
 # =====================================================================================
 kwriteconfig6 --file konsolerc --group 'KonsoleWindow' --key 'RememberWindowSize' 'false'
+kwriteconfig6 --file konsolerc --group 'MainWindow' --key 'MenuBar' 'Disabled'
+kwriteconfig6 --file konsolerc --group 'MainWindow' --key 'ToolButtonStyle' 'IconOnly'
+kwriteconfig6 --file konsolerc --group 'Toolbar mainToolBar' --key 'ToolButtonStyle' 'IconOnly'
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'TabBarPosition' 'Bottom'
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'TabBarVisibility' 'AlwaysShowTabBar'
+# Remove the per-tab close (X) button. Konsole's default is 'OnEachTab'; other
+# values are 'OnTabBar' (single X on the bar) and 'None' (no button). Tabs stay
+# closable via Ctrl+W and right-click tab -> Close Tab.
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'CloseTabButton' 'None'
+# The Pastels profile + its DarkPastels colorscheme are deployed as files by the
+# linux_kde role (files/konsole/); point Konsole at the profile and set the window scheme.
+kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key 'DefaultProfile' 'Pastels.profile'
+kwriteconfig6 --file konsolerc --group 'UiSettings' --key 'ColorScheme' 'BreezeClassic'
 # TODO: add shortcut for "find"  Ctrl +F instead of Ctr + Shift + F
-# TODO: automate profile with dark pastels color, probably using elementary breeze pacakge
-# TODO: make setting to have session tabs always visible
 
 # =====================================================================================
 # Yakuake
@@ -85,10 +96,16 @@ kwriteconfig6 --file kwinrc --group 'Windows' --key 'TitlebarDoubleClickCommand'
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft MNSF
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
 
-# wobly windows
+# wobbly windows
 kwriteconfig6 --file kwinrc --group Plugins --key 'wobblywindowsEnabled' 'true'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'Drag' '92'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'MoveFactor' '20'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'ResizeWobble' 'false'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'Stiffness' '3'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'WobblynessLevel' '3'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Drag' '92'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'MoveFactor' '20'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'ResizeWobble' 'false'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Stiffness' '3'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'WobblynessLevel' '3'
+
+# virtual desktops
+kwriteconfig6 --file kwinrc --group Desktops --key 'Id_1' '28e33d8f-a554-492c-82a9-9cd0ba8b0235'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Id_2' '04b36c7f-15f5-4d13-bd38-664a46617547'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Rows' '1'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Number' '2'

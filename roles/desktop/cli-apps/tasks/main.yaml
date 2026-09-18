@@ -1,0 +1,68 @@
+---
+#============================================================================================================
+# CLI / developer apps role — main tasks
+#============================================================================================================
+- name: CLI apps
+  when:
+    - run_role_cli_apps | bool
+  tags:
+    - role_cli_apps
+  block:
+    - name: Validate cli_apps_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - cli_apps_config is mapping
+        fail_msg: "cli_apps_config must be a mapping of app-name -> overrides (or empty), got {{ cli_apps_config | type_debug }}."
+
+    - name: Validate cli_apps_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (cli_apps_config.keys() | list | difference(cli_apps_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in cli_apps_config:
+          {{ cli_apps_config.keys() | list | difference(cli_apps_available) | join(', ') }}.
+          Available: {{ cli_apps_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via cli_apps_config) ---
+    # The whole role is driven by a single tag (role_cli_apps, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    - name: yt-dlp
+      ansible.builtin.import_tasks: apps/ytdlp.yaml
+      when: "'ytdlp' in cli_apps_config"
+    - name: k9s
+      ansible.builtin.import_tasks: apps/k9s.yaml
+      when: "'k9s' in cli_apps_config"
+    - name: Golang
+      ansible.builtin.import_tasks: apps/golang.yaml
+      when: "'golang' in cli_apps_config"
+    - name: jenv
+      ansible.builtin.import_tasks: apps/jenv.yaml
+      when: "'jenv' in cli_apps_config"
+    - name: maven
+      ansible.builtin.import_tasks: apps/maven.yaml
+      when: "'maven' in cli_apps_config"
+    - name: kubectl
+      ansible.builtin.import_tasks: apps/kubectl.yaml
+      when: "'kubectl' in cli_apps_config"
+    - name: Vagrant
+      ansible.builtin.import_tasks: apps/vagrant.yaml
+      when: "'vagrant' in cli_apps_config"
+    - name: Vault
+      ansible.builtin.import_tasks: apps/vault.yaml
+      when: "'vault' in cli_apps_config"
+    - name: herdr
+      ansible.builtin.import_tasks: apps/herdr.yaml
+      when: "'herdr' in cli_apps_config"
+    - name: GitHub CLI
+      ansible.builtin.import_tasks: apps/github-cli.yaml
+      when: "'github-cli' in cli_apps_config"
+    # candy-tools: shared apt repo (dibs, go-deps-view, linux-candy, todo).
+    # Repo is added once if any is selected, then the subset is installed together.
+    - name: candy-tools apps
+      ansible.builtin.import_tasks: apps/candy-tools.yaml
+      when: candy_tools_apps | intersect(cli_apps_config.keys() | list) | length > 0
+    # node is special-cased: imported unconditionally so it can uninstall nvm
+    # when 'node' is not selected in cli_apps_config (see apps/node.yaml).
+    - name: Node
+      ansible.builtin.import_tasks: apps/node.yaml

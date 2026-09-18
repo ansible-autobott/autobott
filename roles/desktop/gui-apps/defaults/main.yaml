@@ -1,0 +1,97 @@
+---
+#============================================================================================================
+# GUI desktop apps role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_gui_apps: true
+
+# App selection. Keys are app names; value is an optional per-app override
+# dict (deep-merged into that app's defaults). Empty value = install with
+# defaults. Example:
+#   gui_apps_config:
+#     freecad:
+#     google-chrome:
+#       extra_profiles: [...]
+gui_apps_config: {}
+
+# Source of truth for validation — every key allowed in gui_apps_config.
+gui_apps_available:
+  - freecad
+  - google-chrome
+  - jellium-desktop
+  - jdownloader
+  - pcsx2
+  - prusa-slicer
+  - virtualbox
+  - input-remapper
+
+#============================================================================================================
+# Per-app defaults
+#============================================================================================================
+
+# ----- freecad -----
+freecad_defaults:
+  # https://www.freecad.org/downloads.php?lang=en
+  version: "1.0.2"
+freecad_versions:
+  1.0.2: "https://github.com/FreeCAD/FreeCAD/releases/download/1.0.2/FreeCAD_1.0.2-conda-Linux-x86_64-py311.AppImage"
+
+# ----- google-chrome -----
+google_chrome_defaults:
+  extra_profiles:
+    - name: owa # name
+      destination: /home/vagrant/programs/owa
+      url: "https://outlook.office365.com/mail/inbox" # (optional) default url to open
+      desktop:
+        desc: "Outlook Web Access"
+        generic_name: "Outlook Web Access"
+      bin: true # create link in /bin
+
+# ----- jellium-desktop -----
+jellium_desktop_defaults:
+  # https://github.com/andresbott/jellium-desktop/releases
+  version: "0.1.0" # version without the leading v
+
+# ----- jdownloader -----
+jdownloader_defaults:
+  # JDownloader self-updates on launch, so there is no version to pin — the
+  # official install4j installer always fetches the latest build.
+  # https://jdownloader.org/download/index
+  installer_url: "https://installer.jdownloader.org/JD2Setup_x64.sh"
+  install_dir: /opt/jdownloader
+
+# ----- pcsx2 -----
+pcsx2_defaults:
+  # get from: https://github.com/PCSX2/pcsx2
+  version: v1.6.0
+
+# ----- prusa-slicer -----
+prusa_slicer_defaults:
+  # prusa-slicer version to install
+  version: "2.7.0"
+# download from: https://github.com/prusa3d/PrusaSlicer/releases
+prusa_slicer_versions:
+  2.7.0: "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.0/PrusaSlicer-2.7.0+linux-x64-GTK3-202311231454.AppImage"
+
+# ----- virtualbox -----
+virtualbox_defaults:
+  # virtualbox version to install
+  pacakge: "virtualbox-7.1"
+
+# ----- input-remapper (input device remapping) -----
+input_remapper_defaults:
+  # https://github.com/sezanzeb/input-remapper/releases
+  version: "2.2.1"
+  base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
+  sha256: "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
+  # Deploy the example user config below into the desktop user's
+  # ~/.config/input-remapper-2/ (set false to install the app only).
+  deploy_config: true
+  # Presets rendered per user. Each entry deploys `template` to
+  # presets/<device>/<name>.json and is added to autoload in config.json.
+  # Seeded with the current example (M500s mouse tilt-wheel -> Ctrl+PgUp/PgDn).
+  presets:
+    - device: "Logitech Advanced Corded Mouse M500s"
+      name: "new preset"
+      template: "input-remapper/presets/m500s.json"

@@ -104,6 +104,77 @@
         group: "{{ linux_desktop_user_main_group }}"
 
     #============================================================================================================
+    # Nerd Fonts: DejaVu Sans Mono patched with icon / Powerline glyphs
+    #============================================================================================================
+    # Installs the Nerd-Fonts-patched DejaVu Sans Mono system-wide (under
+    # /usr/local/share/fonts) so terminals/editors can render the icon glyphs the
+    # plain fonts-dejavu package lacks. Off by default (install_dejavu_nerd_font);
+    # the pinned release + hash are role vars (nerd_font_version /
+    # nerd_font_dejavu_sha256). The patched family truncates to "DejaVuSansM Nerd
+    # Font" (verified with fc-scan) - that is the string a consumer sets as its
+    # font (e.g. the linux-kde Konsole profile).
+    - name: Install the DejaVuSansM Nerd Font
+      when: linux_desktop_config.install_dejavu_nerd_font | bool
+      vars:
+        nerd_font_cache_dir: /usr/local/share/autobott/fonts
+        nerd_font_install_dir: /usr/local/share/fonts/nerd-fonts/DejaVuSansMono
+        nerd_font_dejavu_tarball: "{{ nerd_font_cache_dir }}/DejaVuSansMono-{{ nerd_font_version }}.tar.xz"
+      block:
+        - name: Ensure xz-utils is present (required to unpack the .tar.xz)
+          ansible.builtin.apt:
+            name: xz-utils
+            state: present
+            update_cache: true
+
+        - name: Ensure the Nerd Font cache + install directories exist
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+          loop:
+            - "{{ nerd_font_cache_dir }}"
+            - "{{ nerd_font_install_dir }}"
+
+        - name: Download the pinned DejaVuSansM Nerd Font release tarball
+          ansible.builtin.get_url:
+            url: "https://github.com/ryanoasis/nerd-fonts/releases/download/{{ nerd_font_version }}/DejaVuSansMono.tar.xz"
+            dest: "{{ nerd_font_dejavu_tarball }}"
+            checksum: "sha256:{{ nerd_font_dejavu_sha256 }}"
+            owner: root
+            group: root
+            mode: "0644"
+          register: nerd_font_download
+
+        - name: Check whether the Nerd Font TTFs are already extracted
+          ansible.builtin.stat:
+            path: "{{ nerd_font_install_dir }}/DejaVuSansMNerdFont-Regular.ttf"
+          register: nerd_font_ttf
+
+        # Extract on first install (TTFs missing) or when the pinned tarball
+        # changed (version bump). The archive is flat TTFs plus LICENSE/README;
+        # keeping the licence beside the fonts is deliberate.
+        - name: Extract the DejaVuSansM Nerd Font
+          ansible.builtin.unarchive:
+            src: "{{ nerd_font_dejavu_tarball }}"
+            dest: "{{ nerd_font_install_dir }}"
+            remote_src: true
+            owner: root
+            group: root
+            mode: "0644"
+          when: nerd_font_download is changed or not nerd_font_ttf.stat.exists
+          register: nerd_font_extracted
+
+        # Inline (not a handler) on purpose: the refresh belongs with the
+        # extraction that changed the fonts, and the install dir is a block-scoped
+        # var a play-level handler could not see.
+        - name: Refresh the system font cache  # noqa: no-handler
+          ansible.builtin.command: "fc-cache -f {{ nerd_font_install_dir }}"
+          when: nerd_font_extracted is changed
+          changed_when: true
+
+    #============================================================================================================
     # ImageMagick: install and/or tune /etc/ImageMagick-6/policy.xml
     #============================================================================================================
     - name: ImageMagick

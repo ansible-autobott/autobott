@@ -1,0 +1,46 @@
+---
+#============================================================================================================
+# k9s
+#============================================================================================================
+- name: Set merged k9s configuration
+  ansible.builtin.set_fact:
+    k9s_config: "{{ k9s_defaults | combine(cli_apps_config['k9s'] | default({}, true), recursive=true) }}"
+
+- name: Get current k9s version
+  ansible.builtin.shell: "k9s version --short | grep Version | awk -F ' ' '{print $2}'"
+  register: k9s_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update k9s
+  when: k9s_current_version.stdout != k9s_config.version
+  block:
+    - name: Create k9s download dir
+      ansible.builtin.file:
+        path: "/tmp/k9s"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Download k9s
+      ansible.builtin.unarchive:
+        src: "https://github.com/derailed/k9s/releases/download/{{ k9s_config.version }}/k9s_Linux_amd64.tar.gz"
+        dest: "/tmp/k9s"
+        remote_src: true
+
+    - name: Move k9s
+      ansible.builtin.command: "mv /tmp/k9s/k9s /usr/local/bin/k9s"
+
+    - name: Remove k9s download dir
+      ansible.builtin.file:
+        path: "/tmp/k9s"
+        state: absent
+
+    - name: Ensure k9s is executable
+      ansible.builtin.file:
+        path: "/usr/local/bin/k9s"
+        state: file
+        mode: '0755'
+        owner: root
+        group: root

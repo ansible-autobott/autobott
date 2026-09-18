@@ -106,8 +106,10 @@
     - desktop/linux-desktop
     - desktop/linux-kde
 
-    # desktop + developer apps (selection via apps_config)
-    - desktop/apps
+    # GUI desktop apps (selection via gui_apps_config)
+    - desktop/gui-apps
+    # CLI / developer apps (selection via cli_apps_config)
+    - desktop/cli-apps
 
 #============================================================================================================
 # post setup actions

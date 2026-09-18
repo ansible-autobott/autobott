@@ -1,0 +1,41 @@
+---
+#============================================================================================================
+# candy-tools — shared apt repo (dibs, go-deps-view, linux-candy, todo)
+# https://candy-tools.github.io/debian-repo/
+#
+# This file is imported once when at least one candy-tools app is selected in
+# cli_apps_config. It adds the repo, then installs the selected subset in a single
+# `apt install`. Add new packages to `candy_tools_apps` in defaults/main.yaml
+# (and to `cli_apps_available`).
+#============================================================================================================
+- name: Ensure python3-debian is present (required by deb822_repository)
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+
+- name: Add candy-tools GPG key
+  ansible.builtin.copy:
+    src: candy-tools/candy-tools-archive-keyring.gpg
+    dest: /usr/share/keyrings/candy-tools-archive-keyring.gpg
+    mode: "0644"
+
+- name: Add candy-tools apt repository
+  ansible.builtin.deb822_repository:
+    name: candy-tools
+    types: deb
+    uris: https://candy-tools.github.io/debian-repo
+    suites: stable
+    components: main
+    signed_by: /usr/share/keyrings/candy-tools-archive-keyring.gpg
+    state: present
+    mode: "0644"
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install selected candy-tools apps
+  ansible.builtin.apt:
+    name: "{{ candy_tools_apps | intersect(cli_apps_config.keys() | list) }}"
+    state: present

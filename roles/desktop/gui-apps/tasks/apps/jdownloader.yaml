@@ -1,0 +1,73 @@
+---
+#============================================================================================================
+# JDownloader
+#============================================================================================================
+- name: Set merged jdownloader configuration
+  ansible.builtin.set_fact:
+    jdownloader_config: "{{ jdownloader_defaults | combine(gui_apps_config['jdownloader'] | default({}, true), recursive=true) }}"
+
+- name: Check whether JDownloader is already installed
+  ansible.builtin.stat:
+    path: "{{ jdownloader_config.install_dir }}/JDownloader2"
+  register: jdownloader_launcher
+
+# JDownloader self-updates on launch, so the official installer only needs to
+# run once — skip it entirely when the launcher is already present.
+- name: Install JDownloader
+  when: not jdownloader_launcher.stat.exists
+  block:
+    - name: Create JDownloader download dir
+      ansible.builtin.file:
+        path: /tmp/jdownloader
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Download JDownloader installer
+      ansible.builtin.get_url:
+        url: "{{ jdownloader_config.installer_url }}"
+        dest: /tmp/jdownloader/JD2Setup_x64.sh
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Run JDownloader unattended installer
+      ansible.builtin.command:
+        cmd: "sh /tmp/jdownloader/JD2Setup_x64.sh -q -console -overwrite -dir {{ jdownloader_config.install_dir }}"
+        creates: "{{ jdownloader_config.install_dir }}/JDownloader2"
+
+    - name: Remove JDownloader download dir
+      ansible.builtin.file:
+        path: /tmp/jdownloader
+        state: absent
+
+- name: Verify JDownloader launcher is present
+  ansible.builtin.stat:
+    path: "{{ jdownloader_config.install_dir }}/JDownloader2"
+  register: jdownloader_launcher_check
+
+- name: Assert JDownloader installed correctly
+  ansible.builtin.assert:
+    that:
+      - jdownloader_launcher_check.stat.exists
+    fail_msg: >-
+      JDownloader launcher not found at {{ jdownloader_config.install_dir }}/JDownloader2
+      after installation; the install4j layout may have changed.
+
+- name: Create JDownloader desktop entry
+  ansible.builtin.copy:
+    dest: /usr/share/applications/jdownloader.desktop
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Desktop Entry]
+      Name=JDownloader
+      GenericName=Download Manager
+      Comment=Download management tool for direct and container downloads
+      Exec={{ jdownloader_config.install_dir }}/JDownloader2
+      Icon={{ jdownloader_config.install_dir }}/icons/jdownloader.png
+      Terminal=false
+      Type=Application
+      Categories=Network;FileTransfer;

@@ -1,0 +1,22 @@
+{
+    "KPackageStructure": "Plasma/LayoutTemplate",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "",
+                "Name": "AutoBott"
+            }
+        ],
+        "Category": "",
+        "Description": "AutoBott panel: launcher, task manager, system tray and clock",
+        "EnabledByDefault": true,
+        "Id": "org.autobott.plasma.desktop.panel",
+        "License": "GPL-3.0-or-later",
+        "Name": "AutoBott Panel",
+        "Website": "https://ansible-autobott.github.io/docs/"
+    },
+    "X-Plasma-ContainmentCategories": [
+        "panel"
+    ],
+    "X-Plasma-Shell": "plasmashell"
+}

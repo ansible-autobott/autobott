@@ -84,24 +84,12 @@
             clean: yes
 
     #============================================================================================================
-    # Elementary breeze
-    #============================================================================================================
-    - name: Install theme
-      when: linux_kde_config.add_kde_elementary_breeze or linux_kde_config.add_kde_style
-      block:
-        - name: Installing Elementary-breeze
-          apt:
-            deb: "{{ linux_kde_elementary_breeze_url }}"
-
-    #============================================================================================================
     # KDE style customizations
     #============================================================================================================
-    # Applies the per-user desktop styling for the primary desktop user. The
-    # elementary-breeze theme is installed by the "Install theme" block above
-    # (which also fires for add_kde_style); here we push the distro-appropriate
-    # kwriteconfig script (kde_kwriteconfig_script, from vars/<release>.yaml) and
-    # run it as that user so it writes to their ~/.config. Some settings only
-    # take effect after a re-login.
+    # Applies the per-user desktop styling for the primary desktop user: it pushes
+    # the distro-appropriate kwriteconfig script (kde_kwriteconfig_script, from
+    # vars/<release>.yaml) and runs it as that user so it writes to their
+    # ~/.config. Some settings only take effect after a re-login.
     - name: KDE style customizations block
       when: linux_kde_config.add_kde_style
       vars:
@@ -131,6 +119,149 @@
             HOME: "{{ kde_style_home }}"
           # kwriteconfig re-asserts the same values on every run; not a change.
           changed_when: false
+
+        # Dolphin's toolbar layout lives in the KXMLGUI file dolphinui.rc, which
+        # ALSO holds the menus, shortcuts and state - there is no toolbar-only
+        # file. So we split responsibilities:
+        #   1. Seed the full known-good file only if the user has none yet
+        #      (force: false): this provides the menus/hamburger and never
+        #      clobbers a config the user later customizes.
+        #   2. Enforce ONLY the <ToolBar> element on every run via the xml
+        #      module, so the toolbar stays up to date while the user's
+        #      menus/shortcuts are left untouched.
+        # KF6 (trixie) only; KF5/bookworm keeps the Dolphin defaults.
+        - name: Deploy the custom Dolphin toolbar (KDE 6 / trixie only)
+          when: ansible_facts.distribution_release == "trixie"
+          block:
+            - name: Ensure the Dolphin KXMLGUI config directory exists
+              ansible.builtin.file:
+                path: "{{ kde_style_home }}/.local/share/kxmlgui5/dolphin"
+                state: directory
+                owner: "{{ linux_desktop_config.user }}"
+                group: "{{ linux_desktop_user_main_group }}"
+                mode: "0755"
+
+            - name: Seed the Dolphin config file if the user has none yet
+              ansible.builtin.copy:
+                src: dolphinui.rc
+                dest: "{{ kde_style_home }}/.local/share/kxmlgui5/dolphin/dolphinui.rc"
+                owner: "{{ linux_desktop_config.user }}"
+                group: "{{ linux_desktop_user_main_group }}"
+                mode: "0644"
+                force: false
+
+            - name: Ensure python3-lxml is present (required by the xml module)
+              ansible.builtin.apt:
+                name: python3-lxml
+                state: present
+                update_cache: true
+
+            # Authoritative toolbar definition. This must be kept in sync with the
+            # <ToolBar> in files/dolphinui.rc; on every run this task wins and
+            # replaces ONLY the mainToolBar children, leaving menus/shortcuts as-is.
+            # Runs as the desktop user so the rewritten file stays user-owned.
+            - name: Enforce the Dolphin toolbar button layout
+              community.general.xml:
+                path: "{{ kde_style_home }}/.local/share/kxmlgui5/dolphin/dolphinui.rc"
+                xpath: "/gui/ToolBar[@name='mainToolBar']"
+                input_type: xml
+                set_children:
+                  - '<text context="@title:menu" translationDomain="dolphin">Main Toolbar</text>'
+                  - '<Action name="go_back"/>'
+                  - '<Action name="go_up"/>'
+                  - '<Action name="go_forward"/>'
+                  - '<Action name="go_home"/>'
+                  - '<Separator name="separator_0"/>'
+                  - '<Action name="icons"/>'
+                  - '<Action name="compact"/>'
+                  - '<Action name="details"/>'
+                  - '<Separator name="separator_1"/>'
+                  # priority="0" (LowPriority) = the per-button "Show Text" OFF
+                  # state, so these two render icon-only like the rest.
+                  - '<Action name="show_preview" priority="0"/>'
+                  - '<Action name="split_view" priority="0"/>'
+                  - '<Separator name="separator_2"/>'
+                  - '<Action name="url_navigators"/>'
+                  - '<Action name="split_stash"/>'
+                  - '<Action name="toggle_search"/>'
+                  - '<Action name="hamburger_menu"/>'
+              become: true
+              become_user: "{{ linux_desktop_config.user }}"
+
+        # Konsole style: no toolbar, tabs at the bottom, menubar off, icon-only,
+        # Pastels / Dark Pastels colours. The konsolerc *settings* are re-asserted
+        # by the kwriteconfig script above; here we deploy the files that settings
+        # can't express:
+        #   - the profile + its colorscheme, and
+        #   - the KXMLGUI files with the main + session <ToolBar> elements removed.
+        #     Konsole shows those toolbars by default and the [Toolbar] Hidden= key
+        #     is ignored in KF6, so dropping the <ToolBar> elements is the reliable
+        #     way to remove the bar (verified on Konsole 25.04.3).
+        # copy's default (force: true) upserts the box to match the role source on
+        # every run. KF6 (trixie) only.
+        #
+        # The profile's Font= is "DejaVuSansM Nerd Font", installed by the
+        # linux-desktop role (install_dejavu_nerd_font). If that toggle is off the
+        # font is absent and Konsole silently falls back - no glyphs, not an error.
+        - name: Deploy the Konsole style (KDE 6 / trixie only)
+          when: ansible_facts.distribution_release == "trixie"
+          block:
+            - name: Ensure the Konsole data + KXMLGUI directories exist
+              ansible.builtin.file:
+                path: "{{ item }}"
+                state: directory
+                owner: "{{ linux_desktop_config.user }}"
+                group: "{{ linux_desktop_user_main_group }}"
+                mode: "0755"
+              loop:
+                - "{{ kde_style_home }}/.local/share/konsole"
+                - "{{ kde_style_home }}/.local/share/kxmlgui5/konsole"
+
+            - name: Deploy the Konsole profile + colorscheme (upsert on change)
+              ansible.builtin.copy:
+                src: "konsole/{{ item }}"
+                dest: "{{ kde_style_home }}/.local/share/konsole/{{ item }}"
+                owner: "{{ linux_desktop_config.user }}"
+                group: "{{ linux_desktop_user_main_group }}"
+                mode: "0644"
+              loop:
+                - Pastels.profile
+                - DarkPastels.colorscheme
+
+            - name: Deploy the Konsole GUI files with the toolbars removed (upsert)
+              ansible.builtin.copy:
+                src: "konsole/{{ item }}"
+                dest: "{{ kde_style_home }}/.local/share/kxmlgui5/konsole/{{ item }}"
+                owner: "{{ linux_desktop_config.user }}"
+                group: "{{ linux_desktop_user_main_group }}"
+                mode: "0644"
+              loop:
+                - konsoleui.rc
+                - sessionui.rc
+
+    #============================================================================================================
+    # KDE panel layout template (Plasma 6 only)
+    #============================================================================================================
+    # Installs a system-wide Plasma "Add Panel" layout template so the desktop
+    # user can add the pre-defined "AutoBott Panel" when editing KDE. Gated by
+    # add_kde_style. The files are root-owned under
+    # /usr/share/plasma/layout-templates/; nothing is applied automatically and
+    # nothing is written to the user's ~/.config. Only named for Plasma 6
+    # releases via kde_panel_layout_template (from vars/<release>.yaml); on
+    # Plasma 5 releases that var is undefined, so this block is skipped.
+    - name: KDE panel layout template block
+      when:
+        - linux_kde_config.add_kde_style | bool
+        - kde_panel_layout_template is defined
+      block:
+        - name: Install the AutoBott panel layout template
+          ansible.builtin.copy:
+            src: "plasma-layout-templates/{{ kde_panel_layout_template }}/"
+            dest: "/usr/share/plasma/layout-templates/{{ kde_panel_layout_template }}/"
+            owner: root
+            group: root
+            mode: "0644"
+            directory_mode: "0755"
 
     #============================================================================================================
     # GTK global menu (appmenu-gtk-module) - Debian 13 (trixie) only

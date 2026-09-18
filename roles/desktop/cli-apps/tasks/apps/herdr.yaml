@@ -1,0 +1,22 @@
+---
+#============================================================================================================
+# herdr — runtime platform for coding agents
+# https://herdr.dev
+# https://github.com/herdrdev/herdr
+#
+# Installs the upstream Linux x86_64 release binary to /usr/local/bin/herdr,
+# pinned by version + sha256. herdr is a CLI/runtime run by the user; this role
+# only puts the binary on PATH.
+#============================================================================================================
+- name: Set merged herdr configuration
+  ansible.builtin.set_fact:
+    herdr_config: "{{ herdr_defaults | combine(cli_apps_config['herdr'] | default({}, true), recursive=true) }}"
+
+- name: Install herdr binary
+  ansible.builtin.get_url:
+    url: "{{ herdr_config.base_url }}/v{{ herdr_config.version }}/herdr-linux-x86_64"
+    dest: /usr/local/bin/herdr
+    checksum: "sha256:{{ herdr_config.sha256 }}"
+    owner: root
+    group: root
+    mode: '0755'

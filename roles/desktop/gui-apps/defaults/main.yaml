@@ -24,7 +24,6 @@ gui_apps_available:
   - pcsx2
   - prusa-slicer
   - virtualbox
-  - input-remapper
 
 #============================================================================================================
 # Per-app defaults and version catalogs (version -> checksum; sha as a separate lookup)
@@ -44,15 +43,21 @@ freecad_versions:
 
 # ----- google-chrome -----
 # Installed from Google's apt repo (self-updating); no version to pin.
+#
+# extra_profiles: isolated Chrome profiles, each with its own launcher (and an
+# optional /usr/local/bin symlink). Empty by default — set per host via
+# gui_apps_config['google-chrome'].extra_profiles. Paths are absolute, so point
+# `destination` at the target user's home. Example entry:
+#   extra_profiles:
+#     - name: owa                                     # profile + launcher name
+#       destination: /home/<user>/programs/owa        # absolute; where the profile lives
+#       url: "https://outlook.office365.com/mail/inbox"  # (optional) default url to open
+#       desktop:
+#         desc: "Outlook Web Access"
+#         generic_name: "Outlook Web Access"
+#       bin: true                                     # (optional) symlink launcher into /usr/local/bin
 google_chrome_defaults:
-  extra_profiles:
-    - name: owa # name
-      destination: /home/vagrant/programs/owa
-      url: "https://outlook.office365.com/mail/inbox" # (optional) default url to open
-      desktop:
-        desc: "Outlook Web Access"
-        generic_name: "Outlook Web Access"
-      bin: true # create link in /bin
+  extra_profiles: []
 
 # ----- jellium-desktop -----
 # https://github.com/andresbott/jellium-desktop/releases
@@ -85,21 +90,3 @@ pcsx2_versions:
 virtualbox_defaults:
   # virtualbox apt package to install
   package: "virtualbox-7.1"
-
-# ----- input-remapper (input device remapping) -----
-# https://github.com/sezanzeb/input-remapper/releases  (version -> sha256 of the .deb)
-input_remapper_default_version: "2.2.1"
-input_remapper_versions:
-  "2.2.1": "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
-input_remapper_defaults:
-  base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
-  # Deploy the example user config below into the desktop user's
-  # ~/.config/input-remapper-2/ (set false to install the app only).
-  deploy_config: true
-  # Presets rendered per user. Each entry deploys `template` to
-  # presets/<device>/<name>.json and is added to autoload in config.json.
-  # Seeded with the current example (M500s mouse tilt-wheel -> Ctrl+PgUp/PgDn).
-  presets:
-    - device: "Logitech Advanced Corded Mouse M500s"
-      name: "new preset"
-      template: "input-remapper/presets/m500s.json"

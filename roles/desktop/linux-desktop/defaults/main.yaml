@@ -73,11 +73,38 @@ linux_desktop_defaults:
   # "DejaVuSansM Nerd Font" (e.g. the linux-kde Konsole profile). Off by default.
   install_dejavu_nerd_font: true
 
+  #============================================================================================================
+  # input-remapper (remap keys/buttons of input devices)
+  #============================================================================================================
+  # Install input-remapper (https://github.com/sezanzeb/input-remapper) and enable its
+  # system daemon, then optionally deploy per-user remapping presets into
+  # ~/.config/input-remapper-2/ (the package's XDG autostart applies them on next
+  # login). Off by default; the pinned release + hash are the role vars below.
+  input_remapper:
+    # install the app + enable the system daemon
+    install: false
+    # Presets rendered per user; each is added to autoload. Empty by default and only
+    # deployed when install is true. Templates resolve against this role's templates/
+    # dir. Example — a Logitech M500s tilt-wheel mapped to Ctrl+PgUp/PgDn (the
+    # input-remapper/presets/m500s.json template ships with this role):
+    #   presets:
+    #     - device: "Logitech Advanced Corded Mouse M500s"
+    #       name: "new preset"
+    #       template: "input-remapper/presets/m500s.json"
+    presets: []
+
 # Pinned Nerd Fonts release + per-font hash for the DejaVu install above. The
 # release tag is shared across any Nerd Font; nerd_font_dejavu_sha256 is the
 # DejaVuSansMono.tar.xz hash. Bump via the upgrade-packages workflow and keep the
 # hash in sync with the release tarball.
 nerd_font_version: v3.5.1
 nerd_font_dejavu_sha256: 9d3f2d60faa790b101903c2984b89c11397fc63b9ce43f2dcd25ffed4fb44e5f
+
+# Pinned input-remapper release + .deb hash for the input_remapper.install feature
+# above. https://github.com/sezanzeb/input-remapper/releases  (version -> sha256 of
+# the .deb). Bump via the upgrade-packages workflow.
+input_remapper_version: "2.2.1"
+input_remapper_sha256: "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
+input_remapper_base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
 
 

@@ -5,6 +5,12 @@ linux_desktop:
   git_repos:
     - repo: "https://github.com/octocat/Hello-World.git"
       dest: "src/hello-world" # relative to the user's home
+  input_remapper:
+    install: true
+    presets:
+      - device: "Logitech Advanced Corded Mouse M500s"
+        name: "new preset"
+        template: "input-remapper/presets/m500s.json"
 
 run_role_linux_kde: true
 linux_kde:
@@ -25,7 +31,6 @@ gui_apps_config:
   jellium-desktop:
   pcsx2:
   prusa-slicer:
-  input-remapper:
 
 
 #============================================================================================================

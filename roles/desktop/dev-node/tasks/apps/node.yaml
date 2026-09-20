@@ -1,0 +1,102 @@
+---
+#============================================================================================================
+# Node (via nvm — Node Version Manager)
+# Special-cased: this file is imported unconditionally by tasks/main.yaml so it
+# can uninstall nvm when 'node' is NOT selected in dev_node_config.
+#
+# nvm's canonical install.sh is downloaded by version (sha-verified) and run as
+# the desktop user; it installs nvm into ~/.nvm. Node itself is then installed
+# via `nvm install <target>` — nvm fetches Node, so the node version is a plain
+# selector: "lts" (default), "node" (latest), or an exact version.
+#============================================================================================================
+- name: Install Node Version Manager
+  when: "'node' in dev_node_config"
+  block:
+    - name: Resolve the selected nvm / node versions
+      ansible.builtin.set_fact:
+        nvm_version: "{{ (dev_node_config['node'] | default({}, true)).nvm_version | default(nvm_default_version, true) }}"
+        node_version: "{{ (dev_node_config['node'] | default({}, true)).version | default(node_default_version, true) }}"
+
+    - name: Validate the selected nvm version is available
+      ansible.builtin.assert:
+        that:
+          - nvm_version in nvm_versions
+        fail_msg: >-
+          Unknown nvm version '{{ nvm_version }}'.
+          Available: {{ nvm_versions.keys() | list | join(', ') }}
+
+    - name: Check if .nvm exists
+      ansible.builtin.stat:
+        path: "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
+      register: nvm_stat
+
+    - name: Ensure acl is installed
+      ansible.builtin.apt:
+        name: acl
+        state: present
+
+    - name: Download the nvm installer
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh"
+        dest: "/tmp/nvm_{{ nvm_version }}_install.sh"
+        checksum: "sha256:{{ nvm_versions[nvm_version] }}"
+        owner: root
+        group: root
+        mode: '0755'
+      when: not nvm_stat.stat.exists
+
+    - name: Install nvm
+      become: true
+      become_user: "{{ linux_desktop_config.user }}"
+      ansible.builtin.shell: >
+        bash /tmp/nvm_{{ nvm_version }}_install.sh
+      environment:
+        NVM_DIR: "/home/{{ linux_desktop_config.user }}/.nvm"
+      args:
+        creates: "/home/{{ linux_desktop_config.user }}/.nvm/nvm.sh"
+
+    - name: Remove the installer
+      ansible.builtin.file:
+        path: "/tmp/nvm_{{ nvm_version }}_install.sh"
+        state: absent
+      when: not nvm_stat.stat.exists
+
+    - name: Make sure .bashrc.d exists
+      ansible.builtin.file:
+        path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+        state: directory
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
+        mode: '0750'
+
+    - name: Copy .bashrc.d template
+      ansible.builtin.template:
+        src: node/nvm.bashrc
+        dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/nvm.bashrc"
+        mode: '0750'
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
+
+    - name: Install Node
+      become: true
+      become_user: "{{ linux_desktop_config.user }}"
+      ansible.builtin.shell: "source /home/{{ linux_desktop_config.user }}/.nvm/nvm.sh && nvm install {{ '--lts' if node_version == 'lts' else node_version }}"
+      environment:
+        NVM_DIR: "/home/{{ linux_desktop_config.user }}/.nvm"
+      args:
+        executable: /bin/bash
+      register: install_node
+      changed_when: "'is already installed' not in (install_node.stdout + install_node.stderr)"
+
+- name: Uninstall Node Version Manager
+  when: "'node' not in dev_node_config"
+  block:
+    - name: Remove .bashrc.d nvm template
+      ansible.builtin.file:
+        path: "/home/{{ linux_desktop_config.user }}/.bashrc.d/nvm.bashrc"
+        state: absent
+
+    - name: Remove .nvm directory
+      ansible.builtin.file:
+        path: "/home/{{ linux_desktop_config.user }}/.nvm"
+        state: absent

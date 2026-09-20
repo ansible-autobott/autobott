@@ -1,0 +1,42 @@
+---
+#============================================================================================================
+# dev-generic — generic developer tools role — main tasks
+#============================================================================================================
+- name: Dev generic apps
+  when:
+    - run_role_dev_generic | bool
+  tags:
+    - role_dev_generic
+    - linux-desktop-all
+  block:
+    - name: Validate dev_generic_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_generic_config is mapping
+        fail_msg: "dev_generic_config must be a mapping of app-name -> overrides (or empty), got {{ dev_generic_config | type_debug }}."
+
+    - name: Validate dev_generic_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (dev_generic_config.keys() | list | difference(dev_generic_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in dev_generic_config:
+          {{ dev_generic_config.keys() | list | difference(dev_generic_available) | join(', ') }}.
+          Available: {{ dev_generic_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via dev_generic_config) ---
+    # The whole role is driven by a single tag (role_dev_generic, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    - name: Vagrant
+      ansible.builtin.import_tasks: apps/vagrant.yaml
+      when: "'vagrant' in dev_generic_config"
+    - name: Vault
+      ansible.builtin.import_tasks: apps/vault.yaml
+      when: "'vault' in dev_generic_config"
+    - name: herdr
+      ansible.builtin.import_tasks: apps/herdr.yaml
+      when: "'herdr' in dev_generic_config"
+    - name: GitHub CLI
+      ansible.builtin.import_tasks: apps/github-cli.yaml
+      when: "'github-cli' in dev_generic_config"

@@ -1,0 +1,124 @@
+---
+#============================================================================================================
+# kubectl (+ Azure kubelogin)
+# https://kubernetes.io/releases/            (version -> sha256, kubectl_versions)
+# https://github.com/Azure/kubelogin/releases (version -> sha256, kubelogin_versions)
+#============================================================================================================
+- name: Resolve the selected kubectl / kubelogin versions
+  ansible.builtin.set_fact:
+    kubectl_version: "{{ (dev_k8s_config['kubectl'] | default({}, true)).version | default(kubectl_default_version, true) }}"
+    kubelogin_version: "{{ (dev_k8s_config['kubectl'] | default({}, true)).kubelogin_version | default(kubelogin_default_version, true) }}"
+
+- name: Validate the selected kubectl version is available
+  ansible.builtin.assert:
+    that:
+      - kubectl_version in kubectl_versions
+    fail_msg: >-
+      Unknown kubectl version '{{ kubectl_version }}'.
+      Available: {{ kubectl_versions.keys() | list | join(', ') }}
+
+- name: Validate the selected kubelogin version is available
+  ansible.builtin.assert:
+    that:
+      - kubelogin_version in kubelogin_versions
+    fail_msg: >-
+      Unknown kubelogin version '{{ kubelogin_version }}'.
+      Available: {{ kubelogin_versions.keys() | list | join(', ') }}
+
+# ============================== kubectl ============================== #
+- name: Get current kubectl version
+  ansible.builtin.shell: "kubectl version --client=true --output=json | grep gitVersion | awk '{print $2}' | tr -d '\"' | tr -d ','"
+  register: kube_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update kubectl
+  when: kube_current_version.stdout != kubectl_version
+  block:
+    - name: Download kubectl
+      ansible.builtin.get_url:
+        url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        checksum: "sha256:{{ kubectl_versions[kubectl_version] }}"
+        owner: root
+        group: root
+        mode: '0755'
+
+- name: Make sure .bashrc.d exists
+  ansible.builtin.file:
+    path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+    state: directory
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+    mode: '0750'
+
+- name: Copy .bashrc.d template
+  ansible.builtin.template:
+    src: kubectl/kubectl.bashrc
+    dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/10_kubectl.bashrc"
+    mode: '0750'
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+
+- name: Create .kube config dir
+  ansible.builtin.file:
+    path: "/home/{{ linux_desktop_config.user }}/.kube"
+    state: directory
+    mode: '0750'
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+
+# ============================== Azure kubelogin ============================== #
+- name: Get current kubelogin version
+  ansible.builtin.shell: "kubelogin --version | grep hash | awk -F '/' '{print $1}' | awk -F ' ' '{print $3}'"
+  register: kubelogin_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update kubelogin
+  when: kubelogin_current_version.stdout != kubelogin_version
+  block:
+    - name: Create kubelogin download dir
+      ansible.builtin.file:
+        path: "/tmp/kubelogin"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Ensure unzip is installed
+      ansible.builtin.apt:
+        name: unzip
+        state: present
+      become: true
+
+    - name: Download kubelogin
+      ansible.builtin.get_url:
+        url: "https://github.com/Azure/kubelogin/releases/download/{{ kubelogin_version }}/kubelogin-linux-amd64.zip"
+        dest: "/tmp/kubelogin/kubelogin.zip"
+        checksum: "sha256:{{ kubelogin_versions[kubelogin_version] }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Unpack kubelogin
+      ansible.builtin.unarchive:
+        src: "/tmp/kubelogin/kubelogin.zip"
+        dest: "/tmp/kubelogin"
+        remote_src: true
+
+    - name: Move kubelogin
+      ansible.builtin.command: "mv /tmp/kubelogin/bin/linux_amd64/kubelogin /usr/local/bin/kubelogin"
+
+    - name: Remove kubelogin download dir
+      ansible.builtin.file:
+        path: "/tmp/kubelogin"
+        state: absent
+
+    - name: Ensure kubelogin is executable
+      ansible.builtin.file:
+        path: "/usr/local/bin/kubelogin"
+        state: file
+        mode: '0755'
+        owner: root
+        group: root

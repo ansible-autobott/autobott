@@ -1,0 +1,20 @@
+---
+#============================================================================================================
+# JDK install method: apt
+# Installs, in a single apt transaction, the distro packages for every selected
+# java_versions entry whose catalog method is `apt`.
+#============================================================================================================
+- name: Collect the apt-method JDK packages
+  ansible.builtin.set_fact:
+    java_apt_packages: >-
+      {{ dev_java_config.java_versions
+         | map('extract', java_available_jdks)
+         | selectattr('method', 'eq', 'apt')
+         | map(attribute='package') | list }}
+
+- name: Install OpenJDK packages
+  ansible.builtin.apt:
+    name: "{{ java_apt_packages }}"
+    state: present
+    update_cache: true
+  when: java_apt_packages | length > 0

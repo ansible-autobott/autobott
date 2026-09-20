@@ -1,0 +1,47 @@
+---
+#============================================================================================================
+# dev-k8s — Kubernetes developer tools role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_dev_k8s: true
+
+# App selection. Keys are tool names; value is an optional per-tool override
+# dict. kubectl accepts { version:, kubelogin_version: }; k9s accepts { version: }.
+# Each version must be one of that tool's catalogued versions below; an empty
+# value installs the default versions.
+# Example:
+#   dev_k8s_config:
+#     kubectl:
+#       version: "v1.31.0"
+#       kubelogin_version: "v0.0.34"
+#     k9s:
+dev_k8s_config: {}
+
+# Source of truth for validation — every key allowed in dev_k8s_config.
+dev_k8s_available:
+  - kubectl
+  - k9s
+
+#============================================================================================================
+# Per-tool version catalogs (version -> sha256; the sha is a separate lookup)
+#============================================================================================================
+
+# ----- kubectl -----
+# https://kubernetes.io/releases/  (version -> sha256 of the linux/amd64 binary,
+# from https://dl.k8s.io/release/<version>/bin/linux/amd64/kubectl.sha256)
+kubectl_default_version: "v1.31.0"
+kubectl_versions:
+  "v1.31.0": "7c27adc64a84d1c0cc3dcf7bf4b6e916cc00f3f576a2dbac51b318d926032437"
+
+# ----- kubelogin (Azure AD auth plugin for kubectl; installed alongside kubectl) -----
+# https://github.com/Azure/kubelogin/releases  (version -> sha256 of the linux-amd64 zip)
+kubelogin_default_version: "v0.0.34"
+kubelogin_versions:
+  "v0.0.34": "de2a529b4b044f6d41b82cd256c9d9fba44a68ad3c48f2d68e1c093eba51db02"
+
+# ----- k9s -----
+# https://github.com/derailed/k9s/releases  (version -> sha256 of the Linux_amd64 tarball)
+k9s_default_version: "v0.29.1"
+k9s_versions:
+  "v0.29.1": "b7ed81a8952a5520a1a6978c3cf68b1fd555d928a444c63d4b826ae6fbb6d9ff"

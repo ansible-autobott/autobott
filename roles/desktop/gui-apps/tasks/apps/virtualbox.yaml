@@ -42,6 +42,6 @@
 
 - name: "apt | ensure virtualBox present"
   ansible.builtin.apt:
-    name: "{{ virtualbox_config.pacakge }}"
+    name: "{{ virtualbox_config.package }}"
     state: present
     update_cache: true

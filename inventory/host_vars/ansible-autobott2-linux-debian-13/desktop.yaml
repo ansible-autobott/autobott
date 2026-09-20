@@ -27,22 +27,51 @@ gui_apps_config:
   prusa-slicer:
   input-remapper:
 
-# CLI / developer apps
+
+#============================================================================================================
+# CLI utilities / developer toolchains
+#============================================================================================================
 run_role_cli_apps: true
 cli_apps_config:
-  golang:
-  kubectl:
-  k9s:
-  node:
-  vagrant:
-  vault:
   ytdlp:
   linux-candy:
   dibs:
-  go-deps-view:
   todo:
+
+# =========================== # NODE  ===========================
+run_role_dev_node: true
+dev_node_config:
+  node:
+
+# =========================== # GO  ===========================
+run_role_dev_go: true
+dev_go_config:
+  golang:
+  goreleaser:
+  nfpm:
+  golangci-lint:
+  go-deps-view:
+
+# =========================== # JAVA  ===========================
+run_role_dev_java: true
+dev_java_config:
+  java_versions:
+    - openjdk-21-jdk
+    - openjdk-25-jdk
   jenv:
   maven:
+
+# =========================== # K8S  ===========================
+run_role_dev_k8s: true
+dev_k8s_config:
+  kubectl:
+  k9s:
+
+# =========================== # Other  ===========================
+run_role_dev_generic: true
+dev_generic_config:
+  vagrant:
+  vault:
   herdr:
   github-cli:
 

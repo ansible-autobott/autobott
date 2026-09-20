@@ -1,0 +1,50 @@
+---
+#============================================================================================================
+# dev-java — Java developer tools role — main tasks
+#============================================================================================================
+- name: Dev Java apps
+  when:
+    - run_role_dev_java | bool
+  tags:
+    - role_dev_java
+    - linux-desktop-all
+  block:
+    - name: Validate dev_java_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_java_config is mapping
+        fail_msg: "dev_java_config must be a mapping (or empty), got {{ dev_java_config | type_debug }}."
+
+    - name: Validate dev_java_config only references known keys
+      ansible.builtin.assert:
+        that:
+          - (dev_java_config.keys() | list | difference(['java_versions'] + dev_java_tools)) | length == 0
+        fail_msg: >-
+          Unknown key(s) in dev_java_config:
+          {{ dev_java_config.keys() | list | difference(['java_versions'] + dev_java_tools) | join(', ') }}.
+          Allowed: java_versions, {{ dev_java_tools | join(', ') }}
+
+    - name: Validate the selected JDKs are available
+      ansible.builtin.assert:
+        that:
+          - (dev_java_config.java_versions | default([]) | difference(java_available_jdks.keys() | list)) | length == 0
+        fail_msg: >-
+          Unknown JDK(s) in dev_java_config.java_versions:
+          {{ dev_java_config.java_versions | default([]) | difference(java_available_jdks.keys() | list) | join(', ') }}.
+          Available: {{ java_available_jdks.keys() | list | join(', ') }}
+
+    # --- JDKs first, so jenv can register the freshly installed ones ---
+    - name: Java JDKs
+      ansible.builtin.import_tasks: apps/java-jdks.yaml
+      when: (dev_java_config.java_versions | default([])) | length > 0
+
+    # --- versioned tools (selection via dev_java_config) ---
+    # The whole role is driven by a single tag (role_dev_java, on the block above);
+    # there are no per-tool tags. Running the role tag runs every selected tool's
+    # (idempotent) tasks.
+    - name: jenv
+      ansible.builtin.import_tasks: apps/jenv.yaml
+      when: "'jenv' in dev_java_config"
+    - name: maven
+      ansible.builtin.import_tasks: apps/maven.yaml
+      when: "'maven' in dev_java_config"

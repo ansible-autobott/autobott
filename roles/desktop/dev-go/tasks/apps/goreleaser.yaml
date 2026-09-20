@@ -1,0 +1,42 @@
+---
+#============================================================================================================
+# goreleaser — release automation for Go (installed from the upstream .deb)
+# https://github.com/goreleaser/goreleaser/releases
+#============================================================================================================
+- name: Resolve the selected goreleaser version
+  ansible.builtin.set_fact:
+    goreleaser_version: "{{ (dev_go_config['goreleaser'] | default({}, true)).version | default(goreleaser_default_version, true) }}"
+
+- name: Validate the selected goreleaser version is available
+  ansible.builtin.assert:
+    that:
+      - goreleaser_version in goreleaser_versions
+    fail_msg: >-
+      Unknown goreleaser version '{{ goreleaser_version }}'.
+      Available: {{ goreleaser_versions.keys() | list | join(', ') }}
+
+- name: Create goreleaser download directory
+  ansible.builtin.file:
+    path: /tmp/goreleaser-dl
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Download goreleaser
+  ansible.builtin.get_url:
+    url: "https://github.com/goreleaser/goreleaser/releases/download/v{{ goreleaser_version }}/goreleaser_{{ goreleaser_version }}_amd64.deb"
+    dest: /tmp/goreleaser-dl/goreleaser.deb
+    checksum: "sha256:{{ goreleaser_versions[goreleaser_version] }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install goreleaser
+  ansible.builtin.apt:
+    deb: /tmp/goreleaser-dl/goreleaser.deb
+
+- name: Remove goreleaser download directory
+  ansible.builtin.file:
+    path: /tmp/goreleaser-dl
+    state: absent

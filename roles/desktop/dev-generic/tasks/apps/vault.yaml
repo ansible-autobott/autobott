@@ -1,0 +1,69 @@
+---
+#============================================================================================================
+# vault
+# https://releases.hashicorp.com/vault/  (version -> sha256 of the linux_amd64 zip)
+#============================================================================================================
+- name: Resolve the selected vault version
+  ansible.builtin.set_fact:
+    vault_version: "{{ (dev_generic_config['vault'] | default({}, true)).version | default(vault_default_version, true) }}"
+
+- name: Validate the selected vault version is available
+  ansible.builtin.assert:
+    that:
+      - vault_version in vault_versions
+    fail_msg: >-
+      Unknown vault version '{{ vault_version }}'.
+      Available: {{ vault_versions.keys() | list | join(', ') }}
+
+- name: Get current vault version
+  ansible.builtin.shell: "vault version | awk '{print $2}' | tr -d 'v'"
+  register: vault_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update vault
+  when: vault_current_version.stdout != vault_version
+  block:
+    - name: Create vault download dir
+      ansible.builtin.file:
+        path: "/tmp/vault"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Ensure unzip is installed
+      ansible.builtin.apt:
+        name: unzip
+        state: present
+
+    - name: Download vault
+      ansible.builtin.get_url:
+        url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip"
+        dest: "/tmp/vault/vault.zip"
+        checksum: "sha256:{{ vault_versions[vault_version] }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Unpack vault
+      ansible.builtin.unarchive:
+        src: "/tmp/vault/vault.zip"
+        dest: "/tmp/vault"
+        remote_src: true
+
+    - name: Move vault
+      ansible.builtin.command: "mv /tmp/vault/vault /usr/local/bin/vault"
+
+    - name: Remove vault download dir
+      ansible.builtin.file:
+        path: "/tmp/vault"
+        state: absent
+
+    - name: Ensure vault is executable
+      ansible.builtin.file:
+        path: "/usr/local/bin/vault"
+        state: file
+        mode: '0755'
+        owner: root
+        group: root

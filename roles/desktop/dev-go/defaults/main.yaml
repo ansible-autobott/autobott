@@ -1,0 +1,76 @@
+---
+#============================================================================================================
+# dev-go — Go developer tools role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_dev_go: true
+
+# App selection. Keys are tool names; value is an optional per-tool override
+# dict. For the versioned tools the only override is `version:` (which must be
+# one of that tool's catalogued versions below); an empty value installs the
+# tool's default version. go-deps-view takes no version (latest from apt).
+# Example:
+#   dev_go_config:
+#     golang:
+#       version: "1.25.6"
+#     goreleaser:
+#     go-deps-view:
+dev_go_config: {}
+
+# Source of truth for validation — every key allowed in dev_go_config.
+dev_go_available:
+  - golang
+  - goreleaser
+  - nfpm
+  - golangci-lint
+  - go-deps-view
+
+#============================================================================================================
+# Per-tool version catalogs
+#
+# Each versioned tool has a `<tool>_versions` catalog and a `<tool>_default_version`
+# used when dev_go_config selects the tool without pinning a version. The selected
+# version is asserted to exist in the catalog before install.
+#============================================================================================================
+
+# ----- golang -----
+# Go is installed via godeb, which fetches the Go release from Google; there is
+# no per-version sha we control, so golang_versions is a plain allow-list. godeb
+# itself is pinned separately below.
+golang_default_version: "1.25.6"
+golang_versions:
+  - "1.25.6"
+  - "1.25.5"
+
+# godeb — the installer used to fetch/install Go (fixed pin, not per-Go-version).
+# get the link from: https://github.com/niemeyer/godeb
+golang_godeb_url: "https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz"
+golang_godeb_sha256: "f2b3445dda98b31a32381036bf01c7e82df1a5a151e7e838ca1f0d1fb8e80952"
+
+# ----- goreleaser -----
+# https://github.com/goreleaser/goreleaser/releases  (version -> sha256 of the amd64 .deb)
+goreleaser_default_version: "2.18.1"
+goreleaser_versions:
+  "2.18.1": "f9227f77b5f7747dc3ddad211e34bacccde111a95560c5404d47add00d0aa24e"
+
+# ----- nfpm -----
+# https://github.com/goreleaser/nfpm/releases  (version -> sha256 of the amd64 .deb)
+nfpm_default_version: "2.47.0"
+nfpm_versions:
+  "2.47.0": "3f1cf344bd0b57373ca55636a78c08b0491f7293d609a456a9ac3b0b150fda97"
+
+# ----- golangci-lint -----
+# https://github.com/golangci/golangci-lint/releases  (version -> sha256 of the amd64 .deb)
+golangci_lint_default_version: "2.13.2"
+golangci_lint_versions:
+  "2.13.2": "7ef9114c71db2e6b8529fc58ef4575b02661f6e0a45aeb50248f2a86f8ea50a9"
+
+# ----- candy-tools (shared apt repo: go-deps-view) -----
+# https://candy-tools.github.io/debian-repo/
+# The repo is added once if go-deps-view is selected in dev_go_config, then the
+# selected subset is installed together with `apt install`.
+# NOTE: the same candy-tools repo also serves dibs/linux-candy/todo, installed
+# by the cli-apps role.
+candy_tools_apps:
+  - go-deps-view

@@ -1,0 +1,20 @@
+---
+#============================================================================================================
+# Java JDKs — install each selected JDK via its catalogued install method.
+#
+# The distinct methods among the selected JDKs are dispatched to
+# tasks/jdks/<method>.yaml; each handler installs every selected JDK that uses
+# it. Today only `apt` (OpenJDK) is implemented.
+#============================================================================================================
+- name: Determine the JDK install methods needed
+  ansible.builtin.set_fact:
+    java_selected_methods: >-
+      {{ dev_java_config.java_versions
+         | map('extract', java_available_jdks)
+         | map(attribute='method') | unique | list }}
+
+- name: Install JDKs by method
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/jdks/{{ jdk_method }}.yaml"
+  loop: "{{ java_selected_methods }}"
+  loop_control:
+    loop_var: jdk_method

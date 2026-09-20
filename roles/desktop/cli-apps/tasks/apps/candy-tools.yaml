@@ -1,6 +1,6 @@
 ---
 #============================================================================================================
-# candy-tools — shared apt repo (dibs, go-deps-view, linux-candy, todo)
+# candy-tools — shared apt repo (dibs, linux-candy, todo)
 # https://candy-tools.github.io/debian-repo/
 #
 # This file is imported once when at least one candy-tools app is selected in
@@ -8,6 +8,9 @@
 # repositories catalog, then installs the selected subset in a single
 # `apt install`. Add new packages to `candy_tools_apps` in defaults/main.yaml
 # (and to `cli_apps_available`).
+#
+# NOTE: the same candy-tools repo also serves go-deps-view, installed by the
+# dev-go role (its own copy of this task installs that subset).
 #============================================================================================================
 - name: Ensure the candy-tools apt repository  # noqa: role-name[path]
   ansible.builtin.import_role:

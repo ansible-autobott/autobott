@@ -1,0 +1,35 @@
+---
+#============================================================================================================
+# dev-node — Node.js developer tools role — main tasks
+#============================================================================================================
+- name: Dev Node apps
+  when:
+    - run_role_dev_node | bool
+  tags:
+    - role_dev_node
+    - linux-desktop-all
+  block:
+    - name: Validate dev_node_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_node_config is mapping
+        fail_msg: "dev_node_config must be a mapping of app-name -> overrides (or empty), got {{ dev_node_config | type_debug }}."
+
+    - name: Validate dev_node_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (dev_node_config.keys() | list | difference(dev_node_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in dev_node_config:
+          {{ dev_node_config.keys() | list | difference(dev_node_available) | join(', ') }}.
+          Available: {{ dev_node_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via dev_node_config) ---
+    # The whole role is driven by a single tag (role_dev_node, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    #
+    # node is special-cased: imported unconditionally so it can uninstall nvm
+    # when 'node' is not selected in dev_node_config (see apps/node.yaml).
+    - name: Node
+      ansible.builtin.import_tasks: apps/node.yaml

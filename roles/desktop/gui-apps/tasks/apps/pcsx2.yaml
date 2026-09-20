@@ -1,10 +1,19 @@
 ---
 #============================================================================================================
 # PCSX2
+# https://github.com/PCSX2/pcsx2/releases  (version -> sha256 of the AppImage)
 #============================================================================================================
-- name: Set merged pcsx2 configuration
+- name: Resolve the selected pcsx2 version
   ansible.builtin.set_fact:
-    pcsx2_config: "{{ pcsx2_defaults | combine(gui_apps_config['pcsx2'] | default({}, true), recursive=true) }}"
+    pcsx2_version: "{{ (gui_apps_config['pcsx2'] | default({}, true)).version | default(pcsx2_default_version, true) }}"
+
+- name: Validate the selected pcsx2 version is available
+  ansible.builtin.assert:
+    that:
+      - pcsx2_version in pcsx2_versions
+    fail_msg: >-
+      Unknown pcsx2 version '{{ pcsx2_version }}'.
+      Available: {{ pcsx2_versions.keys() | list | join(', ') }}
 
 - name: Ensure pcsx2 install dir exists
   ansible.builtin.file:
@@ -29,16 +38,17 @@
   changed_when: false
 
 - name: Install or update pcsx2
-  when: pcsx2_current_version.stdout != pcsx2_config.version
+  when: pcsx2_current_version.stdout != pcsx2_version
   block:
     - name: Download pcsx2
       ansible.builtin.get_url:
-        url: "https://github.com/PCSX2/pcsx2/releases/download/{{ pcsx2_config.version }}/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
-        dest: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+        url: "https://github.com/PCSX2/pcsx2/releases/download/{{ pcsx2_version }}/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
+        dest: "/opt/pcsx2/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
+        checksum: "sha256:{{ pcsx2_versions[pcsx2_version] }}"
 
     - name: Ensure pcsx2 AppImage is executable
       ansible.builtin.file:
-        path: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+        path: "/opt/pcsx2/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
         state: file
         mode: '0755'
         owner: root
@@ -46,7 +56,7 @@
 
     - name: Link into usr/local
       ansible.builtin.file:
-        src: "/opt/pcsx2/pcsx2-{{ pcsx2_config.version }}-linux-AppImage-32bit.AppImage"
+        src: "/opt/pcsx2/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
         dest: /usr/local/bin/pcsx2
         state: link
 

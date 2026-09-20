@@ -1,0 +1,30 @@
+---
+#============================================================================================================
+# candy-tools — shared apt repo (dibs, go-deps-view, linux-candy, todo)
+# https://candy-tools.github.io/debian-repo/
+#
+# This file is imported once when at least one candy-tools app is selected in
+# cli_apps_config. It configures the repo through base/linux-apt's extra
+# repositories catalog, then installs the selected subset in a single
+# `apt install`. Add new packages to `candy_tools_apps` in defaults/main.yaml
+# (and to `cli_apps_available`).
+#============================================================================================================
+- name: Ensure the candy-tools apt repository  # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-apt
+    tasks_from: extra_repos
+    allow_duplicates: false
+  vars:
+    linux_apt_extra_repos_selected: ["candy-tools"]
+
+# The key used to live in /usr/share/keyrings; the catalog installs it in
+# /etc/apt/keyrings. Removed only now, after the .sources file was switched over.
+- name: Remove the legacy candy-tools keyring
+  ansible.builtin.file:
+    path: /usr/share/keyrings/candy-tools-archive-keyring.gpg
+    state: absent
+
+- name: Install selected candy-tools apps
+  ansible.builtin.apt:
+    name: "{{ candy_tools_apps | intersect(cli_apps_config.keys() | list) }}"
+    state: present

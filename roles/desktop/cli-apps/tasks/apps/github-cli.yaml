@@ -1,0 +1,47 @@
+---
+#============================================================================================================
+# github-cli (gh)
+# Installed from GitHub's official apt repo (self-updating); no version to pin.
+# https://cli.github.com/packages
+#============================================================================================================
+- name: Set merged github-cli configuration
+  ansible.builtin.set_fact:
+    github_cli_config: "{{ github_cli_defaults | combine(cli_apps_config['github-cli'] | default({}, true), recursive=true) }}"
+
+- name: Ensure python3-debian is present (required by deb822_repository)
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+
+- name: Add GitHub CLI GPG key
+  ansible.builtin.copy:
+    src: github-cli/githubcli-archive-keyring.gpg
+    dest: /usr/share/keyrings/githubcli-archive-keyring.gpg
+    mode: "0644"
+
+- name: Add GitHub CLI apt repository
+  ansible.builtin.deb822_repository:
+    name: github_cli
+    types: deb
+    uris: https://cli.github.com/packages
+    suites: stable
+    components: main
+    architectures: amd64
+    signed_by: /usr/share/keyrings/githubcli-archive-keyring.gpg
+    state: present
+    mode: "0644"
+
+- name: Remove legacy GitHub CLI .list source (migrated to deb822 .sources)
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/github_cli.list
+    state: absent
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install GitHub CLI
+  ansible.builtin.apt:
+    name: gh
+    state: present

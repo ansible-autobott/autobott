@@ -8,27 +8,34 @@ linux_desktop:
 
 run_role_linux_kde: true
 linux_kde:
-  add_kde_elementary_breeze: true
+  add_kde_style: true
+  add_kde_screenshots: true
 
 
 # only for Virtualbox VMs
 run_role_vbox_guest: false
 
 # =========================== Desktop Apps ===========================
-run_role_apps: true
-apps_config:
-  golang:
-  kubectl:
-  k9s:
-  node:
-  vagrant:
-  vault:
+# GUI apps
+run_role_gui_apps: true
+gui_apps_config:
   virtualbox:
   freecad:
   google-chrome:
   jellium-desktop:
   pcsx2:
   prusa-slicer:
+  input-remapper:
+
+# CLI / developer apps
+run_role_cli_apps: true
+cli_apps_config:
+  golang:
+  kubectl:
+  k9s:
+  node:
+  vagrant:
+  vault:
   ytdlp:
   linux-candy:
   dibs:
@@ -37,7 +44,7 @@ apps_config:
   jenv:
   maven:
   herdr:
-  input-remapper:
+  github-cli:
 
 
 

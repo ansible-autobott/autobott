@@ -1,5 +1,5 @@
 #! /usr/bin/env sh
-# KDE 6 / Plasma 6 variant of kwriteconfig.sh (uses the kwriteconfig6 binary).
+# Per-user KDE Plasma 6 customizations (uses the kwriteconfig6 binary).
 # based on https://github.com/nbeaver/config-kde5/blob/master/config-kde.sh
 
 # Do not obey DRM limitations.
@@ -12,6 +12,20 @@ kwriteconfig6 --file okularpartrc --group 'Core General' --key 'ObeyDRM' --type 
 
 kwriteconfig6 --file kdeglobals --group 'KDE' --key 'AnimationDurationFactor' '0.125'
 kwriteconfig6 --file kdeglobals --group 'General' --key 'BrowserApplication' 'google-chrome.desktop'
+
+
+# =====================================================================================
+# Plasma
+# =====================================================================================
+# Plasma Style (System Settings > Colors & Themes > Plasma Style): the theme of the
+# panels and widgets, independent of the application colour scheme. 'breeze-dark' is
+# the id of the stock "Breeze Dark" style (/usr/share/plasma/desktoptheme/breeze-dark).
+# A running plasmashell watches plasmarc and switches live; no re-login needed.
+kwriteconfig6 --file plasmarc --group 'Theme' --key 'name' 'breeze-dark'
+# Cursors (System Settings > Colors & Themes > Cursors): 'Breeze_Light' is the id of
+# the stock white "Breeze Light" theme (breeze-cursor-theme). Not live - KWin only
+# reloads it on the Cursors KCM's change signal - so it applies at the next login.
+kwriteconfig6 --file kcminputrc --group 'Mouse' --key 'cursorTheme' 'Breeze_Light'
 
 
 # =====================================================================================
@@ -49,9 +63,20 @@ kwriteconfig6 --file dolphinrc --group 'TabBar' --key 'TabBarVisibility' 'Always
 # Konsole
 # =====================================================================================
 kwriteconfig6 --file konsolerc --group 'KonsoleWindow' --key 'RememberWindowSize' 'false'
+kwriteconfig6 --file konsolerc --group 'MainWindow' --key 'MenuBar' 'Disabled'
+kwriteconfig6 --file konsolerc --group 'MainWindow' --key 'ToolButtonStyle' 'IconOnly'
+kwriteconfig6 --file konsolerc --group 'Toolbar mainToolBar' --key 'ToolButtonStyle' 'IconOnly'
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'TabBarPosition' 'Bottom'
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'TabBarVisibility' 'AlwaysShowTabBar'
+# Remove the per-tab close (X) button. Konsole's default is 'OnEachTab'; other
+# values are 'OnTabBar' (single X on the bar) and 'None' (no button). Tabs stay
+# closable via Ctrl+W and right-click tab -> Close Tab.
+kwriteconfig6 --file konsolerc --group 'TabBar' --key 'CloseTabButton' 'None'
+# The Pastels profile + its DarkPastels colorscheme are deployed as files by the
+# linux_kde role (files/konsole/); point Konsole at the profile and set the window scheme.
+kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key 'DefaultProfile' 'Pastels.profile'
+kwriteconfig6 --file konsolerc --group 'UiSettings' --key 'ColorScheme' 'BreezeClassic'
 # TODO: add shortcut for "find"  Ctrl +F instead of Ctr + Shift + F
-# TODO: automate profile with dark pastels color, probably using elementary breeze pacakge
-# TODO: make setting to have session tabs always visible
 
 # =====================================================================================
 # Yakuake
@@ -85,10 +110,16 @@ kwriteconfig6 --file kwinrc --group 'Windows' --key 'TitlebarDoubleClickCommand'
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft MNSF
 kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight IAX
 
-# wobly windows
+# wobbly windows
 kwriteconfig6 --file kwinrc --group Plugins --key 'wobblywindowsEnabled' 'true'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'Drag' '92'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'MoveFactor' '20'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'ResizeWobble' 'false'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'Stiffness' '3'
-kwriteconfig6 --file kwinrc --group Effect-Wobbly --key 'WobblynessLevel' '3'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Drag' '92'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'MoveFactor' '20'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'ResizeWobble' 'false'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Stiffness' '3'
+kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'WobblynessLevel' '3'
+
+# virtual desktops
+kwriteconfig6 --file kwinrc --group Desktops --key 'Id_1' '28e33d8f-a554-492c-82a9-9cd0ba8b0235'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Id_2' '04b36c7f-15f5-4d13-bd38-664a46617547'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Rows' '1'
+kwriteconfig6 --file kwinrc --group Desktops --key 'Number' '2'

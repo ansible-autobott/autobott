@@ -27,6 +27,8 @@ run_role_linux_apt: true
 linux_apt:
   release: "trixie"
   automatic_updates: false # setting this to yes will make the vagrant task to fail because of lock on dpkg
+  extra_repos:
+    - autobott
 
 #============================================================================================================
 # Linux Basics

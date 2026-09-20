@@ -78,7 +78,7 @@ the version file must already reflect the intended release by the time the PR is
 `autobott.yaml` has 4 plays:
 1. **All hosts** — base, base-services, security foundation
 2. **linux_servers** — web-base, monitoring, servarr, webservices
-3. **linux_desktop** — KDE, apps
+3. **linux_desktop** — KDE, gui-apps, cli-apps
 4. **post-setup** — finalization, version write
 
 ### Role Organization
@@ -92,15 +92,17 @@ roles/
   monitoring/    # prometheus, alertmanager, node_exporter, grafana, monit
   webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
-  desktop/       # linux-desktop, linux-kde, vbox-guest, apps
+  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps
   games/         # minecraft
   validation/    # test roles
 ```
 
-> The **`desktop/apps`** role unifies all desktop and developer apps: select
-> which to install per host via the `apps_config` mapping. Per-app tasks live in
-> `roles/desktop/apps/tasks/apps/<app>.yaml`; defaults for every app live in
-> `roles/desktop/apps/defaults/main.yaml`.
+> The **`desktop/gui-apps`** and **`desktop/cli-apps`** roles hold the desktop
+> and developer app catalogue: GUI apps in `gui-apps` (selected per host via the
+> `gui_apps_config` mapping), CLI/developer apps in `cli-apps` (via
+> `cli_apps_config`). Per-app tasks live in
+> `roles/desktop/<gui-apps|cli-apps>/tasks/apps/<app>.yaml`; defaults for every
+> app live in each role's `defaults/main.yaml`.
 
 ### Role Conventions
 

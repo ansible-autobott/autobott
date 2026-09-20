@@ -1,0 +1,126 @@
+---
+#============================================================================================================
+# CLI / developer apps role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_cli_apps: true
+
+# App selection. Keys are app names; value is an optional per-app override
+# dict (deep-merged into that app's defaults). Empty value = install with
+# defaults. Example:
+#   cli_apps_config:
+#     golang:
+#     kubectl:
+cli_apps_config: {}
+
+# Source of truth for validation — every key allowed in cli_apps_config.
+cli_apps_available:
+  - ytdlp
+  - linux-candy
+  - dibs
+  - go-deps-view
+  - todo
+  - golang
+  - jenv
+  - maven
+  - k9s
+  - kubectl
+  - node
+  - vagrant
+  - vault
+  - herdr
+  - github-cli
+
+#============================================================================================================
+# Per-app defaults
+#============================================================================================================
+
+# ----- ytdlp -----
+ytdlp_defaults:
+  # https://github.com/yt-dlp/yt-dlp/releases
+  version: "2023.11.16"
+
+# ----- candy-tools (shared apt repo: dibs, go-deps-view, linux-candy, todo) -----
+# https://candy-tools.github.io/debian-repo/
+# The repo is added once if any of these apps is selected in cli_apps_config,
+# then the selected subset is installed together with `apt install`.
+candy_tools_apps:
+  - dibs
+  - go-deps-view
+  - linux-candy
+  - todo
+
+# ----- golang -----
+golang_defaults:
+  # go version to install
+  go_version: "1.25.5"
+
+  # get the link from: https://github.com/niemeyer/godeb
+  godeb_url: https://godeb.s3.amazonaws.com/godeb-amd64.tar.gz
+  godeb_sha256: f2b3445dda98b31a32381036bf01c7e82df1a5a151e7e838ca1f0d1fb8e80952
+  # get from: https://github.com/goreleaser/goreleaser/releases
+  goreleaser_url: "https://github.com/goreleaser/goreleaser/releases/download/v2.18.1/goreleaser_2.18.1_amd64.deb"
+  goreleaser_sha256: "f9227f77b5f7747dc3ddad211e34bacccde111a95560c5404d47add00d0aa24e"
+  # get from: https://github.com/goreleaser/nfpm/releases
+  nfpm_url: "https://github.com/goreleaser/nfpm/releases/download/v2.47.0/nfpm_2.47.0_amd64.deb"
+  nfpm_sha256: "3f1cf344bd0b57373ca55636a78c08b0491f7293d609a456a9ac3b0b150fda97"
+  # get from https://github.com/golangci/golangci-lint/releases
+  golangci_lint_url: "https://github.com/golangci/golangci-lint/releases/download/v2.13.2/golangci-lint-2.13.2-linux-amd64.deb"
+  golangci_lint_sha256: "7ef9114c71db2e6b8529fc58ef4575b02661f6e0a45aeb50248f2a86f8ea50a9"
+
+# ----- jenv (Java version manager) -----
+jenv_defaults:
+  # jenv release tag — https://github.com/jenv/jenv/releases
+  version: "0.6.0"
+  sha256: "2897ac544007a2c651bb3c02985143c94f4e1234b9c3c6cb2e436442b17cbc74"
+  # keep JAVA_HOME in sync with the active version (needed by Maven/Gradle/IDEs)
+  enable_export_plugin: true
+  # OpenJDK packages to install and register with `jenv add`.
+  # Set to [] to install jenv only and manage JDKs yourself.
+  # Debian 13 ships only openjdk-21 and openjdk-25 (17 is bookworm-only).
+  jdk_packages:
+    - openjdk-25-jdk
+    - openjdk-21-jdk
+  # Optional default set via `jenv global` (e.g. "21"); "" leaves it unset.
+  global_version: ""
+
+# ----- maven (build tool) -----
+maven_defaults:
+  # Apache Maven version — https://maven.apache.org/download.cgi
+  version: "3.9.16"
+  sha512: "831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6"
+  # archive.apache.org keeps every release (permanent pin); point at a local mirror if desired.
+  base_url: "https://archive.apache.org/dist/maven/maven-3"
+
+# ----- k9s -----
+k9s_defaults:
+  # k9s version to install
+  version: "v0.29.1"
+
+# ----- kubectl -----
+kubectl_defaults:
+  # install azure kubelogin with kubectl https://github.com/Azure/kubelogin/releases
+  kubelogin_version: "v0.0.34"
+
+# ----- node -----
+node_defaults: {}
+
+# ----- vagrant -----
+vagrant_defaults: {}
+
+# ----- vault -----
+vault_defaults:
+  # get url from: https://www.vaultproject.io/downloads
+  version: "1.15.4"
+
+# ----- herdr (runtime platform for coding agents) -----
+herdr_defaults:
+  # https://github.com/herdrdev/herdr/releases  (version without leading v)
+  version: "0.9.0"
+  base_url: "https://github.com/herdrdev/herdr/releases/download"
+  sha256: "4fa1a01158dd8043da92d31b270780b0dcc10603038d9b61cac4d81ab63fb71f"
+
+# ----- github-cli (gh) -----
+# Installed from GitHub's official apt repo (self-updating); no version pin.
+github_cli_defaults: {}

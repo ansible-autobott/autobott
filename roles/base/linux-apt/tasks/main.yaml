@@ -18,6 +18,13 @@
       ansible.builtin.include_tasks:
         file: sources.yaml
 
+    - name: "Configure extra repositories from the catalog"
+      ansible.builtin.include_tasks:
+        file: extra_repos.yaml
+      vars:
+        linux_apt_extra_repos_selected: "{{ linux_apt_data.extra_repos }}"
+      when: linux_apt_data.extra_repos | default([]) | length > 0
+
     - name: "Configure pinned backport packages"
       ansible.builtin.include_tasks:
         file: pin-backported-pkg.yaml

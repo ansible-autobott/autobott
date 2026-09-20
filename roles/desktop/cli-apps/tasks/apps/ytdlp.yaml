@@ -1,0 +1,45 @@
+---
+#============================================================================================================
+# yt-dlp
+#============================================================================================================
+- name: Set merged ytdlp configuration
+  ansible.builtin.set_fact:
+    ytdlp_config: "{{ ytdlp_defaults | combine(cli_apps_config['ytdlp'] | default({}, true), recursive=true) }}"
+
+- name: Get current ytdlp version
+  ansible.builtin.shell: "ytdlp --version"
+  register: ytdlp_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update ytdlp
+  when: ytdlp_current_version.stdout != ytdlp_config.version
+  block:
+    - name: Create ytdlp download dir
+      ansible.builtin.file:
+        path: "/tmp/ytdlp"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+
+    - name: Download ytdlp
+      ansible.builtin.get_url:
+        url: "https://github.com/yt-dlp/yt-dlp/releases/download/{{ ytdlp_config.version }}/yt-dlp_linux"
+        dest: "/tmp/ytdlp"
+
+    - name: Move ytdlp
+      ansible.builtin.command: "mv /tmp/ytdlp/yt-dlp_linux /usr/local/bin/ytdlp"
+
+    - name: Remove ytdlp download dir
+      ansible.builtin.file:
+        path: "/tmp/ytdlp"
+        state: absent
+
+    - name: Ensure ytdlp is executable
+      ansible.builtin.file:
+        path: "/usr/local/bin/ytdlp"
+        state: file
+        mode: '0755'
+        owner: root
+        group: root

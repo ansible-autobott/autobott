@@ -1,0 +1,53 @@
+---
+#============================================================================================================
+# GUI desktop apps role — main tasks
+#============================================================================================================
+- name: GUI desktop apps
+  when:
+    - run_role_gui_apps | bool
+  tags:
+    - role_gui_apps
+  block:
+    - name: Validate gui_apps_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - gui_apps_config is mapping
+        fail_msg: "gui_apps_config must be a mapping of app-name -> overrides (or empty), got {{ gui_apps_config | type_debug }}."
+
+    - name: Validate gui_apps_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (gui_apps_config.keys() | list | difference(gui_apps_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in gui_apps_config:
+          {{ gui_apps_config.keys() | list | difference(gui_apps_available) | join(', ') }}.
+          Available: {{ gui_apps_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via gui_apps_config) ---
+    # The whole role is driven by a single tag (role_gui_apps, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    - name: FreeCAD
+      ansible.builtin.import_tasks: apps/freecad.yaml
+      when: "'freecad' in gui_apps_config"
+    - name: Google Chrome
+      ansible.builtin.import_tasks: apps/google-chrome.yaml
+      when: "'google-chrome' in gui_apps_config"
+    - name: Jellium Desktop
+      ansible.builtin.import_tasks: apps/jellium-desktop.yaml
+      when: "'jellium-desktop' in gui_apps_config"
+    - name: JDownloader
+      ansible.builtin.import_tasks: apps/jdownloader.yaml
+      when: "'jdownloader' in gui_apps_config"
+    - name: PCSX2
+      ansible.builtin.import_tasks: apps/pcsx2.yaml
+      when: "'pcsx2' in gui_apps_config"
+    - name: PrusaSlicer
+      ansible.builtin.import_tasks: apps/prusa-slicer.yaml
+      when: "'prusa-slicer' in gui_apps_config"
+    - name: VirtualBox
+      ansible.builtin.import_tasks: apps/virtualbox.yaml
+      when: "'virtualbox' in gui_apps_config"
+    - name: input-remapper
+      ansible.builtin.import_tasks: apps/input-remapper.yaml
+      when: "'input-remapper' in gui_apps_config"

@@ -1,8 +1,4 @@
 
-# Script run by the add_kde_style block (as the desktop user) to apply the KDE
-# kwriteconfig customizations for this release.
-kde_kwriteconfig_script: kwriteconfig6.sh
-
 kde_packages:
   # core
   - kde-plasma-desktop
@@ -12,6 +8,9 @@ kde_packages:
   - sddm-theme-breeze
   - ffmpegthumbnailer
   - kwin-addons
+  # extra Plasma widgets used by the AutoBott panel template
+  # (kickerdash / Application Dashboard, quicklaunch, ...)
+  - plasma-widgets-addons
   - kde-config-gtk-style
   - kde-config-gtk-style-preview
 
@@ -23,6 +22,8 @@ kde_packages:
   - smb4k
   - yakuake
   - kmix
+  # screenshots; the shortcuts are set up per user by add_kde_screenshots
+  - kde-spectacle
   - flameshot
   - filelight    
   - qimgv
@@ -36,5 +37,4 @@ kde_theme_packages:
 
 kde_packages_purge:
   - plasma-discover
-  - kde-spectacle
   - gwenview

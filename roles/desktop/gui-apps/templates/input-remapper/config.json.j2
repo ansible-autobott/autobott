@@ -4,4 +4,4 @@
 {% for preset in input_remapper_config.presets %}
 {% set _ = autoload.update({preset.device: preset.name}) %}
 {% endfor %}
-{{ {"version": input_remapper_config.version, "autoload": autoload} | to_nice_json }}
+{{ {"version": input_remapper_version, "autoload": autoload} | to_nice_json }}

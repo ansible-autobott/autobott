@@ -147,16 +147,21 @@ run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<ta
 # 'run-local' reads INV/HOST/TAG (and optional EXTRA_ARGS / SOPS_AGE_KEY_FILE) from a
 # git-ignored env file so you don't retype them on every 'make run'. Copy
 # run-local.env.example -> run-local.env and edit it. Override the file: RUN_LOCAL_FILE=<path>.
+# Any of INV/HOST/TAG/EXTRA_ARGS/SOPS_AGE_KEY_FILE passed on the command line
+# (e.g. 'make run-local TAG=role_docker') takes precedence over the env file.
 RUN_LOCAL_FILE ?= run-local.env
 
-run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (default: run-local.env; see run-local.env.example)
+run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (default: run-local.env; command-line vars override the file)
 	@if [ ! -f "$(RUN_LOCAL_FILE)" ]; then \
 		echo "Error: '$(RUN_LOCAL_FILE)' not found." >&2; \
 		echo "       Create it from the template:  cp run-local.env.example $(RUN_LOCAL_FILE)" >&2; \
 		exit 1; \
 	fi
-	@unset SOPS_AGE_KEY_FILE; \
+	@_INV_CLI="$$INV"; _HOST_CLI="$$HOST"; _TAG_CLI="$$TAG"; _EXTRA_CLI="$$EXTRA_ARGS"; _SOPS_CLI="$$SOPS_AGE_KEY_FILE"; \
+	unset SOPS_AGE_KEY_FILE; \
 	set -a; . "$(CURDIR)/$(RUN_LOCAL_FILE)"; set +a; \
+	INV="$${_INV_CLI:-$$INV}"; HOST="$${_HOST_CLI:-$$HOST}"; TAG="$${_TAG_CLI:-$$TAG}"; \
+	EXTRA_ARGS="$${_EXTRA_CLI:-$$EXTRA_ARGS}"; SOPS_AGE_KEY_FILE="$${_SOPS_CLI:-$$SOPS_AGE_KEY_FILE}"; \
 	if [ -z "$$INV" ]; then \
 		echo "Error: 'INV' is not set in $(RUN_LOCAL_FILE)" >&2; \
 		exit 1; \

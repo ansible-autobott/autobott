@@ -1,0 +1,71 @@
+---
+#============================================================================================================
+# dev-java — Java developer tools role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_dev_java: true
+
+# App selection. Recognised keys:
+#   java_versions: list of JDK identifiers to install (see java_available_jdks);
+#                  each identifier selects its own install method.
+#   jenv / maven:  optional { version: } override (must be a catalogued version);
+#                  an empty value installs the tool's default version.
+# Example:
+#   dev_java_config:
+#     java_versions:
+#       - openjdk-21-jdk
+#       - openjdk-25-jdk
+#     jenv:
+#     maven:
+dev_java_config: {}
+
+# Versioned tools selectable in dev_java_config (besides the special
+# `java_versions` key).
+dev_java_tools:
+  - jenv
+  - maven
+
+#============================================================================================================
+# JDK catalog
+#
+# Every identifier allowed in dev_java_config.java_versions, mapped to its install
+# method. Adding a new method later is a catalog entry with method: <m> plus a
+# tasks/jdks/<m>.yaml handler; no other changes are needed.
+#   apt method -> installs `package` from the distro repos.
+# Debian 13 ships only openjdk-21 and openjdk-25 (17 is bookworm-only).
+#============================================================================================================
+java_available_jdks:
+  openjdk-21-jdk:
+    method: apt
+    package: openjdk-21-jdk
+  openjdk-25-jdk:
+    method: apt
+    package: openjdk-25-jdk
+  # Future (not implemented yet), e.g. an Oracle JDK downloaded as a .deb:
+  # oracle-jdk-25:
+  #   method: oracle
+  #   url: "https://download.oracle.com/java/25/latest/jdk-25_linux-x64_bin.deb"
+  #   sha256: "..."
+
+#============================================================================================================
+# Per-tool version catalogs (version -> checksum; the sha is a separate lookup)
+#============================================================================================================
+
+# ----- jenv (Java version manager) -----
+# https://github.com/jenv/jenv/releases  (version -> sha256 of the release tarball)
+jenv_default_version: "0.6.0"
+jenv_versions:
+  "0.6.0": "2897ac544007a2c651bb3c02985143c94f4e1234b9c3c6cb2e436442b17cbc74"
+# keep JAVA_HOME in sync with the active version (needed by Maven/Gradle/IDEs)
+jenv_enable_export_plugin: true
+# Optional default set via `jenv global` (e.g. "21"); "" leaves it unset.
+jenv_global_version: ""
+
+# ----- maven (build tool) -----
+# https://maven.apache.org/download.cgi  (version -> sha512 of the bin tarball)
+maven_default_version: "3.9.16"
+maven_versions:
+  "3.9.16": "831a8591fe20c8243b1dbe7d71e3244f31d1665b0804b2e825e38cbbe5ce0cafb8338851f90780735568773e0a6cd07bbec107cda0b896b008b861075358b6f6"
+# archive.apache.org keeps every release (permanent pin); point at a local mirror if desired.
+maven_base_url: "https://archive.apache.org/dist/maven/maven-3"

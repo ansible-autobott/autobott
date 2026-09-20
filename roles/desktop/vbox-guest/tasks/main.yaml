@@ -6,6 +6,7 @@
   tags:
     - vbox_guest
     - vbox-guest
+    - linux-desktop-all
   when:
     - run_role_vbox_guest | bool
   block:

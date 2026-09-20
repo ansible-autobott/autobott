@@ -7,6 +7,7 @@
     - run_role_gui_apps | bool
   tags:
     - role_gui_apps
+    - linux-desktop-all
   block:
     - name: Validate gui_apps_config is a mapping
       ansible.builtin.assert:

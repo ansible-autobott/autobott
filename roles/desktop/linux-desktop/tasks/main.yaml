@@ -5,6 +5,7 @@
 - name: Main Linux-desktop block
   tags:
     - always        # <- ensures it runs no matter what
+    - linux-desktop-all
   block:
     - name: Set merged Linux-desktop configuration
       ansible.builtin.set_fact:

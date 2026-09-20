@@ -27,17 +27,23 @@ gui_apps_available:
   - input-remapper
 
 #============================================================================================================
-# Per-app defaults
+# Per-app defaults and version catalogs (version -> checksum; sha as a separate lookup)
+#
+# Apps installed from an apt repo / self-updating installer (google-chrome,
+# virtualbox, prusa-slicer, jdownloader) are not version-pinned.
 #============================================================================================================
 
 # ----- freecad -----
-freecad_defaults:
-  # https://www.freecad.org/downloads.php?lang=en
-  version: "1.0.2"
+# https://www.freecad.org/downloads.php  (version -> { url, sha256 } of the AppImage;
+# the AppImage filename carries a non-derivable build suffix, so the url is catalogued too)
+freecad_default_version: "1.0.2"
 freecad_versions:
-  1.0.2: "https://github.com/FreeCAD/FreeCAD/releases/download/1.0.2/FreeCAD_1.0.2-conda-Linux-x86_64-py311.AppImage"
+  "1.0.2":
+    url: "https://github.com/FreeCAD/FreeCAD/releases/download/1.0.2/FreeCAD_1.0.2-conda-Linux-x86_64-py311.AppImage"
+    sha256: "e00be00ad9fdb12b05c5002bfd1aa2ea8126f2c1d4e2fb603eb7423b72904f61"
 
 # ----- google-chrome -----
+# Installed from Google's apt repo (self-updating); no version to pin.
 google_chrome_defaults:
   extra_profiles:
     - name: owa # name
@@ -49,42 +55,44 @@ google_chrome_defaults:
       bin: true # create link in /bin
 
 # ----- jellium-desktop -----
-jellium_desktop_defaults:
-  # https://github.com/andresbott/jellium-desktop/releases
-  version: "0.1.0" # version without the leading v
+# https://github.com/andresbott/jellium-desktop/releases
+# The release .deb is per Debian/Ubuntu release, so the checksum catalog is
+# nested: version -> { <distribution_release>: sha256 }.
+jellium_desktop_default_version: "0.1.0"
+jellium_desktop_versions:
+  "0.1.0":
+    trixie: "27d424dab1110a879d5cb1133c816c0689c1d187ddf96083d4a57d9f4fc690ef"
+    resolute: "1d7c369a7863b4a9b61eef84309801f4104984ed0af470911bc18b811f727af1"
 
 # ----- jdownloader -----
+# JDownloader self-updates on launch, so there is no version to pin — the
+# official install4j installer always fetches the latest build.
+# https://jdownloader.org/download/index
 jdownloader_defaults:
-  # JDownloader self-updates on launch, so there is no version to pin — the
-  # official install4j installer always fetches the latest build.
-  # https://jdownloader.org/download/index
   installer_url: "https://installer.jdownloader.org/JD2Setup_x64.sh"
   install_dir: /opt/jdownloader
 
 # ----- pcsx2 -----
-pcsx2_defaults:
-  # get from: https://github.com/PCSX2/pcsx2
-  version: v1.6.0
+# https://github.com/PCSX2/pcsx2/releases  (version -> sha256 of the AppImage)
+pcsx2_default_version: "v1.6.0"
+pcsx2_versions:
+  "v1.6.0": "fae04a860e31ff943d57acbcda6fc2d991489eeafcdf898ddf892facd963b31c"
 
 # ----- prusa-slicer -----
-prusa_slicer_defaults:
-  # prusa-slicer version to install
-  version: "2.7.0"
-# download from: https://github.com/prusa3d/PrusaSlicer/releases
-prusa_slicer_versions:
-  2.7.0: "https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.7.0/PrusaSlicer-2.7.0+linux-x64-GTK3-202311231454.AppImage"
+# Installed from the Debian/Ubuntu repos (self-updating); no version to pin.
 
 # ----- virtualbox -----
 virtualbox_defaults:
-  # virtualbox version to install
-  pacakge: "virtualbox-7.1"
+  # virtualbox apt package to install
+  package: "virtualbox-7.1"
 
 # ----- input-remapper (input device remapping) -----
+# https://github.com/sezanzeb/input-remapper/releases  (version -> sha256 of the .deb)
+input_remapper_default_version: "2.2.1"
+input_remapper_versions:
+  "2.2.1": "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
 input_remapper_defaults:
-  # https://github.com/sezanzeb/input-remapper/releases
-  version: "2.2.1"
   base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
-  sha256: "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
   # Deploy the example user config below into the desktop user's
   # ~/.config/input-remapper-2/ (set false to install the app only).
   deploy_config: true

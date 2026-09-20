@@ -1,26 +1,36 @@
 ---
 #============================================================================================================
 # FreeCAD
+# https://www.freecad.org/  (version -> { url, sha256 } of the AppImage, freecad_versions)
 #============================================================================================================
-- name: Set merged freecad configuration
+- name: Resolve the selected FreeCAD version
   ansible.builtin.set_fact:
-    freecad_config: "{{ freecad_defaults | combine(gui_apps_config['freecad'] | default({}, true), recursive=true) }}"
+    freecad_version: "{{ (gui_apps_config['freecad'] | default({}, true)).version | default(freecad_default_version, true) }}"
+
+- name: Validate the selected FreeCAD version is available
+  ansible.builtin.assert:
+    that:
+      - freecad_version in freecad_versions
+    fail_msg: >-
+      Unknown FreeCAD version '{{ freecad_version }}'.
+      Available: {{ freecad_versions.keys() | list | join(', ') }}
 
 - name: Ensure target directory exists
   ansible.builtin.file:
-    path: "/opt/freecad/{{ freecad_config.version }}"
+    path: "/opt/freecad/{{ freecad_version }}"
     state: directory
     mode: '0755'
 
 - name: Download FreeCAD AppImage
   ansible.builtin.get_url:
-    url: "{{ freecad_versions[freecad_config.version] }}"
-    dest: "/opt/freecad/{{ freecad_config.version }}/FreeCAD.AppImage"
+    url: "{{ freecad_versions[freecad_version].url }}"
+    dest: "/opt/freecad/{{ freecad_version }}/FreeCAD.AppImage"
+    checksum: "sha256:{{ freecad_versions[freecad_version].sha256 }}"
     mode: '0755'
 
 - name: Update symlink to point to current version
   ansible.builtin.file:
-    src: "/opt/freecad/{{ freecad_config.version }}/FreeCAD.AppImage"
+    src: "/opt/freecad/{{ freecad_version }}/FreeCAD.AppImage"
     dest: "/usr/local/freecad"
     state: link
     force: true

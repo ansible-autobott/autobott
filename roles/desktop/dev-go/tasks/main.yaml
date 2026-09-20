@@ -1,0 +1,47 @@
+---
+#============================================================================================================
+# dev-go — Go developer tools role — main tasks
+#============================================================================================================
+- name: Dev Go apps
+  when:
+    - run_role_dev_go | bool
+  tags:
+    - role_dev_go
+    - linux-desktop-all
+  block:
+    - name: Validate dev_go_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_go_config is mapping
+        fail_msg: "dev_go_config must be a mapping of app-name -> overrides (or empty), got {{ dev_go_config | type_debug }}."
+
+    - name: Validate dev_go_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (dev_go_config.keys() | list | difference(dev_go_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in dev_go_config:
+          {{ dev_go_config.keys() | list | difference(dev_go_available) | join(', ') }}.
+          Available: {{ dev_go_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per tool; selection via dev_go_config) ---
+    # The whole role is driven by a single tag (role_dev_go, on the block above);
+    # there are no per-tool tags. Running the role tag runs every selected tool's
+    # (idempotent) tasks.
+    - name: Golang
+      ansible.builtin.import_tasks: apps/golang.yaml
+      when: "'golang' in dev_go_config"
+    - name: goreleaser
+      ansible.builtin.import_tasks: apps/goreleaser.yaml
+      when: "'goreleaser' in dev_go_config"
+    - name: nfpm
+      ansible.builtin.import_tasks: apps/nfpm.yaml
+      when: "'nfpm' in dev_go_config"
+    - name: golangci-lint
+      ansible.builtin.import_tasks: apps/golangci-lint.yaml
+      when: "'golangci-lint' in dev_go_config"
+    # candy-tools: go-deps-view is served from the shared candy-tools apt repo
+    # (also used by cli-apps). The repo is added once if selected, then installed.
+    - name: candy-tools apps
+      ansible.builtin.import_tasks: apps/candy-tools.yaml
+      when: candy_tools_apps | intersect(dev_go_config.keys() | list) | length > 0

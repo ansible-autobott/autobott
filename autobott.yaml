@@ -108,8 +108,14 @@
 
     # GUI desktop apps (selection via gui_apps_config)
     - desktop/gui-apps
-    # CLI / developer apps (selection via cli_apps_config)
+    # CLI utilities (selection via cli_apps_config)
     - desktop/cli-apps
+    # developer toolchains (selection via the matching dev_*_config)
+    - desktop/dev-node
+    - desktop/dev-go
+    - desktop/dev-java
+    - desktop/dev-k8s
+    - desktop/dev-generic
 
 #============================================================================================================
 # post setup actions

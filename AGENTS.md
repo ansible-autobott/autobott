@@ -78,7 +78,7 @@ the version file must already reflect the intended release by the time the PR is
 `autobott.yaml` has 4 plays:
 1. **All hosts** — base, base-services, security foundation
 2. **linux_servers** — web-base, monitoring, servarr, webservices
-3. **linux_desktop** — KDE, gui-apps, cli-apps
+3. **linux_desktop** — KDE, gui-apps, cli-apps, dev-* toolchains
 4. **post-setup** — finalization, version write
 
 ### Role Organization
@@ -92,17 +92,27 @@ roles/
   monitoring/    # prometheus, alertmanager, node_exporter, grafana, monit
   webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
-  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps
+  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-generic
   games/         # minecraft
   validation/    # test roles
 ```
 
-> The **`desktop/gui-apps`** and **`desktop/cli-apps`** roles hold the desktop
-> and developer app catalogue: GUI apps in `gui-apps` (selected per host via the
-> `gui_apps_config` mapping), CLI/developer apps in `cli-apps` (via
-> `cli_apps_config`). Per-app tasks live in
-> `roles/desktop/<gui-apps|cli-apps>/tasks/apps/<app>.yaml`; defaults for every
-> app live in each role's `defaults/main.yaml`.
+> The desktop app catalogue is split across several roles, each following the
+> same pattern (a `<role>_config` selection mapping validated against a
+> `<role>_available` list; per-app tasks in `tasks/apps/<app>.yaml`; per-app
+> defaults in `defaults/main.yaml`):
+> - **`desktop/gui-apps`** — GUI apps (via `gui_apps_config`)
+> - **`desktop/cli-apps`** — general CLI utilities: ytdlp, linux-candy, dibs,
+>   todo (via `cli_apps_config`)
+> - **`desktop/dev-node`** — Node.js toolchain (via `dev_node_config`)
+> - **`desktop/dev-go`** — Go toolchain + go-deps-view (via `dev_go_config`)
+> - **`desktop/dev-java`** — jenv + maven (via `dev_java_config`)
+> - **`desktop/dev-k8s`** — kubectl + k9s (via `dev_k8s_config`)
+> - **`desktop/dev-generic`** — other dev tools: vagrant, vault, herdr,
+>   github-cli (via `dev_generic_config`)
+>
+> The candy-tools shared apt repo is used by both `cli-apps` (dibs, linux-candy,
+> todo) and `dev-go` (go-deps-view); each role adds it idempotently.
 
 ### Role Conventions
 

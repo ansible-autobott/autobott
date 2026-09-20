@@ -1,10 +1,30 @@
 ---
 #============================================================================================================
 # jellium-desktop
+# https://github.com/andresbott/jellium-desktop/releases
+# The release .deb is per Debian/Ubuntu release, so the checksum catalog is
+# nested: version -> { <distribution_release>: sha256 }.
 #============================================================================================================
-- name: Set merged jellium-desktop configuration
+- name: Resolve the selected jellium-desktop version
   ansible.builtin.set_fact:
-    jellium_desktop_config: "{{ jellium_desktop_defaults | combine(gui_apps_config['jellium-desktop'] | default({}, true), recursive=true) }}"
+    jellium_desktop_version: "{{ (gui_apps_config['jellium-desktop'] | default({}, true)).version | default(jellium_desktop_default_version, true) }}"
+
+- name: Validate the selected jellium-desktop version is available
+  ansible.builtin.assert:
+    that:
+      - jellium_desktop_version in jellium_desktop_versions
+    fail_msg: >-
+      Unknown jellium-desktop version '{{ jellium_desktop_version }}'.
+      Available: {{ jellium_desktop_versions.keys() | list | join(', ') }}
+
+- name: Validate jellium-desktop is available for this distribution release
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution_release in jellium_desktop_versions[jellium_desktop_version]
+    fail_msg: >-
+      jellium-desktop {{ jellium_desktop_version }} has no catalogued checksum for
+      release '{{ ansible_facts.distribution_release }}'.
+      Supported: {{ jellium_desktop_versions[jellium_desktop_version].keys() | list | join(', ') }}
 
 - name: Purge legacy jellyfin-media-player package (superseded by jellium-desktop)
   ansible.builtin.apt:
@@ -19,7 +39,7 @@
   changed_when: false
 
 - name: Install or update jellium-desktop
-  when: not (jellium_desktop_current_version.stdout | default('')).startswith(jellium_desktop_config.version)
+  when: not (jellium_desktop_current_version.stdout | default('')).startswith(jellium_desktop_version)
   block:
     - name: Create jellium-desktop download dir
       ansible.builtin.file:
@@ -31,12 +51,13 @@
 
     - name: Download jellium-desktop
       ansible.builtin.get_url:
-        url: "https://github.com/andresbott/jellium-desktop/releases/download/v{{ jellium_desktop_config.version }}/jellium-desktop_{{ jellium_desktop_config.version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
-        dest: "/tmp/jellium-desktop"
+        url: "https://github.com/andresbott/jellium-desktop/releases/download/v{{ jellium_desktop_version }}/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
+        dest: "/tmp/jellium-desktop/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
+        checksum: "sha256:{{ jellium_desktop_versions[jellium_desktop_version][ansible_facts.distribution_release] }}"
 
     - name: Install jellium-desktop .deb file
       ansible.builtin.apt:
-        deb: "/tmp/jellium-desktop/jellium-desktop_{{ jellium_desktop_config.version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
+        deb: "/tmp/jellium-desktop/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
 
     - name: Remove jellium-desktop download dir
       ansible.builtin.file:

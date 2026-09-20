@@ -1,0 +1,36 @@
+---
+#============================================================================================================
+# dev-k8s — Kubernetes developer tools role — main tasks
+#============================================================================================================
+- name: Dev Kubernetes apps
+  when:
+    - run_role_dev_k8s | bool
+  tags:
+    - role_dev_k8s
+    - linux-desktop-all
+  block:
+    - name: Validate dev_k8s_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_k8s_config is mapping
+        fail_msg: "dev_k8s_config must be a mapping of app-name -> overrides (or empty), got {{ dev_k8s_config | type_debug }}."
+
+    - name: Validate dev_k8s_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (dev_k8s_config.keys() | list | difference(dev_k8s_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in dev_k8s_config:
+          {{ dev_k8s_config.keys() | list | difference(dev_k8s_available) | join(', ') }}.
+          Available: {{ dev_k8s_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via dev_k8s_config) ---
+    # The whole role is driven by a single tag (role_dev_k8s, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    - name: kubectl
+      ansible.builtin.import_tasks: apps/kubectl.yaml
+      when: "'kubectl' in dev_k8s_config"
+    - name: k9s
+      ansible.builtin.import_tasks: apps/k9s.yaml
+      when: "'k9s' in dev_k8s_config"

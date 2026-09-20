@@ -1,0 +1,33 @@
+---
+#============================================================================================================
+# dev-node — Node.js developer tools role — defaults
+#============================================================================================================
+
+# Master on/off for the whole role
+run_role_dev_node: true
+
+# App selection. The `node` key installs Node via nvm; its optional override:
+#   version:     nvm install target — "lts" (default), "node" (latest), or an
+#                exact version like "22.11.0".
+#   nvm_version: catalogued nvm version to install (sha-verified).
+# Example:
+#   dev_node_config:
+#     node:
+#       version: "lts"
+dev_node_config: {}
+
+# Source of truth for validation — every key allowed in dev_node_config.
+dev_node_available:
+  - node
+
+#============================================================================================================
+# nvm version catalog (version -> sha256 of the upstream install.sh)
+# https://github.com/nvm-sh/nvm/releases
+#============================================================================================================
+nvm_default_version: "0.40.7"
+nvm_versions:
+  "0.40.7": "066ce4eaf4d78eaa6410433bc9ba58faaba646157cbbed6109153e6c24c5f8a5"
+
+# Default `nvm install` target for Node (see the `node` key above): "lts",
+# "node" (latest), or an exact version.
+node_default_version: "lts"

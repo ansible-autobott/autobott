@@ -9,6 +9,7 @@ linux_desktop:
 run_role_linux_kde: true
 linux_kde:
   add_kde_style: true
+  add_kde_screenshots: true
 
 
 # only for Virtualbox VMs

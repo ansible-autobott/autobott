@@ -1,0 +1,60 @@
+---
+# APT extra repositories
+# Configures the linux_apt_extra_repos_catalog entries named in
+# linux_apt_extra_repos_selected. Included by main.yaml (linux_apt.extra_repos)
+# and imported by roles that need a repository (see defaults/main.yaml), so it
+# must not rely on run_role_linux_apt or on the facts set in main.yaml.
+
+- name: "Validate the selected extra repositories"
+  ansible.builtin.assert:
+    that:
+      - linux_apt_extra_repos_selected | difference(linux_apt_extra_repos_catalog.keys() | list) | length == 0
+    fail_msg: >-
+      Unknown extra repo(s):
+      {{ linux_apt_extra_repos_selected | difference(linux_apt_extra_repos_catalog.keys() | list) | join(', ') }}.
+      Available: {{ linux_apt_extra_repos_catalog.keys() | list | join(', ') }}
+    quiet: true
+
+- name: "Ensure python3-debian is present (required by deb822_repository)"
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: "Ensure the APT keyrings directory exists"
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: "Install the extra repository signing keys"
+  ansible.builtin.copy:
+    src: "keyrings/{{ linux_apt_extra_repos_catalog[item].key }}"
+    dest: "/etc/apt/keyrings/{{ linux_apt_extra_repos_catalog[item].key }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ linux_apt_extra_repos_selected }}"
+
+- name: "Configure the extra repositories"
+  ansible.builtin.deb822_repository:
+    name: "{{ item }}"
+    uris: "{{ linux_apt_extra_repos_catalog[item].uris }}"
+    suites: "{{ linux_apt_extra_repos_catalog[item].suites | default(ansible_facts.distribution_release) }}"
+    components: "{{ linux_apt_extra_repos_catalog[item].components | default('main') }}"
+    architectures: "{{ linux_apt_extra_repos_catalog[item].architectures | default(omit) }}"
+    signed_by: "/etc/apt/keyrings/{{ linux_apt_extra_repos_catalog[item].key }}"
+    state: present
+    mode: "0644"
+  loop: "{{ linux_apt_extra_repos_selected }}"
+  register: linux_apt_extra_repos_result
+
+# Inline (not a handler): the caller installs packages from these repositories
+# right after this file, so the cache has to be fresh now.
+- name: "Update APT cache after adding extra repositories"  # noqa: no-handler
+  ansible.builtin.apt:
+    update_cache: true
+  when: linux_apt_extra_repos_result is changed

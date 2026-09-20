@@ -77,15 +77,28 @@
     mode: '0750'
 
 # ============================== export plugin (JAVA_HOME) ============================== #
+# `jenv enable-plugin` is a shell-function command (libexec/jenv-sh-enable-plugin), only
+# reachable after `eval "$(jenv init -)"`, so do what it does: symlink the plugin from
+# available-plugins/ into plugins/ (a directory that only `jenv init` would create).
 - name: Enable jenv export plugin (keeps JAVA_HOME in sync)
-  become: true
-  become_user: "{{ linux_desktop_config.user }}"
-  ansible.builtin.command: "{{ jenv_bin }} enable-plugin export"
-  environment:
-    JENV_ROOT: "{{ jenv_home }}"
-  args:
-    creates: "{{ jenv_home }}/plugins/export"
   when: jenv_config.enable_export_plugin | bool
+  block:
+    - name: Ensure the jenv plugins directory exists
+      ansible.builtin.file:
+        path: "{{ jenv_home }}/plugins"
+        state: directory
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
+        mode: '0755'
+
+    - name: Link the export plugin into the jenv plugins directory
+      ansible.builtin.file:
+        src: "{{ jenv_home }}/available-plugins/export"
+        dest: "{{ jenv_home }}/plugins/export"
+        state: link
+        follow: false
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_config.user }}"
 
 # ============================== JDKs ============================== #
 - name: Install OpenJDK packages

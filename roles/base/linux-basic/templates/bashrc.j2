@@ -97,6 +97,13 @@ if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
     . /etc/bash_completion
 fi
 
+{% set editor = item.editor | default(linux_basic.editor | default('')) %}
+{% if editor %}
+# Default editor honoured by git, sops (`make edit-secrets`), crontab, visudo, ...
+export EDITOR="{{ editor }}"
+export VISUAL="{{ editor }}"
+{% endif %}
+
 ## make use of bashrc.d structure for additional things
 c=`ls {{ item.home | default( '/home/' ~ item.username  ) }}/.bashrc.d/| grep ".bashrc" | wc -l`
 if [ $c -gt 0  ]; then

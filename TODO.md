@@ -40,3 +40,23 @@ Found while silencing the `item`-collision warning in
       vagrant inventory can't exercise it (both sample destinations skip — one has no
       `encryption`, the other `encryption: none`). Add an encrypted ssh destination to
       the test inventory first, then fix + verify.
+
+## linux-kde: KDE menu actions (`add_kde_menu_actions`) are still Plasma 5-only
+
+The role is Plasma 6 only now, but the opt-in Kim service menu (convert / rotate /
+flip images from Dolphin's context menu) was never ported and can't work on trixie.
+
+- [ ] Decide: port it to Plasma 6, or remove the feature.
+- [ ] If porting:
+  - apt: install `qdbus-qt6` instead of `qdbus` — `qdbus` doesn't exist in trixie,
+    so enabling the toggle currently fails at the apt step;
+  - `files/menu_actions/kim_*`: call `qdbus6` instead of `qdbus` (the kdialog
+    progress-bar D-Bus calls);
+  - install `kim_convertandrotate.desktop` to `/usr/share/kio/servicemenus/` rather
+    than the legacy `/usr/share/kservices5/ServiceMenus/` (KF6 still reads it, but
+    it's deprecated), with `MimeType=image/*;` instead of `image/*` in `ServiceTypes`;
+  - verify on the vagrant box — enable `linux_kde.add_kde_menu_actions` in its
+    inventory first (it's off there).
+- [ ] If removing: drop the menu-action block in `tasks/main.yaml`,
+      `files/menu_actions/`, the `add_kde_menu_actions` default, and the "Image
+      context-menu actions" section of the docs page.

@@ -1,5 +1,5 @@
 #! /usr/bin/env sh
-# KDE 6 / Plasma 6 variant of kwriteconfig.sh (uses the kwriteconfig6 binary).
+# Per-user KDE Plasma 6 customizations (uses the kwriteconfig6 binary).
 # based on https://github.com/nbeaver/config-kde5/blob/master/config-kde.sh
 
 # Do not obey DRM limitations.
@@ -12,6 +12,20 @@ kwriteconfig6 --file okularpartrc --group 'Core General' --key 'ObeyDRM' --type 
 
 kwriteconfig6 --file kdeglobals --group 'KDE' --key 'AnimationDurationFactor' '0.125'
 kwriteconfig6 --file kdeglobals --group 'General' --key 'BrowserApplication' 'google-chrome.desktop'
+
+
+# =====================================================================================
+# Plasma
+# =====================================================================================
+# Plasma Style (System Settings > Colors & Themes > Plasma Style): the theme of the
+# panels and widgets, independent of the application colour scheme. 'breeze-dark' is
+# the id of the stock "Breeze Dark" style (/usr/share/plasma/desktoptheme/breeze-dark).
+# A running plasmashell watches plasmarc and switches live; no re-login needed.
+kwriteconfig6 --file plasmarc --group 'Theme' --key 'name' 'breeze-dark'
+# Cursors (System Settings > Colors & Themes > Cursors): 'Breeze_Light' is the id of
+# the stock white "Breeze Light" theme (breeze-cursor-theme). Not live - KWin only
+# reloads it on the Cursors KCM's change signal - so it applies at the next login.
+kwriteconfig6 --file kcminputrc --group 'Mouse' --key 'cursorTheme' 'Breeze_Light'
 
 
 # =====================================================================================

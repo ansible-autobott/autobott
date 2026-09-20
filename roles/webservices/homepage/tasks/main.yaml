@@ -64,10 +64,15 @@
         dest: "{{ homepage_config.paths.base_dir }}/images/{{ item | basename }}"
       loop: >-
         {{
-          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/images/*.jpg', wantlist=True)
+          (
+            lookup('ansible.builtin.fileglob', homepage_inventory_dir + '/*.jpg', wantlist=True)
+            if homepage_inventory_dir is directory else []
+          )
           +
           lookup('ansible.builtin.fileglob', role_path + '/files/images/*.jpg', wantlist=True)
         }}
+      vars:
+        homepage_inventory_dir: "{{ inventory_dir }}/files/homepage/images"
       run_once: true
       notify: restart homepage
 
@@ -77,10 +82,15 @@
         dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
       loop: >-
         {{
-          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/icons/*.jpg', wantlist=True)
+          (
+            lookup('ansible.builtin.fileglob', homepage_inventory_dir + '/*.jpg', wantlist=True)
+            if homepage_inventory_dir is directory else []
+          )
           +
           lookup('ansible.builtin.fileglob', role_path + '/files/icons/*.jpg', wantlist=True)
         }}
+      vars:
+        homepage_inventory_dir: "{{ inventory_dir }}/files/homepage/icons"
       run_once: true
       notify: restart homepage
 
@@ -90,10 +100,15 @@
         dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
       loop: >-
         {{
-          lookup('ansible.builtin.fileglob', inventory_dir + '/files/homepage/icons/*.png', wantlist=True)
+          (
+            lookup('ansible.builtin.fileglob', homepage_inventory_dir + '/*.png', wantlist=True)
+            if homepage_inventory_dir is directory else []
+          )
           +
           lookup('ansible.builtin.fileglob', role_path + '/files/icons/*.png', wantlist=True)
         }}
+      vars:
+        homepage_inventory_dir: "{{ inventory_dir }}/files/homepage/icons"
       run_once: true
       notify: restart homepage
 

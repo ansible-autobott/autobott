@@ -18,9 +18,30 @@ linux_kde_defaults:
   # setting). Note: on some older NVIDIA/X11 setups appmenu-gtk-module can crash
   # GTK apps, hence this is opt-in.
   add_kde_global_menu: false
-  # Apply the desktop styling for the primary desktop user: run the
-  # distro-appropriate kwriteconfig customizations (Plasma 5 -> kwriteconfig.sh,
-  # Plasma 6 -> kwriteconfig6.sh) as that user. On Plasma 6 it also installs the
-  # system-wide "AutoBott Panel" layout template so the user can add it from
-  # KDE's "Add Panel" menu. Opt-in; re-runs converge.
+  # Apply the desktop styling for the primary desktop user: run the kwriteconfig6
+  # customizations (files/kwriteconfig6.sh) as that user, including the Breeze
+  # Dark Plasma Style (dark panels / widgets) and the white Breeze Light cursors.
+  # It also installs the system-wide "AutoBott Panel" layout template so the user
+  # can add it from KDE's "Add Panel" menu, and Klassy
+  # (https://github.com/paulmcauley/klassy) from the autobott apt repo - both
+  # installed and selected as the KWin window decoration and the Qt/KDE
+  # application (widget) style, with the Breeze Classic colour scheme applied
+  # (Klassy is trixie / forky / sid only; its own decoration look, klassyrc, is
+  # left at its defaults - tune it via klassy-settings). It also installs the
+  # Twemoji colour emoji font system-wide and makes it the preferred emoji font
+  # via fontconfig, replacing the stock Noto Color Emoji. Opt-in; re-runs
+  # converge.
   add_kde_style: false
+  # Spectacle screenshot shortcuts for the primary desktop user: Meta+Shift+S
+  # captures a region, Meta+Shift+W the active window. Each capture is saved to
+  # ~/Screenshots as JPG and copied to the clipboard, and a notification plays a
+  # sound. No Spectacle window opens. The shortcuts work after the user's next
+  # login.
+  add_kde_screenshots: false
+
+# Pinned Twemoji colour emoji font (Mozilla COLR/CPAL build) installed and set as
+# the preferred system emoji font by the add_kde_style block above. Twemoji is not
+# in Debian's repos, so it is a pinned GitHub release TTF + hash; bump via the
+# upgrade-packages workflow and keep the hash in sync with the release.
+twemoji_version: v0.7.0
+twemoji_sha256: 6d90152ee0d29e82fe2a87793af5aa4b7ad13e6538360889e141e81ed299ee8e

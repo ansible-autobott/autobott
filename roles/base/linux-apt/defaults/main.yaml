@@ -61,3 +61,46 @@ linux_apt_defaults:
   #     types: "deb"                                               # Optional; defaults to "deb"
   #     enabled: true                                              # Repository state
   sources_d: []
+
+  # Named repositories from linux_apt_extra_repos_catalog (below) to configure,
+  # e.g. ["autobott"]. Roles that install packages from one of them configure it
+  # themselves, so list a repository here only to use it directly.
+  extra_repos: []
+
+#============================================================================================================
+# Extra repositories catalog
+#============================================================================================================
+# Known third-party repositories, selectable by name: via linux_apt.extra_repos,
+# or by a role that needs one. Such a role imports tasks/extra_repos.yaml, which
+# works regardless of run_role_linux_apt:
+#
+#   - name: Ensure the autobott apt repository
+#     ansible.builtin.import_role:
+#       name: base/linux-apt
+#       tasks_from: extra_repos
+#       allow_duplicates: false  # same list from several roles -> configured once per play
+#     vars:
+#       linux_apt_extra_repos_selected: ["autobott"]  # keep it literal: the dedup compares it unrendered
+#
+# Entry fields: uris, suites, components, architectures (as in sources_d), plus
+# `key`: a keyring vendored in files/keyrings/, installed to /etc/apt/keyrings/<key>.
+linux_apt_extra_repos_catalog:
+  # https://github.com/ansible-autobott/debian-repo
+  # Built per Debian release for trixie / forky / sid; any other release (older
+  # Debian, Ubuntu) tracks the "stable" suite.
+  autobott:
+    uris: "https://ansible-autobott.github.io/debian-repo"
+    suites: "{{ ansible_facts.distribution_release if ansible_facts.distribution_release in ['trixie', 'forky', 'sid'] else 'stable' }}"
+    components: "main"
+    architectures: ["amd64", "arm64"]
+    key: "autobott-archive-keyring.gpg"
+  # https://candy-tools.github.io/debian-repo/ (dibs, go-deps-view, linux-candy, todo)
+  candy-tools:
+    uris: "https://candy-tools.github.io/debian-repo"
+    suites: "stable"
+    components: "main"
+    key: "candy-tools-archive-keyring.gpg"
+
+# Input of tasks/extra_repos.yaml: the catalog names to configure. main.yaml sets
+# it from linux_apt.extra_repos; roles importing the file pass their own list.
+linux_apt_extra_repos_selected: []

@@ -78,9 +78,10 @@ jenv_defaults:
   enable_export_plugin: true
   # OpenJDK packages to install and register with `jenv add`.
   # Set to [] to install jenv only and manage JDKs yourself.
+  # Debian 13 ships only openjdk-21 and openjdk-25 (17 is bookworm-only).
   jdk_packages:
+    - openjdk-25-jdk
     - openjdk-21-jdk
-    - openjdk-17-jdk
   # Optional default set via `jenv global` (e.g. "21"); "" leaves it unset.
   global_version: ""
 

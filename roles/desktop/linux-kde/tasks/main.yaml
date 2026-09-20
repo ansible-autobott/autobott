@@ -13,6 +13,8 @@
       ansible.builtin.set_fact:
         linux_kde_config: "{{ linux_kde_defaults | combine(linux_kde, recursive=true) }}"
 
+    # One vars file per supported release: Plasma 6 only (vars/trixie.yaml). Any
+    # other release - the Plasma 5 ones included - has no vars file and fails here.
     - name: Load package names based on distro relese
       include_vars: "{{ item }}"
       with_first_found:
@@ -87,9 +89,9 @@
     # KDE style customizations
     #============================================================================================================
     # Applies the per-user desktop styling for the primary desktop user: it pushes
-    # the distro-appropriate kwriteconfig script (kde_kwriteconfig_script, from
-    # vars/<release>.yaml) and runs it as that user so it writes to their
-    # ~/.config. Some settings only take effect after a re-login.
+    # the kwriteconfig6 script (files/kwriteconfig6.sh) and runs it as that user
+    # so it writes to their ~/.config. Some settings only take effect after a
+    # re-login.
     - name: KDE style customizations block
       when: linux_kde_config.add_kde_style
       vars:
@@ -105,7 +107,7 @@
 
         - name: Copy the kwriteconfig customization script
           ansible.builtin.copy:
-            src: "{{ kde_kwriteconfig_script }}"
+            src: kwriteconfig6.sh
             dest: "{{ kde_style_home }}/.local/bin/kde-style-customize.sh"
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
@@ -129,9 +131,7 @@
         #   2. Enforce ONLY the <ToolBar> element on every run via the xml
         #      module, so the toolbar stays up to date while the user's
         #      menus/shortcuts are left untouched.
-        # KF6 (trixie) only; KF5/bookworm keeps the Dolphin defaults.
-        - name: Deploy the custom Dolphin toolbar (KDE 6 / trixie only)
-          when: ansible_facts.distribution_release == "trixie"
+        - name: Deploy the custom Dolphin toolbar
           block:
             - name: Ensure the Dolphin KXMLGUI config directory exists
               ansible.builtin.file:
@@ -198,13 +198,12 @@
         #     is ignored in KF6, so dropping the <ToolBar> elements is the reliable
         #     way to remove the bar (verified on Konsole 25.04.3).
         # copy's default (force: true) upserts the box to match the role source on
-        # every run. KF6 (trixie) only.
+        # every run.
         #
         # The profile's Font= is "DejaVuSansM Nerd Font", installed by the
         # linux-desktop role (install_dejavu_nerd_font). If that toggle is off the
         # font is absent and Konsole silently falls back - no glyphs, not an error.
-        - name: Deploy the Konsole style (KDE 6 / trixie only)
-          when: ansible_facts.distribution_release == "trixie"
+        - name: Deploy the Konsole style
           block:
             - name: Ensure the Konsole data + KXMLGUI directories exist
               ansible.builtin.file:
@@ -240,19 +239,18 @@
                 - sessionui.rc
 
     #============================================================================================================
-    # KDE panel layout template (Plasma 6 only)
+    # KDE panel layout template
     #============================================================================================================
     # Installs a system-wide Plasma "Add Panel" layout template so the desktop
     # user can add the pre-defined "AutoBott Panel" when editing KDE. Gated by
     # add_kde_style. The files are root-owned under
     # /usr/share/plasma/layout-templates/; nothing is applied automatically and
-    # nothing is written to the user's ~/.config. Only named for Plasma 6
-    # releases via kde_panel_layout_template (from vars/<release>.yaml); on
-    # Plasma 5 releases that var is undefined, so this block is skipped.
+    # nothing is written to the user's ~/.config. kde_panel_layout_template names
+    # both the source dir under files/plasma-layout-templates/ and the install dir.
     - name: KDE panel layout template block
-      when:
-        - linux_kde_config.add_kde_style | bool
-        - kde_panel_layout_template is defined
+      when: linux_kde_config.add_kde_style | bool
+      vars:
+        kde_panel_layout_template: org.autobott.plasma.desktop.panel
       block:
         - name: Install the AutoBott panel layout template
           ansible.builtin.copy:
@@ -262,6 +260,137 @@
             group: root
             mode: "0644"
             directory_mode: "0755"
+
+    #============================================================================================================
+    # Klassy window decoration / application style
+    #============================================================================================================
+    # Part of add_kde_style: installs the klassy package from the autobott apt
+    # repo; the repo itself comes from base/linux-apt's extra repositories catalog
+    # (works regardless of run_role_linux_apt). Nothing is selected for the user.
+    # The repo builds klassy for trixie / forky / sid only, so this is skipped on
+    # any other release.
+    - name: Klassy block
+      when:
+        - linux_kde_config.add_kde_style | bool
+        - ansible_facts.distribution_release in ['trixie', 'forky', 'sid']
+      vars:
+        kde_style_home: "/home/{{ linux_desktop_config.user }}"
+      block:
+        - name: Ensure the autobott apt repository  # noqa: role-name[path]
+          ansible.builtin.import_role:
+            name: base/linux-apt
+            tasks_from: extra_repos
+            allow_duplicates: false
+          vars:
+            linux_apt_extra_repos_selected: ["autobott"]
+
+        - name: Install Klassy
+          ansible.builtin.apt:
+            name: klassy
+            state: present
+
+        # Select Klassy for the desktop user, both as the KWin window decoration
+        # and as the Qt/KDE application (widget) style. Done here rather than in
+        # kwriteconfig6.sh so it only runs on the releases where the package is
+        # actually installed - pointing kwinrc/kdeglobals at a missing plugin
+        # would silently fall back to Breeze. The decoration applies at the next
+        # login (or via `qdbus org.kde.KWin /KWin reconfigure`); the widget style
+        # applies to apps started afterwards.
+        - name: Select Klassy as the window decoration and application style
+          ansible.builtin.command:
+            argv: "{{ ['kwriteconfig6'] + item }}"
+          become: true
+          become_user: "{{ linux_desktop_config.user }}"
+          environment:
+            HOME: "{{ kde_style_home }}"
+          # kwriteconfig re-asserts the same values on every run; not a change.
+          changed_when: false
+          loop:
+            # Window decoration: point KDecoration at the Klassy KWin plugin. The
+            # kwinrc group is org.kde.kdecoration2 even under Plasma 6's
+            # KDecoration3 API (same as the ButtonsOnLeft/Right keys in
+            # kwriteconfig6.sh). No 'theme' key: that is only for aurorae SVG
+            # themes, not native decoration plugins like Klassy.
+            - [--file, kwinrc, --group, org.kde.kdecoration2, --key, library, org.kde.klassy]
+            # Application (widget) style for Qt/KDE apps.
+            - [--file, kdeglobals, --group, KDE, --key, widgetStyle, Klassy]
+            # Klassy application-style frame corner radius. Klassy keeps its own
+            # settings in ~/.config/klassy/klassyrc (kwriteconfig creates the
+            # subdir). FrameCornerRadius must be FCR_Custom for the custom value
+            # to apply (otherwise it is derived from the window decoration);
+            # FrameCustomCornerRadius is a Double, valid range 0-24.
+            - [--file, klassy/klassyrc, --group, Style, --key, FrameCornerRadius, FCR_Custom]
+            - [--file, klassy/klassyrc, --group, Style, --key, FrameCustomCornerRadius, "2"]
+          loop_control:
+            label: "{{ item[1] }} {{ item[-2] }}={{ item[-1] }}"
+
+        # Colour scheme: apply the stock Breeze Classic scheme
+        # (/usr/share/color-schemes/BreezeClassic.colors). We use
+        # plasma-apply-colorscheme rather than a bare kwriteconfig ColorScheme
+        # key so the full set of [Colors:*] groups is written into kdeglobals,
+        # not just the name. QT_QPA_PLATFORM=offscreen lets it run in this
+        # headless session; the change persists for the next login.
+        - name: Apply the Breeze Classic colour scheme for the desktop user
+          ansible.builtin.command:
+            argv: [plasma-apply-colorscheme, BreezeClassic]
+          become: true
+          become_user: "{{ linux_desktop_config.user }}"
+          environment:
+            HOME: "{{ kde_style_home }}"
+            QT_QPA_PLATFORM: offscreen
+          # Re-applying the same scheme is not a change.
+          changed_when: false
+
+    #============================================================================================================
+    # Twemoji colour emoji font
+    #============================================================================================================
+    # Part of add_kde_style: installs the Twemoji colour emoji font (Mozilla's
+    # COLR/CPAL build) system-wide under /usr/local/share/fonts and points
+    # fontconfig at it as the preferred "emoji" family, replacing the stock Noto
+    # Color Emoji look everywhere emoji are rendered (Konsole, the Claude Code
+    # statusline, GTK/Qt apps). Twemoji is not in Debian's repos, so this is a
+    # pinned release TTF + hash (twemoji_version / twemoji_sha256), the same
+    # approach as the Nerd Font install in the linux-desktop role. The family
+    # name is "Twemoji Mozilla" (verified with fc-scan).
+    - name: Twemoji block
+      when: linux_kde_config.add_kde_style | bool
+      vars:
+        twemoji_install_dir: /usr/local/share/fonts/twemoji
+        twemoji_ttf: "{{ twemoji_install_dir }}/Twemoji.Mozilla.ttf"
+      block:
+        - name: Ensure the Twemoji install directory exists
+          ansible.builtin.file:
+            path: "{{ twemoji_install_dir }}"
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Download the pinned Twemoji colour emoji font
+          ansible.builtin.get_url:
+            url: "https://github.com/mozilla/twemoji-colr/releases/download/{{ twemoji_version }}/Twemoji.Mozilla.ttf"
+            dest: "{{ twemoji_ttf }}"
+            checksum: "sha256:{{ twemoji_sha256 }}"
+            owner: root
+            group: root
+            mode: "0644"
+          register: twemoji_download
+
+        - name: Prefer Twemoji as the system emoji font (fontconfig)
+          ansible.builtin.copy:
+            src: fontconfig/70-autobott-twemoji.conf
+            dest: /etc/fonts/conf.d/70-autobott-twemoji.conf
+            owner: root
+            group: root
+            mode: "0644"
+          register: twemoji_fontconfig
+
+        # Inline (not a handler) on purpose: the refresh belongs with the font /
+        # config change that triggered it, mirroring the Nerd Font install.
+        - name: Refresh the system font cache  # noqa: no-handler
+          ansible.builtin.command: fc-cache -f
+          when: twemoji_download is changed or twemoji_fontconfig is changed
+          changed_when: true
 
     #============================================================================================================
     # GTK global menu (appmenu-gtk-module) - Debian 13 (trixie) only
@@ -325,3 +454,55 @@
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
             mode: 0644
+
+    #============================================================================================================
+    # Spectacle screenshot shortcuts
+    #============================================================================================================
+    # Configures Spectacle (installed with kde_packages) for the primary desktop user:
+    # Meta+Shift+S captures a region, Meta+Shift+W the active window. The capture is
+    # saved to ~/Screenshots as JPG, copied to the clipboard, and a notification plays
+    # the screen-capture sound. No Spectacle window opens: a global shortcut runs the
+    # Spectacle action over D-Bus, which uses these settings and skips the editor
+    # window. Confirm a region with Enter or a double-click; the capture bar's own
+    # Copy / Save buttons only do that one action.
+    - name: KDE screenshots block
+      when: linux_kde_config.add_kde_screenshots | bool
+      vars:
+        kde_screenshots_home: "/home/{{ linux_desktop_config.user }}"
+      block:
+        # Each item is a kwriteconfig6 argument list.
+        #   - spectacle.notifyrc: 'screen-capture' is the XDG sound-theme name, played
+        #     by the notification's Sound action.
+        #   - kglobalshortcutsrc: desktop-file actions live under
+        #     [services][<desktop id>] and the value is only the key sequence. These
+        #     replace the stock Meta+Shift+Print / Meta+Print. kglobalaccel reads this
+        #     file at login, so the new shortcuts work after the next login.
+        #   - _launch is Spectacle's own launch action; its .desktop default binds it
+        #     to "Print,Meta+Shift+S", so we drop Meta+Shift+S from it (keeping Print
+        #     -> open Spectacle) to free that key for the region capture below.
+        - name: Configure Spectacle and its global shortcuts for the desktop user
+          ansible.builtin.command:
+            argv: "{{ ['kwriteconfig6'] + item }}"
+          become: true
+          become_user: "{{ linux_desktop_config.user }}"
+          environment:
+            HOME: "{{ kde_screenshots_home }}"
+          # kwriteconfig re-asserts the same values on every run; not a change.
+          changed_when: false
+          loop:
+            - [--file, spectaclerc, --group, General, --key, autoSaveImage, "true"]
+            - [--file, spectaclerc, --group, General, --key, clipboardGroup, PostScreenshotCopyImage]
+            - [--file, spectaclerc, --group, ImageSave, --key, imageSaveLocation, "file://{{ kde_screenshots_home }}/Screenshots/"]
+            # save as JPG; the value doubles as the file extension and the QImageWriter format.
+            - [--file, spectaclerc, --group, ImageSave, --key, preferredImageFormat, jpg]
+            - [--file, spectacle.notifyrc, --group, Event/newScreenshotSaved, --key, Action, "Popup|Sound"]
+            - [--file, spectacle.notifyrc, --group, Event/newScreenshotSaved, --key, Sound, screen-capture]
+            # free Meta+Shift+S from the launch action before assigning it to the region capture.
+            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
+               --key, _launch, "Print"]
+            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
+               --key, RectangularRegionScreenShot, "Meta+Shift+S"]
+            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
+               --key, ActiveWindowScreenShot, "Meta+Shift+W"]
+          loop_control:
+            label: "{{ item[1] }} {{ item[-2] }}={{ item[-1] }}"

@@ -47,7 +47,13 @@
         owner: "{{ dashi_config.user.name }}"
         group: "{{ dashi_config.user.group }}"
         mode: "0640"
-      loop: "{{ lookup('ansible.builtin.fileglob', inventory_dir + '/files/dashi/dashboards/*', wantlist=True) }}"
+      loop: >-
+        {{
+          lookup('ansible.builtin.fileglob', dashi_inventory_dir + '/*', wantlist=True)
+          if dashi_inventory_dir is directory else []
+        }}
+      vars:
+        dashi_inventory_dir: "{{ inventory_dir }}/files/dashi/dashboards"
       notify: restart dashi
 
     - name: Copy themes from inventory to data directory
@@ -57,7 +63,13 @@
         owner: "{{ dashi_config.user.name }}"
         group: "{{ dashi_config.user.group }}"
         mode: "0640"
-      loop: "{{ lookup('ansible.builtin.fileglob', inventory_dir + '/files/dashi/themes/*', wantlist=True) }}"
+      loop: >-
+        {{
+          lookup('ansible.builtin.fileglob', dashi_inventory_dir + '/*', wantlist=True)
+          if dashi_inventory_dir is directory else []
+        }}
+      vars:
+        dashi_inventory_dir: "{{ inventory_dir }}/files/dashi/themes"
       notify: restart dashi
 
     - name: Create config file

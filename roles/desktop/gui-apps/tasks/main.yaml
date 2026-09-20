@@ -49,6 +49,3 @@
     - name: VirtualBox
       ansible.builtin.import_tasks: apps/virtualbox.yaml
       when: "'virtualbox' in gui_apps_config"
-    - name: input-remapper
-      ansible.builtin.import_tasks: apps/input-remapper.yaml
-      when: "'input-remapper' in gui_apps_config"

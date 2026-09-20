@@ -230,3 +230,10 @@
                   loop_control:
                     label: "{{ item.name }}={{ item.value }}"
                   when: item.value | string | length > 0
+
+    #============================================================================================================
+    # input-remapper: install the app + daemon and deploy per-user remapping presets
+    #============================================================================================================
+    - name: Set up input-remapper
+      ansible.builtin.include_tasks: input-remapper.yaml
+      when: linux_desktop_config.input_remapper.install | bool

@@ -14,6 +14,23 @@
         state: present
       loop: "{{ linux_basic.groups | default([]) }}"
 
+    # Any secondary group referenced by an enabled user/system_user must exist
+    # before ansible.builtin.user runs (it assigns membership but never creates
+    # groups). Some of these are owned by roles that run later (e.g. docker,
+    # vboxusers), so we ensure them here. Creating an already-existing group is a
+    # no-op, and the owning package keeps using it (its `addgroup --system` skips
+    # an existing group). Pin a gid in linux_basic.groups for any group where it
+    # matters.
+    - name: Ensure referenced secondary groups exist
+      ansible.builtin.group:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ (linux_basic.users | union(linux_basic.users_extra) | union(linux_basic.system_users | default([])))
+                | selectattr('enabled', 'defined') | selectattr('enabled')
+                | map(attribute='groups', default=[]) | flatten | unique }}"
+      loop_control:
+        label: "{{ item }}"
+
     # System Users Management
     - name: Manage system users and their groups
       block:

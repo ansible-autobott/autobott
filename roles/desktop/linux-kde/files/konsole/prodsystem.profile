@@ -1,9 +1,9 @@
 [Appearance]
-ColorScheme=DarkPastels
-Font=DejaVuSansM Nerd Font,11,-1,5,50,0,0,0,0,0
+ColorScheme=Dracula
+Font=Hack Nerd Font Mono,11,-1,5,50,0,0,0,0,0
 
 [General]
-Name=Pastels
+Name=prodsystem
 Parent=FALLBACK/
 
 [Scrolling]

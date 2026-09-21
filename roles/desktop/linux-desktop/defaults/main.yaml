@@ -67,11 +67,11 @@ linux_desktop_defaults:
   #============================================================================================================
   # Nerd Fonts
   #============================================================================================================
-  # Install DejaVu Sans Mono patched by the Nerd Fonts project (adds the icon /
-  # Powerline glyphs the plain fonts-dejavu package lacks) system-wide under
+  # Install the Hack font patched by the Nerd Fonts project (adds the icon /
+  # Powerline glyphs the stock monospace fonts lack) system-wide under
   # /usr/local/share/fonts. Consumers reference it by the patched family name
-  # "DejaVuSansM Nerd Font" (e.g. the linux-kde Konsole profile). Off by default.
-  install_dejavu_nerd_font: true
+  # "Hack Nerd Font Mono" (e.g. the linux-kde Konsole profiles). On by default.
+  install_hack_nerd_font: true
 
   #============================================================================================================
   # input-remapper (remap keys/buttons of input devices)
@@ -93,12 +93,12 @@ linux_desktop_defaults:
     #       template: "input-remapper/presets/m500s.json"
     presets: []
 
-# Pinned Nerd Fonts release + per-font hash for the DejaVu install above. The
-# release tag is shared across any Nerd Font; nerd_font_dejavu_sha256 is the
-# DejaVuSansMono.tar.xz hash. Bump via the upgrade-packages workflow and keep the
+# Pinned Nerd Fonts release + per-font hash for the Hack install above. The
+# release tag is shared across any Nerd Font; nerd_font_hack_sha256 is the
+# Hack.tar.xz hash. Bump via the upgrade-packages workflow and keep the
 # hash in sync with the release tarball.
 nerd_font_version: v3.5.1
-nerd_font_dejavu_sha256: 9d3f2d60faa790b101903c2984b89c11397fc63b9ce43f2dcd25ffed4fb44e5f
+nerd_font_hack_sha256: cdd389472e10e2261520140ff1b382b4f8a226af5fd0b2735b975d31151d9c3c
 
 # Pinned input-remapper release + .deb hash for the input_remapper.install feature
 # above. https://github.com/sezanzeb/input-remapper/releases  (version -> sha256 of

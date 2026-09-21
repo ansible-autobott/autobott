@@ -189,11 +189,13 @@
               become: true
               become_user: "{{ linux_desktop_config.user }}"
 
-        # Konsole style: no toolbar, tabs at the bottom, menubar off, icon-only,
-        # Pastels / Dark Pastels colours. The konsolerc *settings* are re-asserted
-        # by the kwriteconfig script above; here we deploy the files that settings
-        # can't express:
-        #   - the profile + its colorscheme, and
+        # Konsole style: no toolbar, tabs at the bottom, menubar off, icon-only.
+        # Two profiles are deployed: "autobott" (the default, Autobott pastel
+        # scheme) and "prodsystem" (the Dracula scheme, hand-selected on prod
+        # boxes to make those sessions visually distinct). The konsolerc
+        # *settings* are re-asserted by the kwriteconfig script above; here we
+        # deploy the files that settings can't express:
+        #   - the profiles + their colorschemes, and
         #   - the KXMLGUI files with the main + session <ToolBar> elements removed.
         #     Konsole shows those toolbars by default and the [Toolbar] Hidden= key
         #     is ignored in KF6, so dropping the <ToolBar> elements is the reliable
@@ -201,8 +203,8 @@
         # copy's default (force: true) upserts the box to match the role source on
         # every run.
         #
-        # The profile's Font= is "DejaVuSansM Nerd Font", installed by the
-        # linux-desktop role (install_dejavu_nerd_font). If that toggle is off the
+        # The profiles' Font= is "Hack Nerd Font Mono", installed by the
+        # linux-desktop role (install_hack_nerd_font). If that toggle is off the
         # font is absent and Konsole silently falls back - no glyphs, not an error.
         - name: Deploy the Konsole style
           block:
@@ -217,7 +219,7 @@
                 - "{{ kde_style_home }}/.local/share/konsole"
                 - "{{ kde_style_home }}/.local/share/kxmlgui5/konsole"
 
-            - name: Deploy the Konsole profile + colorscheme (upsert on change)
+            - name: Deploy the Konsole profiles + colorschemes (upsert on change)
               ansible.builtin.copy:
                 src: "konsole/{{ item }}"
                 dest: "{{ kde_style_home }}/.local/share/konsole/{{ item }}"
@@ -225,8 +227,10 @@
                 group: "{{ linux_desktop_user_main_group }}"
                 mode: "0644"
               loop:
-                - Pastels.profile
-                - DarkPastels.colorscheme
+                - autobott.profile
+                - Autobott.colorscheme
+                - prodsystem.profile
+                - Dracula.colorscheme
 
             - name: Deploy the Konsole GUI files with the toolbars removed (upsert)
               ansible.builtin.copy:

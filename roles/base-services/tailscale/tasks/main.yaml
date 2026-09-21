@@ -29,7 +29,9 @@
       ansible.builtin.deb822_repository:
         name: tailscale
         types: deb
-        uris: https://pkgs.tailscale.com/stable/debian
+        # Tailscale publishes separate repos per distro (debian/ubuntu); the
+        # signing key is identical across them, so the bundled key works for both.
+        uris: "https://pkgs.tailscale.com/stable/{{ ansible_facts.distribution | lower }}"
         suites: "{{ ansible_facts.distribution_release }}"
         components: main
         signed_by: /etc/apt/keyrings/tailscale-archive-keyring.gpg

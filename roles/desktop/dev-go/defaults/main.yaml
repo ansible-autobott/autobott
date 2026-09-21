@@ -38,8 +38,9 @@ dev_go_available:
 # Go is installed via godeb, which fetches the Go release from Google; there is
 # no per-version sha we control, so golang_versions is a plain allow-list. godeb
 # itself is pinned separately below.
-golang_default_version: "1.25.6"
+golang_default_version: "1.27.1"
 golang_versions:
+  - "1.27.1"
   - "1.25.6"
   - "1.25.5"
 
@@ -50,9 +51,10 @@ golang_godeb_sha256: "f2b3445dda98b31a32381036bf01c7e82df1a5a151e7e838ca1f0d1fb8
 
 # ----- goreleaser -----
 # https://github.com/goreleaser/goreleaser/releases  (version -> sha256 of the amd64 .deb)
-goreleaser_default_version: "2.18.1"
+goreleaser_default_version: "2.18.2"
 goreleaser_versions:
   "2.18.1": "f9227f77b5f7747dc3ddad211e34bacccde111a95560c5404d47add00d0aa24e"
+  "2.18.2": "d806a7827b6ec5c0c7f6d478115b6b0204fdaf62a29b3e53a64e211967fa49dc"
 
 # ----- nfpm -----
 # https://github.com/goreleaser/nfpm/releases  (version -> sha256 of the amd64 .deb)

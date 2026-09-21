@@ -22,7 +22,8 @@ e.g. `authelia`, `prometheus`, `etnafinance`). If empty, process every role belo
 1. **Branch guard.** Run `git status`. If on `main`/`master`, stop and ask the user for a
    branch — this repo forbids committing to main. Otherwise continue (edits only; no commit).
 2. **Tools.** Requires `gh` (public GitHub API — works even though `gh auth` points at the
-   corp host), `curl`, `sha256sum`, `sha1sum`, and `jq`. Network access is required.
+   corp host), `curl`, `sha256sum`, `sha1sum`, `sha512sum` (maven), and `jq`. Network access
+   is required.
 3. Work from the repo root (`git rev-parse --show-toplevel`).
 
 ## How pinning works here (the Authelia pattern)
@@ -37,6 +38,23 @@ Most roles follow the shape in `roles/web-base/authelia`:
 
 So an upgrade is: **bump `version:` → download the new artifact → compute its hash →
 append a new `"<version>": "<hash>"` entry to the checksums map.**
+
+## The other pattern: per-tool version catalogs (the dev-* roles)
+
+The `roles/desktop/dev-*` roles (dev-generic, dev-go, dev-java, dev-k8s, dev-node) do
+**not** follow the Authelia shape. Each tool in the role has its own pair of top-level vars
+in `defaults/main.yaml`:
+
+- `<tool>_default_version` — the scalar version installed when the tool is selected without
+  an explicit pin. **This is the field you bump.**
+- `<tool>_versions:` — a **map** `"<version>": "<hash>"` (the checksum lookup), *or* for
+  a couple of tools a plain **allow-list** of version strings with no hash.
+
+The task verifies via `checksum: "<algo>:{{ <tool>_versions[<tool>_version] }}"`. So an
+upgrade here is: **bump `<tool>_default_version` → download the new artifact → append a new
+`"<version>": "<hash>"` entry to `<tool>_versions` (keep the old entries — the catalog is an
+allow-list, existing pins stay valid).** For the allow-list tools, just prepend the new
+version string; there is no hash. See [Tier 1b](#tier-1b--per-tool-version-catalogs-desktopdev-roles).
 
 ## Per-role procedure
 
@@ -126,6 +144,45 @@ sha256sum "$f" | awk '{print $1}'                                       # -> the
 Then edit `roles/web-base/authelia/defaults/main.yaml`: set `version: 4.39.22` and append
 `  "4.39.22": "<hash>"` to `authelia_checksums:`.
 
+## Tier 1b — per-tool version catalogs (desktop/dev-* roles)
+
+The [per-tool catalog pattern](#the-other-pattern-per-tool-version-catalogs-the-dev--roles):
+bump `<tool>_default_version`, append `"<V>": "<hash>"` to `<tool>_versions`. Algo is
+**sha256 unless noted**. `V` = the new stored version (after the tag transform).
+
+| Role (dir) | version key | catalog var | algo | latest command | tag → stored | artifact URL (with `V`) |
+|---|---|---|---|---|---|---|
+| desktop/dev-generic | `vault_default_version` | `vault_versions` | sha256 | `curl -s https://api.releases.hashicorp.com/v1/releases/vault/latest \| jq -r .version` | as-is (no `v`) | `https://releases.hashicorp.com/vault/V/vault_V_linux_amd64.zip` |
+| desktop/dev-generic | `herdr_default_version` | `herdr_versions` | sha256 | `gh api repos/herdrdev/herdr/releases/latest --jq .tag_name` | strip `v` | `https://github.com/herdrdev/herdr/releases/download/vV/herdr-linux-x86_64` |
+| desktop/dev-go | `goreleaser_default_version` | `goreleaser_versions` | sha256 | `gh api repos/goreleaser/goreleaser/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/goreleaser/releases/download/vV/goreleaser_V_amd64.deb` |
+| desktop/dev-go | `nfpm_default_version` | `nfpm_versions` | sha256 | `gh api repos/goreleaser/nfpm/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/nfpm/releases/download/vV/nfpm_V_amd64.deb` |
+| desktop/dev-go | `golangci_lint_default_version` | `golangci_lint_versions` | sha256 | `gh api repos/golangci/golangci-lint/releases/latest --jq .tag_name` | strip `v` | `https://github.com/golangci/golangci-lint/releases/download/vV/golangci-lint-V-linux-amd64.deb` |
+| desktop/dev-java | `jenv_default_version` | `jenv_versions` | sha256 | `gh api repos/jenv/jenv/releases/latest --jq .tag_name` | as-is (no `v`) | `https://github.com/jenv/jenv/archive/refs/tags/V.tar.gz` |
+| desktop/dev-java | `maven_default_version` | `maven_versions` | **sha512** | see maven note below | as-is (no `v`) | `https://archive.apache.org/dist/maven/maven-3/V/binaries/apache-maven-V-bin.tar.gz` |
+| desktop/dev-k8s | `kubectl_default_version` | `kubectl_versions` | sha256 | `curl -sL https://dl.k8s.io/release/stable.txt` | as-is (**with** `v`) | binary: `https://dl.k8s.io/release/V/bin/linux/amd64/kubectl` — hash from sidecar: `curl -sL https://dl.k8s.io/release/V/bin/linux/amd64/kubectl.sha256` (no download needed). NB: the legacy `storage.googleapis.com/kubernetes-release/...` host no longer serves new releases — use `dl.k8s.io`. |
+| desktop/dev-k8s | `kubelogin_default_version` | `kubelogin_versions` | sha256 | `gh api repos/Azure/kubelogin/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/Azure/kubelogin/releases/download/V/kubelogin-linux-amd64.zip` |
+| desktop/dev-k8s | `k9s_default_version` | `k9s_versions` | sha256 | `gh api repos/derailed/k9s/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/derailed/k9s/releases/download/V/k9s_Linux_amd64.tar.gz` |
+| desktop/dev-node | `nvm_default_version` | `nvm_versions` | sha256 | `gh api repos/nvm-sh/nvm/releases/latest --jq .tag_name` | strip `v` | `https://raw.githubusercontent.com/nvm-sh/nvm/vV/install.sh` |
+
+Special cases inside the dev-* roles:
+
+- **golang (dev-go), allow-list, no hash.** `golang_default_version` + `golang_versions` is a
+  plain YAML **list** of version strings (Go is fetched via godeb from Google, so there is no
+  sha we control). Bump `golang_default_version` and **prepend** the new version to the
+  `golang_versions` list. Latest: `curl -s 'https://go.dev/VERSION?m=text' | head -1` → strip
+  the `go` prefix (`go1.27.1` → `1.27.1`). The separate `golang_godeb_sha256` is a fixed
+  installer pin — leave it.
+- **maven (dev-java), maven-3 line only.** `maven_base_url` pins the `maven-3` line, so only
+  ever bump within 3.x — **do not** jump to Maven 4 (a different line/base_url). Latest 3.x:
+  `curl -s https://repo1.maven.org/maven2/org/apache/maven/apache-maven/maven-metadata.xml | grep -oE '<version>3[^<]*</version>' | grep -vE 'alpha|beta|rc' | tail -1`.
+  sha512 via the sidecar: `curl -s <artifact-url>.sha512`.
+- **vault (dev-generic), non-GitHub + major jumps.** The HashiCorp releases API can return a
+  new **major** version (e.g. 1.x → 2.x). Confirm it's GA first —
+  `curl -s https://api.releases.hashicorp.com/v1/releases/vault/<V> | jq .is_prerelease`
+  must be `false` — and **flag any major jump** in the summary as needing review.
+- **kubectl/kubelogin/k9s** store the tag **with** its leading `v` (the URL template uses
+  `{{ version }}` directly, not `v{{ version }}`).
+
 ## Tier 2 — version-only (bump version, no hash to verify)
 
 These pin a version but do not verify a checksum. Bump the version (and, where noted, add the
@@ -145,9 +202,10 @@ matching download-URL map entry). No hashing needed.
 - **base/smartd** (nanoSmart) — `smartd_defaults.nanoSmart.version` (stored **with** `v`).
   Latest: `gh api repos/ansible-autobott/nanoSmart/releases/latest --jq .tag_name`. URL is
   templated from the version — just bump the field.
-- **desktop/cli-apps/defaults/main.yaml** (kubectl) — `kubectl_defaults.kubelogin_version` (stored **with** `v`).
-  Latest: `gh api repos/Azure/kubelogin/releases/latest --jq .tag_name`. Just bump the field.
-  (kubectl itself is fetched at latest-stable at runtime — nothing to pin.)
+
+> **Note:** kubectl/kubelogin/k9s now live in `desktop/dev-k8s` (per-tool catalogs, hashed) —
+> see [Tier 1b](#tier-1b--per-tool-version-catalogs-desktopdev-roles), not here. They were
+> moved out of `cli-apps` when the desktop apps were split into the `dev-*` roles.
 
 ## Tier 3 — special-case
 
@@ -195,10 +253,13 @@ matching download-URL map entry). No hashing needed.
 
 ## Discovery cross-check (catch new roles)
 
-The table is a snapshot. Before finishing, confirm no pinned role was missed:
+The tables are a snapshot. Before finishing, confirm no pinned role was missed — cover
+**both** patterns (the Authelia `_checksums:` map *and* the dev-* `_versions:` /
+`_default_version` catalogs):
 
 ```bash
-grep -rlE '_checksums?:' roles/*/*/defaults/main.yaml   # Tier 1 candidates
+grep -rlE '_checksums?:'                 roles/*/*/defaults/main.yaml   # Tier 1 (Authelia pattern)
+grep -rlE '_versions:|_default_version:' roles/*/*/defaults/main.yaml   # Tier 1b (per-tool catalogs)
 ```
 If a role turns up that isn't in the tables above, derive its handling from its own files —
 `checksum: "<algo>:..."` in `tasks/main.yaml` gives the algorithm, the `get_url` `url:` gives

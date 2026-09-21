@@ -37,7 +37,7 @@
   block:
     - name: Download kubectl
       ansible.builtin.get_url:
-        url: "https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
         dest: /usr/local/bin/kubectl
         checksum: "sha256:{{ kubectl_versions[kubectl_version] }}"
         owner: root

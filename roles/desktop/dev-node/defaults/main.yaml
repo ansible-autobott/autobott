@@ -24,9 +24,10 @@ dev_node_available:
 # nvm version catalog (version -> sha256 of the upstream install.sh)
 # https://github.com/nvm-sh/nvm/releases
 #============================================================================================================
-nvm_default_version: "0.40.7"
+nvm_default_version: "0.40.8"
 nvm_versions:
   "0.40.7": "066ce4eaf4d78eaa6410433bc9ba58faaba646157cbbed6109153e6c24c5f8a5"
+  "0.40.8": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e"
 
 # Default `nvm install` target for Node (see the `node` key above): "lts",
 # "node" (latest), or an exact version.

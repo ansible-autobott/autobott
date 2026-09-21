@@ -30,18 +30,21 @@ dev_k8s_available:
 # ----- kubectl -----
 # https://kubernetes.io/releases/  (version -> sha256 of the linux/amd64 binary,
 # from https://dl.k8s.io/release/<version>/bin/linux/amd64/kubectl.sha256)
-kubectl_default_version: "v1.31.0"
+kubectl_default_version: "v1.37.0"
 kubectl_versions:
   "v1.31.0": "7c27adc64a84d1c0cc3dcf7bf4b6e916cc00f3f576a2dbac51b318d926032437"
+  "v1.37.0": "6129359f4e1f3848a5572ccb0b26cf28b8ca08cef38c95a765b2f64a2c961a2f"
 
 # ----- kubelogin (Azure AD auth plugin for kubectl; installed alongside kubectl) -----
 # https://github.com/Azure/kubelogin/releases  (version -> sha256 of the linux-amd64 zip)
-kubelogin_default_version: "v0.0.34"
+kubelogin_default_version: "v0.2.19"
 kubelogin_versions:
   "v0.0.34": "de2a529b4b044f6d41b82cd256c9d9fba44a68ad3c48f2d68e1c093eba51db02"
+  "v0.2.19": "ebaeff02aa899c5cae6a2b954b64fc02738185319df2570f7dc053451efa4b2f"
 
 # ----- k9s -----
 # https://github.com/derailed/k9s/releases  (version -> sha256 of the Linux_amd64 tarball)
-k9s_default_version: "v0.29.1"
+k9s_default_version: "v0.51.0"
 k9s_versions:
   "v0.29.1": "b7ed81a8952a5520a1a6978c3cf68b1fd555d928a444c63d4b826ae6fbb6d9ff"
+  "v0.51.0": "c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7"

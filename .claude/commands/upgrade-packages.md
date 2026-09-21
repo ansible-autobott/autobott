@@ -157,12 +157,12 @@ matching download-URL map entry). No hashing needed.
   - `caddy_defaults.go_version` (bare, no `go` prefix) ←
     `curl -fsSL 'https://go.dev/VERSION?m=text' | head -1` (e.g. `go1.27.1`) with the `go`
     stripped → `1.27.1`.
-- **desktop/linux-desktop (DejaVuSansM Nerd Font)** — pinned in
+- **desktop/linux-desktop (Hack Nerd Font)** — pinned in
   `roles/desktop/linux-desktop/defaults/main.yaml` as top-level `nerd_font_version` (shared
-  Nerd Fonts release tag, **with** `v`) + `nerd_font_dejavu_sha256` (per-font); also not seen
+  Nerd Fonts release tag, **with** `v`) + `nerd_font_hack_sha256` (per-font); also not seen
   by the `_checksums:` grep. Latest:
   `gh api repos/ryanoasis/nerd-fonts/releases/latest --jq .tag_name`. Hash the per-font asset:
-  `curl -fSL https://github.com/ryanoasis/nerd-fonts/releases/download/V/DejaVuSansMono.tar.xz -o "$f"; sha256sum "$f"`.
+  `curl -fSL https://github.com/ryanoasis/nerd-fonts/releases/download/V/Hack.tar.xz -o "$f"; sha256sum "$f"`.
   Bump `nerd_font_version` and update the hash.
 - **games/minecraft (report-only)** — `minecraft_defaults.version` + `jar_url` (the URL embeds
   an object hash). Latest release + jar come from Mojang's manifest; a server bump is a

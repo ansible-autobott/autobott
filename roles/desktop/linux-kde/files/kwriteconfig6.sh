@@ -57,6 +57,8 @@ kwriteconfig6 --file dolphinrc --group 'MainWindow' --key 'MenuBar' 'Disabled'
 kwriteconfig6 --file dolphinrc --group 'MainWindow' --key 'ToolBarsMovable' 'Disabled'
 kwriteconfig6 --file dolphinrc --group 'Toolbar mainToolBar' --key 'ToolButtonStyle' 'IconOnly'
 kwriteconfig6 --file dolphinrc --group 'TabBar' --key 'TabBarVisibility' 'AlwaysShowTabBar'
+# Open new tabs at the end of the tab bar instead of next to the active one.
+kwriteconfig6 --file dolphinrc --group 'General' --key 'OpenNewTabAfterLastTab' --type 'bool' 'true'
 
 
 # =====================================================================================
@@ -72,9 +74,10 @@ kwriteconfig6 --file konsolerc --group 'TabBar' --key 'TabBarVisibility' 'Always
 # values are 'OnTabBar' (single X on the bar) and 'None' (no button). Tabs stay
 # closable via Ctrl+W and right-click tab -> Close Tab.
 kwriteconfig6 --file konsolerc --group 'TabBar' --key 'CloseTabButton' 'None'
-# The Pastels profile + its DarkPastels colorscheme are deployed as files by the
-# linux_kde role (files/konsole/); point Konsole at the profile and set the window scheme.
-kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key 'DefaultProfile' 'Pastels.profile'
+# The autobott + prodsystem profiles (and their Autobott / Dracula colorschemes)
+# are deployed as files by the linux_kde role (files/konsole/); point Konsole at
+# the default (autobott) profile and set the window scheme.
+kwriteconfig6 --file konsolerc --group 'Desktop Entry' --key 'DefaultProfile' 'autobott.profile'
 kwriteconfig6 --file konsolerc --group 'UiSettings' --key 'ColorScheme' 'BreezeClassic'
 # TODO: add shortcut for "find"  Ctrl +F instead of Ctr + Shift + F
 

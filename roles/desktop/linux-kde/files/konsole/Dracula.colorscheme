@@ -1,98 +1,98 @@
 [Background]
-Color=44,44,44
+Color=40,42,54
 
 [BackgroundFaint]
-Color=44,44,44
+Color=40,42,54
 
 [BackgroundIntense]
-Color=44,44,44
+Color=40,42,54
 
 [Color0]
-Color=63,63,63
+Color=33,34,44
 
 [Color0Faint]
-Color=52,52,52
+Color=33,34,44
 
 [Color0Intense]
-Color=112,144,128
+Color=98,114,164
 
 [Color1]
-Color=187,84,84
+Color=255,85,85
 
 [Color1Faint]
-Color=157,109,105
+Color=255,85,85
 
 [Color1Intense]
-Color=220,127,127
+Color=255,110,103
 
 [Color2]
-Color=96,180,138
+Color=80,250,123
 
 [Color2Faint]
-Color=87,163,124
+Color=80,250,123
 
 [Color2Intense]
-Color=114,213,163
+Color=90,247,142
 
 [Color3]
-Color=223,175,143
+Color=241,250,140
 
 [Color3Faint]
-Color=170,133,111
+Color=241,250,140
 
 [Color3Intense]
-Color=240,223,175
+Color=244,249,157
 
 [Color4]
-Color=154,184,215
+Color=189,147,249
 
 [Color4Faint]
-Color=117,141,161
+Color=189,147,249
 
 [Color4Intense]
-Color=148,191,243
+Color=202,169,250
 
 [Color5]
-Color=220,140,195
+Color=255,121,198
 
 [Color5Faint]
-Color=154,98,137
+Color=255,121,198
 
 [Color5Intense]
-Color=236,147,211
+Color=255,146,208
 
 [Color6]
-Color=140,208,211
+Color=139,233,253
 
 [Color6Faint]
-Color=107,159,161
+Color=139,233,253
 
 [Color6Intense]
-Color=147,224,227
+Color=154,237,254
 
 [Color7]
-Color=220,220,204
+Color=248,248,242
 
 [Color7Faint]
-Color=149,149,139
+Color=248,248,242
 
 [Color7Intense]
 Color=255,255,255
 
 [Foreground]
-Color=220,220,204
+Color=248,248,242
 
 [ForegroundFaint]
-Color=220,220,204
+Color=248,248,242
 
 [ForegroundIntense]
-Color=220,220,204
+Color=248,248,242
 
 [General]
 Anchor=0.5,0.5
 Blur=false
 ColorRandomization=false
-Description=Dark Pastels
+Description=Dracula
 FillStyle=Tile
 Opacity=1
 Wallpaper=

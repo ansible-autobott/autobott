@@ -4,8 +4,9 @@
 # https://github.com/sezanzeb/input-remapper
 #
 # Included from linux-desktop's main tasks when
-# linux_desktop_config.input_remapper.install is true. Installs the upstream .deb
-# (apt resolves its dependencies), enables the system daemon, and — when any presets
+# linux_desktop_config.input_remapper.install is true. Installs input-remapper
+# (the distro archive package on Ubuntu, the pinned upstream .deb on Debian —
+# see the install tasks below), enables the system daemon, and — when any presets
 # are configured — deploys per-user presets + autoload config for the desktop user.
 # Presets are data-driven via linux_desktop_config.input_remapper.presets and rendered
 # into ~/.config/input-remapper-2/. The package's XDG autostart applies them on the
@@ -17,36 +18,53 @@
     ir: "{{ linux_desktop_config.input_remapper }}"
   block:
     # ============================== Install ============================== #
-    - name: Get installed input-remapper version
-      ansible.builtin.command: "dpkg-query -W -f='${Version}' input-remapper"
-      register: input_remapper_installed
-      failed_when: false
-      changed_when: false
+    # Ubuntu ships input-remapper in its own archive, split into
+    # input-remapper / -daemon / -gtk; the upstream monolithic .deb conflicts
+    # with that split, so on Ubuntu we install the distro package. Debian has no
+    # suitable archive package, so there we install the pinned upstream .deb.
+    - name: Install input-remapper from the distro archive (Ubuntu)
+      ansible.builtin.apt:
+        name: input-remapper
+        state: present
+        update_cache: true
+      when: ansible_facts.distribution == "Ubuntu"
 
-    - name: Install input-remapper
-      when: not (input_remapper_installed.stdout | default('')).startswith(input_remapper_version)
+    - name: Install input-remapper from the pinned upstream .deb (Debian)
+      when: ansible_facts.distribution != "Ubuntu"
       block:
-        - name: Download input-remapper .deb
-          ansible.builtin.get_url:
-            url: "{{ input_remapper_base_url }}/{{ input_remapper_version }}/input-remapper-{{ input_remapper_version }}.deb"
-            dest: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
-            checksum: "sha256:{{ input_remapper_sha256 }}"
-            owner: root
-            group: root
-            mode: '0644'
+        - name: Get installed input-remapper version
+          ansible.builtin.command: "dpkg-query -W -f='${Version}' input-remapper"
+          register: input_remapper_installed
+          failed_when: false
+          changed_when: false
 
-        - name: Install input-remapper (apt resolves dependencies)
-          ansible.builtin.apt:
-            deb: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
+        - name: Install input-remapper
+          when: not (input_remapper_installed.stdout | default('')).startswith(input_remapper_version)
+          block:
+            - name: Download input-remapper .deb
+              ansible.builtin.get_url:
+                url: "{{ input_remapper_base_url }}/{{ input_remapper_version }}/input-remapper-{{ input_remapper_version }}.deb"
+                dest: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
+                checksum: "sha256:{{ input_remapper_sha256 }}"
+                owner: root
+                group: root
+                mode: '0644'
 
-        - name: Remove the input-remapper .deb
-          ansible.builtin.file:
-            path: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
-            state: absent
+            - name: Install input-remapper (apt resolves dependencies)
+              ansible.builtin.apt:
+                deb: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
 
+            - name: Remove the input-remapper .deb
+              ansible.builtin.file:
+                path: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
+                state: absent
+
+    # Ubuntu's split package names the unit input-remapper-daemon.service (with
+    # input-remapper.service as an alias); the upstream Debian .deb ships
+    # input-remapper.service directly.
     - name: Enable and start the input-remapper service
       ansible.builtin.systemd_service:
-        name: input-remapper.service
+        name: "{{ 'input-remapper-daemon.service' if ansible_facts.distribution == 'Ubuntu' else 'input-remapper.service' }}"
         enabled: true
         state: started
         daemon_reload: true

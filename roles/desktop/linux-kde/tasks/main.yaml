@@ -14,8 +14,9 @@
       ansible.builtin.set_fact:
         linux_kde_config: "{{ linux_kde_defaults | combine(linux_kde, recursive=true) }}"
 
-    # One vars file per supported release: Plasma 6 only (vars/trixie.yaml). Any
-    # other release - the Plasma 5 ones included - has no vars file and fails here.
+    # One vars file per supported release, Plasma 6 only: Debian trixie
+    # (vars/trixie.yaml) and Ubuntu resolute (vars/resolute.yaml). Any other
+    # release - the Plasma 5 ones included - has no vars file and fails here.
     - name: Load package names based on distro relese
       include_vars: "{{ item }}"
       with_first_found:

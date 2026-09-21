@@ -157,7 +157,7 @@ run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (defaul
 		echo "       Create it from the template:  cp run-local.env.example $(RUN_LOCAL_FILE)" >&2; \
 		exit 1; \
 	fi
-	@_INV_CLI="$$INV"; _HOST_CLI="$$HOST"; _TAG_CLI="$$TAG"; _EXTRA_CLI="$$EXTRA_ARGS"; _SOPS_CLI="$$SOPS_AGE_KEY_FILE"; \
+	@_INV_CLI="$$INV"; _HOST_CLI="$$HOST"; _TAG_CLI="$$TAG"; _EXTRA_CLI="$$EXTRA_ARGS"; _SOPS_CLI="$(SOPS_AGE_KEY_FILE_CLI)"; \
 	unset SOPS_AGE_KEY_FILE; \
 	set -a; . "$(CURDIR)/$(RUN_LOCAL_FILE)"; set +a; \
 	INV="$${_INV_CLI:-$$INV}"; HOST="$${_HOST_CLI:-$$HOST}"; TAG="$${_TAG_CLI:-$$TAG}"; \
@@ -189,6 +189,12 @@ run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (defaul
 # SOPS_AGE_KEY_FILE=<path> to point directly at a key file.
 sops_key_dir := $(if $(wildcard $(INV)/.),$(abspath $(INV))/,$(dir $(abspath $(INV))))
 export SOPS_AGE_KEY_FILE ?= $(sops_key_dir)sops_key
+
+# The default export above always sets SOPS_AGE_KEY_FILE (derived from the sample
+# INV), so run-local can't tell it apart from a user-supplied key. Capture the
+# value ONLY when it actually came from the command line, so a bare 'make
+# run-local' derives the key from the env-file INV instead of this default.
+SOPS_AGE_KEY_FILE_CLI := $(if $(filter command line,$(origin SOPS_AGE_KEY_FILE)),$(SOPS_AGE_KEY_FILE),)
 
 age-key: check-tools ## create the age key for an EXTERNAL inventory (<inv-dir>/sops_key); requires INV (not the in-repo sample), never overwrites
 	@if [ ! -e "$(INV)" ]; then \

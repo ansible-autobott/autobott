@@ -350,13 +350,20 @@
     #============================================================================================================
     # Part of add_kde_style: installs the klassy package from the autobott apt
     # repo; the repo itself comes from base/linux-apt's extra repositories catalog
-    # (works regardless of run_role_linux_apt). Nothing is selected for the user.
-    # The repo builds klassy for trixie / forky / sid only, so this is skipped on
-    # any other release.
+    # (works regardless of run_role_linux_apt), which points apt at the suite
+    # matching ansible_facts.distribution_release - so a Debian trixie host gets
+    # the ~trixie build and an Ubuntu 26.04 host the ~resolute one, compiled
+    # against its own Qt / KF6.
+    #
+    # Whether a build exists at all is a per-release fact, declared as
+    # kde_klassy_available in the release's vars file (vars/<release>.yaml, loaded
+    # above). Releases whose vars file does not set it - or that the repo does not
+    # build for - skip this block instead of installing an ABI-mismatched
+    # decoration that KWin would silently ignore.
     - name: Klassy block
       when:
         - linux_kde_config.add_kde_style | bool
-        - ansible_facts.distribution_release in ['trixie', 'forky', 'sid']
+        - kde_klassy_available | default(false) | bool
       vars:
         kde_style_home: "/home/{{ linux_desktop_config.user }}"
       block:

@@ -1,3 +1,9 @@
+---
+# Debian 13 "trixie" (Plasma 6).
+
+# The autobott apt repo publishes a trixie suite with a klassy built against this
+# release's Qt / KF6, so add_kde_style can install and select it.
+kde_klassy_available: true
 
 kde_packages:
   # core
@@ -25,7 +31,7 @@ kde_packages:
   # screenshots; the shortcuts are set up per user by add_kde_screenshots
   - kde-spectacle
   - flameshot
-  - filelight    
+  - filelight
   - qimgv
 
 kde_theme_packages:

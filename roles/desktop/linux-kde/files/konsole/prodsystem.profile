@@ -1,6 +1,6 @@
 [Appearance]
 ColorScheme=Dracula
-Font=Hack Nerd Font Mono,11,-1,5,50,0,0,0,0,0
+Font=Hack Nerd Font Mono,10,-1,5,50,0,0,0,0,0
 
 [General]
 Name=prodsystem

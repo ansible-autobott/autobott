@@ -26,11 +26,19 @@ linux_kde_defaults:
   # (https://github.com/paulmcauley/klassy) from the autobott apt repo - both
   # installed and selected as the KWin window decoration and the Qt/KDE
   # application (widget) style, with the Breeze Classic colour scheme applied
-  # (Klassy is trixie / forky / sid only; its own decoration look, klassyrc, is
-  # left at its defaults - tune it via klassy-settings). It also installs the
+  # (the klassy build matching the host's release is picked from the autobott repo
+  # - Debian trixie or Ubuntu 26.04 resolute today, per kde_klassy_available in
+  # vars/<release>.yaml - and skipped on releases it is not built for; its own
+  # decoration look, klassyrc, is left at its defaults - tune it via
+  # klassy-settings). It also installs the
   # Twemoji colour emoji font system-wide and makes it the preferred emoji font
   # via fontconfig, replacing the stock Noto Color Emoji. Opt-in; re-runs
   # converge.
+  #
+  # Exception: a small set of settings the user is expected to own - currently the
+  # virtual desktop setup (files/kde-provision-once.sh) - is seeded only once, on
+  # a machine without the ~/.local/state/autobott/kde-provisioned marker, and is
+  # never re-asserted afterwards. Delete that marker to seed them again.
   add_kde_style: false
   # Spectacle screenshot shortcuts for the primary desktop user: Meta+Shift+S
   # captures a region, Meta+Shift+W the active window. Each capture is saved to

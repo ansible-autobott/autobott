@@ -86,11 +86,14 @@ linux_apt_defaults:
 # `key`: a keyring vendored in files/keyrings/, installed to /etc/apt/keyrings/<key>.
 linux_apt_extra_repos_catalog:
   # https://github.com/ansible-autobott/debian-repo
-  # Built per Debian release for trixie / forky / sid; any other release (older
-  # Debian, Ubuntu) tracks the "stable" suite.
+  # One suite per release the repo builds for - Debian trixie / forky / sid and
+  # Ubuntu resolute (26.04) - so a host is served the packages compiled against
+  # its own Qt / KF6. The suite is picked from ansible_facts.distribution_release;
+  # any other release has no suite of its own and tracks "stable" (currently the
+  # trixie build). Keep this list in sync with the suites the repo publishes.
   autobott:
     uris: "https://ansible-autobott.github.io/debian-repo"
-    suites: "{{ ansible_facts.distribution_release if ansible_facts.distribution_release in ['trixie', 'forky', 'sid'] else 'stable' }}"
+    suites: "{{ ansible_facts.distribution_release if ansible_facts.distribution_release in ['trixie', 'forky', 'sid', 'resolute'] else 'stable' }}"
     components: "main"
     architectures: ["amd64", "arm64"]
     key: "autobott-archive-keyring.gpg"

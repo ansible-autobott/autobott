@@ -1,8 +1,13 @@
 ---
-# Ubuntu 25.10+ / 26.04 "resolute" (Plasma 6). All package names below are
-# available verbatim in the Ubuntu archive, so this mirrors vars/trixie.yaml.
-# Debian-repo-only extras (Klassy, GTK appmenu) are release-gated in tasks and
-# stay skipped on Ubuntu.
+# Ubuntu 26.04 "resolute" (Plasma 6). All package names below are available
+# verbatim in the Ubuntu archive, so this mirrors vars/trixie.yaml.
+
+# The autobott apt repo publishes a resolute suite with a klassy built against
+# Ubuntu's Qt / KF6 (klassy 6.7.2-1~resolute needs Qt >= 6.10.2, i.e. 26.04 -
+# never the ~trixie build), so add_kde_style can install and select it here too.
+kde_klassy_available: true
+# The GTK global menu (appmenu-gtk-module) stays Debian-trixie-only; that block
+# gates on the release itself.
 
 kde_packages:
   # core

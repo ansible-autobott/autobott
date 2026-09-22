@@ -48,7 +48,12 @@ kwriteconfig6 --file kglobalshortcutsrc --group 'kwin' --key 'Window Minimize' '
 kwriteconfig6 --file kglobalshortcutsrc --group 'kwin' --key 'Window Quick Tile Left' 'Meta+Ctrl+Alt+Left,Meta+Left,Quick Tile Window to the Left'
 kwriteconfig6 --file kglobalshortcutsrc --group 'kwin' --key 'Window Quick Tile Right' 'Meta+Ctrl+Alt+Right,Meta+Right,Quick Tile Window to the Right'
 
-kwriteconfig6 --file kglobalshortcutsrc --group 'yakuake' --key 'toggle-window-state' 'F12,F12,Open/Retract Yakuake'
+# Yakuake toggle bound to two keys: F12 and the Eject key of an Apple keyboard
+# (keysym XF86Eject -> 'Eject' in Qt's portable shortcut text). kglobalshortcutsrc
+# stores "<active>,<default>,<display name>" and separates several active shortcuts
+# with a tab inside the first field; KConfig writes that tab back out as '\t'.
+yakuake_toggle="$(printf 'F12\tEject')"
+kwriteconfig6 --file kglobalshortcutsrc --group 'yakuake' --key 'toggle-window-state' "${yakuake_toggle},F12,Open/Retract Yakuake"
 
 
 # =====================================================================================

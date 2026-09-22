@@ -31,6 +31,11 @@ linux_kde_defaults:
   # Twemoji colour emoji font system-wide and makes it the preferred emoji font
   # via fontconfig, replacing the stock Noto Color Emoji. Opt-in; re-runs
   # converge.
+  #
+  # Exception: a small set of settings the user is expected to own - currently the
+  # virtual desktop setup (files/kde-provision-once.sh) - is seeded only once, on
+  # a machine without the ~/.local/state/autobott/kde-provisioned marker, and is
+  # never re-asserted afterwards. Delete that marker to seed them again.
   add_kde_style: false
   # Spectacle screenshot shortcuts for the primary desktop user: Meta+Shift+S
   # captures a region, Meta+Shift+W the active window. Each capture is saved to

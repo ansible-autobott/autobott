@@ -1,6 +1,10 @@
 #! /usr/bin/env sh
 # Per-user KDE Plasma 6 customizations (uses the kwriteconfig6 binary).
 # based on https://github.com/nbeaver/config-kde5/blob/master/config-kde.sh
+#
+# ENFORCED: every autobott run re-asserts these values, so a user change to any
+# key below is reverted on the next run. Settings the user is meant to own go in
+# kde-provision-once.sh instead, which is seeded only on a fresh machine.
 
 # Do not obey DRM limitations.
 kwriteconfig6 --file okularpartrc --group 'Core General' --key 'ObeyDRM' --type 'bool' 'false'
@@ -121,8 +125,5 @@ kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'ResizeWobble' 'f
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Stiffness' '3'
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'WobblynessLevel' '3'
 
-# virtual desktops
-kwriteconfig6 --file kwinrc --group Desktops --key 'Id_1' '28e33d8f-a554-492c-82a9-9cd0ba8b0235'
-kwriteconfig6 --file kwinrc --group Desktops --key 'Id_2' '04b36c7f-15f5-4d13-bd38-664a46617547'
-kwriteconfig6 --file kwinrc --group Desktops --key 'Rows' '1'
-kwriteconfig6 --file kwinrc --group Desktops --key 'Number' '2'
+# NOTE: the virtual desktop setup lives in kde-provision-once.sh - it is a
+# starting point the user is expected to change, so it is only seeded once.

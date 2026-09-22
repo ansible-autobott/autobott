@@ -94,10 +94,19 @@
     # the kwriteconfig6 script (files/kwriteconfig6.sh) and runs it as that user
     # so it writes to their ~/.config. Some settings only take effect after a
     # re-login.
+    #
+    # Two scripts, two lifecycles:
+    #   - kwriteconfig6.sh        enforced, re-asserted on every run.
+    #   - kde-provision-once.sh   seeded once, then never again (marker file) -
+    #                             settings the user is expected to own, e.g. the
+    #                             number of virtual desktops.
+    # Both are staged into ~/.local/bin, run, and removed again: the box keeps the
+    # resulting ~/.config entries, not the script.
     - name: KDE style customizations block
       when: linux_kde_config.add_kde_style
       vars:
         kde_style_home: "/home/{{ linux_desktop_config.user }}"
+        kde_provision_marker: "{{ kde_style_home }}/.local/state/autobott/kde-provisioned"
       block:
         - name: Ensure the user local bin directory exists
           ansible.builtin.file:
@@ -114,6 +123,9 @@
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
             mode: "0755"
+          # The script is staged and deleted again below; only its effect on
+          # ~/.config persists, so staging it is not itself a change.
+          changed_when: false
 
         - name: Apply the KDE customizations for the desktop user
           ansible.builtin.command: "{{ kde_style_home }}/.local/bin/kde-style-customize.sh"
@@ -123,6 +135,72 @@
             HOME: "{{ kde_style_home }}"
           # kwriteconfig re-asserts the same values on every run; not a change.
           changed_when: false
+
+        - name: Remove the staged KDE customization script
+          ansible.builtin.file:
+            path: "{{ kde_style_home }}/.local/bin/kde-style-customize.sh"
+            state: absent
+          changed_when: false
+
+        # One-time provisioning: settings we only want to pick for the user on a
+        # fresh machine, never to enforce afterwards. Guarded by a marker file
+        # written once the script has succeeded, so a failed run is retried on the
+        # next one. Delete the marker to deliberately re-seed these settings.
+        - name: Seed the one-time KDE provisioning settings
+          block:
+            - name: Check whether the KDE provisioning marker exists
+              ansible.builtin.stat:
+                path: "{{ kde_provision_marker }}"
+              register: kde_provision_marker_stat
+
+            - name: Apply the one-time KDE provisioning
+              when: not kde_provision_marker_stat.stat.exists
+              block:
+                - name: Copy the one-time KDE provisioning script
+                  ansible.builtin.copy:
+                    src: kde-provision-once.sh
+                    dest: "{{ kde_style_home }}/.local/bin/kde-provision-once.sh"
+                    owner: "{{ linux_desktop_config.user }}"
+                    group: "{{ linux_desktop_user_main_group }}"
+                    mode: "0755"
+
+                - name: Run the one-time KDE provisioning for the desktop user
+                  ansible.builtin.command: "{{ kde_style_home }}/.local/bin/kde-provision-once.sh"
+                  become: true
+                  become_user: "{{ linux_desktop_config.user }}"
+                  environment:
+                    HOME: "{{ kde_style_home }}"
+                  # Only ever runs while the marker is absent, so this really is a
+                  # change to the user's configuration.
+                  changed_when: true
+
+                - name: Remove the staged one-time KDE provisioning script
+                  ansible.builtin.file:
+                    path: "{{ kde_style_home }}/.local/bin/kde-provision-once.sh"
+                    state: absent
+
+                - name: Ensure the user local state directory exists
+                  ansible.builtin.file:
+                    path: "{{ kde_provision_marker | dirname }}"
+                    state: directory
+                    owner: "{{ linux_desktop_config.user }}"
+                    group: "{{ linux_desktop_user_main_group }}"
+                    mode: "0755"
+
+                # Written last: the marker is what stops the block above from
+                # running (and reverting the user's choices) on the next run.
+                - name: Write the KDE provisioning marker
+                  ansible.builtin.copy:
+                    content: |
+                      Written by the autobott linux_kde role.
+                      Its presence means the one-time KDE provisioning settings
+                      (kde-provision-once.sh) have been seeded for this user and
+                      will not be re-applied. Delete this file to seed them again
+                      on the next autobott run.
+                    dest: "{{ kde_provision_marker }}"
+                    owner: "{{ linux_desktop_config.user }}"
+                    group: "{{ linux_desktop_user_main_group }}"
+                    mode: "0644"
 
         # Dolphin's toolbar layout lives in the KXMLGUI file dolphinui.rc, which
         # ALSO holds the menus, shortcuts and state - there is no toolbar-only

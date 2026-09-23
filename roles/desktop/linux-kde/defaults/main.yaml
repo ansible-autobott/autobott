@@ -17,6 +17,11 @@ linux_kde_defaults:
   # add the Global Menu widget to a panel yourself (it is a per-user Plasma
   # setting). Note: on some older NVIDIA/X11 setups appmenu-gtk-module can crash
   # GTK apps, hence this is opt-in.
+  # On every release it also sets whether Plasma's appmenu background service
+  # autostarts for the desktop user (kded5rc [Module-appmenu]). With false (the
+  # default) the service is kept off, so apps keep their menu bar in the window;
+  # otherwise GTK apps like Inkscape hide it on Wayland even without a Global
+  # Menu widget.
   add_kde_global_menu: false
   # Apply the desktop styling for the primary desktop user: run the kwriteconfig6
   # customizations (files/kwriteconfig6.sh) as that user, including the Breeze

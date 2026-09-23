@@ -1,73 +1,71 @@
 ---
 #============================================================================================================
 # JDownloader
+#
+# Deployed as the official portable bootstrap jar rather than the install4j
+# installer (JD2Setup_x64.sh). That installer initialises AWT even in its
+# `-q -console` unattended mode — UnattendedScreenExecutor builds a FormPanel,
+# whose GUIHelper static initializer calls checkRetina() ->
+# getDefaultScreenDevice() — so it dies with a HeadlessException whenever there
+# is no $DISPLAY, which is always the case when ansible drives it over SSH.
+#
+# Installed in the desktop user's home: JDownloader self-updates and keeps its
+# config, logs and downloads list inside the directory it runs from, so it is
+# inherently a per-user app. Only the JRE is installed system-wide.
 #============================================================================================================
 - name: Set merged jdownloader configuration
   ansible.builtin.set_fact:
     jdownloader_config: "{{ jdownloader_defaults | combine(gui_apps_config['jdownloader'] | default({}, true), recursive=true) }}"
 
-- name: Check whether JDownloader is already installed
-  ansible.builtin.stat:
-    path: "{{ jdownloader_config.install_dir }}/JDownloader2"
-  register: jdownloader_launcher
+- name: Set JDownloader user paths
+  ansible.builtin.set_fact:
+    jdownloader_home: "/home/{{ linux_desktop_config.user }}/.local/share/jdownloader"
+    jdownloader_apps_dir: "/home/{{ linux_desktop_config.user }}/.local/share/applications"
 
-# JDownloader self-updates on launch, so the official installer only needs to
-# run once — skip it entirely when the launcher is already present.
-- name: Install JDownloader
-  when: not jdownloader_launcher.stat.exists
-  block:
-    - name: Create JDownloader download dir
-      ansible.builtin.file:
-        path: /tmp/jdownloader
-        state: directory
-        owner: root
-        group: root
-        mode: '0700'
+# A full JRE, not -headless: JDownloader's UI is Swing.
+- name: Ensure a full JRE for JDownloader
+  ansible.builtin.apt:
+    name: default-jre
+    state: present
 
-    - name: Download JDownloader installer
-      ansible.builtin.get_url:
-        url: "{{ jdownloader_config.installer_url }}"
-        dest: /tmp/jdownloader/JD2Setup_x64.sh
-        owner: root
-        group: root
-        mode: '0755'
+- name: Create the JDownloader and user applications dirs
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+    mode: '0755'
+  loop:
+    - "{{ jdownloader_home }}"
+    - "{{ jdownloader_apps_dir }}"
 
-    - name: Run JDownloader unattended installer
-      ansible.builtin.command:
-        cmd: "sh /tmp/jdownloader/JD2Setup_x64.sh -q -console -overwrite -dir {{ jdownloader_config.install_dir }}"
-        creates: "{{ jdownloader_config.install_dir }}/JDownloader2"
+# Downloaded only when missing, so a re-run never clobbers the self-updated
+# install that grows around it on first launch.
+- name: Download the JDownloader bootstrap jar
+  ansible.builtin.get_url:
+    url: "{{ jdownloader_config.jar_url }}"
+    dest: "{{ jdownloader_home }}/JDownloader.jar"
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
+    mode: '0644'
 
-    - name: Remove JDownloader download dir
-      ansible.builtin.file:
-        path: /tmp/jdownloader
-        state: absent
-
-- name: Verify JDownloader launcher is present
-  ansible.builtin.stat:
-    path: "{{ jdownloader_config.install_dir }}/JDownloader2"
-  register: jdownloader_launcher_check
-
-- name: Assert JDownloader installed correctly
-  ansible.builtin.assert:
-    that:
-      - jdownloader_launcher_check.stat.exists
-    fail_msg: >-
-      JDownloader launcher not found at {{ jdownloader_config.install_dir }}/JDownloader2
-      after installation; the install4j layout may have changed.
-
+# Path= sets the working dir, which the jar resolves its install root from.
+# Icon: the jar only unpacks its artwork on first launch, so Icon= is a bare
+# theme name, falling back to the generic application icon if the theme has none.
 - name: Create JDownloader desktop entry
   ansible.builtin.copy:
-    dest: /usr/share/applications/jdownloader.desktop
-    owner: root
-    group: root
+    dest: "{{ jdownloader_apps_dir }}/jdownloader.desktop"
+    owner: "{{ linux_desktop_config.user }}"
+    group: "{{ linux_desktop_user_main_group }}"
     mode: '0644'
     content: |
       [Desktop Entry]
       Name=JDownloader
       GenericName=Download Manager
       Comment=Download management tool for direct and container downloads
-      Exec={{ jdownloader_config.install_dir }}/JDownloader2
-      Icon={{ jdownloader_config.install_dir }}/icons/jdownloader.png
+      Exec=/usr/bin/java -jar {{ jdownloader_home }}/JDownloader.jar
+      Path={{ jdownloader_home }}
+      Icon=jdownloader
       Terminal=false
       Type=Application
       Categories=Network;FileTransfer;

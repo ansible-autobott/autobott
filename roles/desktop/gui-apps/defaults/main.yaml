@@ -70,12 +70,14 @@ jellium_desktop_versions:
     resolute: "1d7c369a7863b4a9b61eef84309801f4104984ed0af470911bc18b811f727af1"
 
 # ----- jdownloader -----
-# JDownloader self-updates on launch, so there is no version to pin — the
-# official install4j installer always fetches the latest build.
+# Installed from the official portable bootstrap jar, not the install4j
+# installer: that installer needs an X display even in unattended mode, so it
+# cannot run over SSH (see the note in tasks/apps/jdownloader.yaml). The jar
+# self-updates into a full install on its first launch, so there is no version
+# to pin.
 # https://jdownloader.org/download/index
 jdownloader_defaults:
-  installer_url: "https://installer.jdownloader.org/JD2Setup_x64.sh"
-  install_dir: /opt/jdownloader
+  jar_url: "https://installer.jdownloader.org/JDownloader.jar"
 
 # ----- pcsx2 -----
 # https://github.com/PCSX2/pcsx2/releases  (version -> sha256 of the AppImage)

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Main vhosts role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main vhosts installation and configuration
   tags:
@@ -105,10 +105,9 @@
       loop_control:
         loop_var: webservice
 
-    - name: tidy up php worker config
+    - name: Tidy up php worker config
       when: php_vers is defined and php_vers != ""
       block:
-
         - name: Find PHP FPM pool configuration files (excluding www.conf)
           ansible.builtin.find:
             paths: "/etc/php/{{ php_vers }}/fpm/pool.d/"
@@ -146,10 +145,8 @@
               pm.max_spare_servers = 1
             owner: root
             group: root
-            mode: '0644'
+            mode: "0644"
           when:
             - php_worker_files.matched == 0
             - not www_conf_stat.stat.exists
           notify: restart php-fpm
-
-

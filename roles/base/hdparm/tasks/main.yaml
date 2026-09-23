@@ -1,14 +1,13 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Hdparm
-#============================================================================================================
-- name: main hdparm block
+# ============================================================================================================
+- name: Main hdparm block
   tags:
     - hdparm
   when:
     - run_role_hdparm | bool
   block:
-
     - name: Set merged hdparm configuration
       ansible.builtin.set_fact:
         hdparm_config: "{{ hdparm_defaults | combine(hdparm, recursive=true) }}"
@@ -18,7 +17,7 @@
         name:
           - hdparm
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Initialize resolved_disks
       ansible.builtin.set_fact:
@@ -26,7 +25,7 @@
 
     - name: Add disks with dev
       ansible.builtin.set_fact:
-        resolved_disks: "{{ resolved_disks + [ {'dev': item.dev, 'options': item.options} ] }}"
+        resolved_disks: "{{ resolved_disks + [{'dev': item.dev, 'options': item.options}] }}"
       loop: "{{ hdparm_config.disks }}"
       when: item.dev is defined
 
@@ -39,7 +38,8 @@
           {%- for disk in hdparm_config.disks -%}
             {%- if disk.serial is defined -%}
               {%- for s in disk.serial -%}
-                {%- set dev = lookup('ansible.builtin.pipe', 'ssh ' ~ inventory_hostname ~ ' lsblk -o NAME,SERIAL -dn | awk \'$2=="' ~ s ~ '" {print "/dev/"$1}\'') -%}
+                {%- set dev = lookup('ansible.builtin.pipe',
+                      'ssh ' ~ inventory_hostname ~ ' lsblk -o NAME,SERIAL -dn | awk \'$2=="' ~ s ~ '" {print "/dev/"$1}\'') -%}
                 {%- if dev != "" -%}
                   {%- set _ = result.append({'dev': dev, 'options': disk.options}) -%}
                 {%- endif -%}
@@ -59,11 +59,10 @@
           {% endfor %}
           }
           {% endfor %}
-        marker: '# {mark} ANSIBLE MANAGED BLOCK'
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
       register: hdparm_cfg_change
 
-
-    - name: re-apply hdparm config
-      command: /usr/lib/pm-utils/power.d/95hdparm-apm resume
+    - name: Re-apply hdparm config # noqa: no-handler
+      ansible.builtin.command: /usr/lib/pm-utils/power.d/95hdparm-apm resume
+      changed_when: true
       when: hdparm_cfg_change.changed
-

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Wireguard Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Wireguard installation and configuration
   tags:
@@ -94,7 +94,7 @@
             owner: root
             group: root
             mode: "0640"
-          ignore_errors: true
+          failed_when: false
           changed_when: false
           become: true
 
@@ -151,8 +151,9 @@
           register: sysctl_conf_changed
           become: true
 
-        - name: Reload sysctl settings
+        - name: Reload sysctl settings # noqa: no-handler
           ansible.builtin.command: sysctl --system
+          changed_when: true
           when: sysctl_conf_changed.changed
           become: true
 
@@ -166,7 +167,8 @@
           register: sysctl_conf_removed
           become: true
 
-        - name: Reload sysctl settings after removal
+        - name: Reload sysctl settings after removal # noqa: no-handler
           ansible.builtin.command: sysctl --system
+          changed_when: true
           when: sysctl_conf_removed.changed
           become: true

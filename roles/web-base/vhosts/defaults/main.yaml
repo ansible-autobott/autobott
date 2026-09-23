@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Main vhosts config
-#============================================================================================================
+# ============================================================================================================
 
 # Role execution control
 run_role_vhosts: false
@@ -19,7 +19,9 @@ vhosts_defaults:
   shell: "/bin/false"
   # delete all data associated with this service
   delete_data: false
-  sample_content: false # todo remove property, we have all info needed to add some content                # add sample landing page, accepted values: no, "html", "php", "info_page",  useful as dummy content
+  # add sample landing page, accepted values: no, "html", "php", "info_page",  useful as dummy content
+  # todo remove property, we have all info needed to add some content
+  sample_content: false
 
   php:
     # select the process manager: static, dynamic, ondemand
@@ -104,14 +106,12 @@ vhosts_sample:
         type: "static"
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
 
-
       # SPA: differs from static in the sense that non found paths will load the index.html SPA entrypoint
       - enabled: true
         domains:
           - "https://localhost:8443"
         type: "spa"
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
-
 
       # different tls configs,only one is possible
       - enabled: true
@@ -126,7 +126,6 @@ vhosts_sample:
         # tls:
         #  type: "cloudflare"
         #  api_key: "<secret goes here>"
-
 
       # php server
       - enabled: true
@@ -161,7 +160,7 @@ vhosts_sample:
         type: "static"
         document_root: "default" # set the root dir for nginx: absolute path, relative to home_dir or "default" will be public_html
         authelia: true
-        authelia_port:  9031 # optional, port where authelia is running
+        authelia_port: 9031 # optional, port where authelia is running
         # optional: paths that skip authelia, for APIs that authenticate themselves
         # (token/apikey) and would otherwise get authelia's HTML login page.
         # caddy's "path" matches exactly: list both the prefix and the wildcard to
@@ -169,7 +168,3 @@ vhosts_sample:
         authelia_except_paths:
           - "/rest"
           - "/rest/*"
-
-
-
-

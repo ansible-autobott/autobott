@@ -11,9 +11,14 @@ linux_desktop:
       - device: "Logitech Advanced Corded Mouse M500s"
         name: "new preset"
         template: "input-remapper/presets/m500s.json"
+  imagemagick:
+    install: true
+    policy:
+      block_remote: true
 
 run_role_linux_kde: true
 linux_kde:
+  add_kde_global_menu: true # Debian 13 only
   add_kde_style: true
   add_kde_screenshots: true
 
@@ -28,6 +33,7 @@ gui_apps_config:
   virtualbox:
   freecad:
   google-chrome:
+  jdownloader:
   jellium-desktop:
   pcsx2:
   prusa-slicer:
@@ -72,12 +78,19 @@ dev_k8s_config:
   kubectl:
   k9s:
 
+# =========================== # AI  ===========================
+run_role_dev_ai: true
+dev_ai_config:
+  herdr:
+  claude-code:
+  pi:
+  copilot-cli:
+
 # =========================== # Other  ===========================
 run_role_dev_generic: true
 dev_generic_config:
   vagrant:
   vault:
-  herdr:
   github-cli:
 
 

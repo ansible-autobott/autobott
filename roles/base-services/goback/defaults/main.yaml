@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Goback Backup Configuration
-#============================================================================================================
+# ============================================================================================================
 
 # Main role control
 run_role_goback: false
@@ -9,12 +9,11 @@ run_role_goback: false
 # second part of the role to be run at the end of execution
 run_goback_profiles: false
 
-
 # User overrides - these will be combined with goback_defaults
 goback: {}
 # Default configuration structure
 goback_defaults:
-  version:  0.4.1
+  version: 0.4.1
   base_dir: /opt/goback
   backup_dest: /var/goback
 
@@ -28,14 +27,12 @@ goback_defaults:
     ssh_key_base64: ""
     ssh_pub_key: ""
 
-
 goback_profiles: []
 goback_profiles_sample:
-
   # very minimal profile config, this will place the backups in the default location
-  - enabled: True
-    cron_weekly: True
-    cron_monthly: False
+  - enabled: true
+    cron_weekly: true
+    cron_monthly: false
     # content of the goback profile configuration,
     # check the goback documentation for details: https://github.com/andresbott/goback
     content:
@@ -51,8 +48,6 @@ goback_profiles_sample:
           type: mysql
       # IMPORTANT the reads this path as well, here it checks path, owner
       destination:
-        path:   "/vhosts/demo_php/backups"
+        path: "/vhosts/demo_php/backups"
         keep: 3
         owner: another_user
-
-

@@ -1,21 +1,20 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # dev-generic — generic developer tools role — defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Master on/off for the whole role
 run_role_dev_generic: true
 
-# App selection. Keys are tool names. vault and herdr accept an optional
-# { version: } override (must be a catalogued version below); an empty value
-# installs the tool's default version. vagrant and github-cli install the latest
+# App selection. Keys are tool names. vault accepts an optional { version: }
+# override (must be a catalogued version below); an empty value installs the
+# tool's default version. vagrant and github-cli install the latest
 # from their apt repos and take no version.
 # Example:
 #   dev_generic_config:
 #     vagrant:
 #     vault:
 #       version: "1.15.4"
-#     herdr:
 #     github-cli:
 dev_generic_config: {}
 
@@ -23,12 +22,11 @@ dev_generic_config: {}
 dev_generic_available:
   - vagrant
   - vault
-  - herdr
   - github-cli
 
-#============================================================================================================
+# ============================================================================================================
 # Per-tool version catalogs (version -> checksum; the sha is a separate lookup)
-#============================================================================================================
+# ============================================================================================================
 
 # ----- vault -----
 # https://releases.hashicorp.com/vault/  (version -> sha256 of the linux_amd64 zip)
@@ -36,13 +34,5 @@ vault_default_version: "2.1.1"
 vault_versions:
   "1.15.4": "f42f550713e87cceef2f29a4e2b754491697475e3d26c0c5616314e40edd8e1b"
   "2.1.1": "8aa90f9cea46f541fc7baa3d0ec692fc06afde9a248cc1f2dcac46a567c6f56b"
-
-# ----- herdr (runtime platform for coding agents) -----
-# https://github.com/herdrdev/herdr/releases  (version -> sha256 of the linux binary)
-herdr_default_version: "0.9.1"
-herdr_versions:
-  "0.9.0": "4fa1a01158dd8043da92d31b270780b0dcc10603038d9b61cac4d81ab63fb71f"
-  "0.9.1": "2a02fed16beb651ef006e1d43f048f652ca4dc58ad053cd2d44450563d5c54b7"
-herdr_base_url: "https://github.com/herdrdev/herdr/releases/download"
 
 # vagrant / github-cli install the latest from their apt repos; no version pin.

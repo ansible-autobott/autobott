@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Crowdsec Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Crowdsec installation and configuration
   tags:
@@ -13,32 +13,32 @@
         crowdsec_config: "{{ crowdsec_defaults | combine(crowdsec, recursive=true) }}"
 
     - name: Ensure Crowdsec is installed
-      apt:
+      ansible.builtin.apt:
         name:
           - crowdsec
           - crowdsec-firewall-bouncer
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Update CrowdSec config.yaml with correct API port
       ansible.builtin.lineinfile:
         path: /etc/crowdsec/config.yaml
-        regexp: '^\s*listen_uri:\s*'
+        regexp: "^\\s*listen_uri:\\s*"
         line: "    listen_uri: 127.0.0.1:{{ crowdsec_config.local_api_port }}"
-        insertafter: '^\s*server:\s*$'
+        insertafter: "^\\s*server:\\s*$"
       notify: restart crowdsec
 
     - name: Update CrowdSec local_api_credentials.yaml with correct API URL
       ansible.builtin.lineinfile:
         path: /etc/crowdsec/local_api_credentials.yaml
-        regexp: '^url:\s*'
-        line: "url: http://127.0.0.1:{{ crowdsec_config.local_api_port  }}"
+        regexp: "^url:\\s*"
+        line: "url: http://127.0.0.1:{{ crowdsec_config.local_api_port }}"
       notify: restart crowdsec
 
     - name: Update firewall bouncer api_url to match new port
       ansible.builtin.lineinfile:
         path: /etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml
-        regexp: '^api_url:\s*'
+        regexp: "^api_url:\\s*"
         line: "api_url: http://127.0.0.1:{{ crowdsec_config.local_api_port }}"
       notify: restart crowdsec firewall-bouncer
 
@@ -71,23 +71,22 @@
         - name: Enable and start crowdsec-hub-upgrade.timer
           ansible.builtin.systemd:
             name: crowdsec-hub-upgrade.timer
-            enabled: yes
+            enabled: true
             state: started
 
     - name: Remove Hub Upgrade timer
       when: not (crowdsec_config.automatic_hub_upgrade)
       block:
-
         - name: Check if the crowdsec-hub-upgrade timer exists
           ansible.builtin.stat:
             path: /etc/systemd/system/crowdsec-hub-upgrade.timer
           register: hub_timer
 
-        - name: stop CrowdSec Hub Upgrade timer
+        - name: Stop CrowdSec Hub Upgrade timer
           ansible.builtin.systemd:
-            name:  crowdsec-hub-upgrade.timer
+            name: crowdsec-hub-upgrade.timer
             state: stopped
-            enabled: no
+            enabled: false
           when: hub_timer.stat.exists
 
         - name: Remove the systemd timer unit file
@@ -95,20 +94,19 @@
             path: /etc/systemd/system/crowdsec-hub-upgrade.timer
             state: absent
 
-
 - name: Remove Crowdsec installation and configuration
   tags:
     - crowdsec
   when: not run_role_crowdsec | bool
   block:
     - name: Ensure Crowdsec and related packages are absent
-      apt:
+      ansible.builtin.apt:
         name:
           - crowdsec
           - crowdsec-firewall-bouncer
         state: absent
-        purge: yes
-        autoremove: yes
+        purge: true
+        autoremove: true
 
     - name: Check if the crowdsec-hub-upgrade timer exists
       ansible.builtin.stat:
@@ -119,7 +117,7 @@
       ansible.builtin.systemd:
         name: crowdsec-hub-upgrade.timer
         state: stopped
-        enabled: no
+        enabled: false
       when: hub_timer.stat.exists
 
     - name: Check if the crowdsec-hub-upgrade service exists
@@ -131,7 +129,7 @@
       ansible.builtin.systemd:
         name: crowdsec-hub-upgrade.service
         state: stopped
-        enabled: no
+        enabled: false
       when: hub_service.stat.exists
 
     - name: Remove the systemd timer unit file
@@ -146,7 +144,7 @@
 
     - name: Reload systemd to apply unit file changes
       ansible.builtin.systemd:
-        daemon_reload: yes
+        daemon_reload: true
 
 - name: Flush handlers
-  meta: flush_handlers
+  ansible.builtin.meta: flush_handlers

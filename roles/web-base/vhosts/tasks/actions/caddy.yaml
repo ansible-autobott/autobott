@@ -37,9 +37,9 @@
       notify: restart caddy
 
     - name: Add secrets to env file
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: /etc/caddy/env
-        block: |
+        block: |2
 
           # secrets for: {{ webservice.name }}
           {% for server in webservice.servers | default([]) %}{% if server.enabled | default(true) %}
@@ -51,11 +51,11 @@
           {% endif -%}
 
           {% endif %}{% endfor %}
-        create: yes
+        create: true
         marker: "### {mark} Ansible managed - {{ webservice.name }} ###"
         owner: root
         group: root
-        mode: '0600'
+        mode: "0600"
 
 - name: Remove Caddy config for disabled webservice {{ webservice.name }}
   when: not (webservice.enabled | default(true))

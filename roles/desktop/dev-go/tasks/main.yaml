@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # dev-go — Go developer tools role — main tasks
-#============================================================================================================
+# ============================================================================================================
 - name: Dev Go apps
   when:
     - run_role_dev_go | bool
@@ -31,17 +31,17 @@
     - name: Golang
       ansible.builtin.import_tasks: apps/golang.yaml
       when: "'golang' in dev_go_config"
-    - name: goreleaser
+    - name: Goreleaser
       ansible.builtin.import_tasks: apps/goreleaser.yaml
       when: "'goreleaser' in dev_go_config"
-    - name: nfpm
+    - name: Nfpm
       ansible.builtin.import_tasks: apps/nfpm.yaml
       when: "'nfpm' in dev_go_config"
-    - name: golangci-lint
+    - name: Golangci-lint
       ansible.builtin.import_tasks: apps/golangci-lint.yaml
       when: "'golangci-lint' in dev_go_config"
     # candy-tools: go-deps-view is served from the shared candy-tools apt repo
     # (also used by cli-apps). The repo is added once if selected, then installed.
-    - name: candy-tools apps
+    - name: Candy-tools apps
       ansible.builtin.import_tasks: apps/candy-tools.yaml
       when: candy_tools_apps | intersect(dev_go_config.keys() | list) | length > 0

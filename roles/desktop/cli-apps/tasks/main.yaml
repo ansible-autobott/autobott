@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # CLI apps role — main tasks
-#============================================================================================================
+# ============================================================================================================
 - name: CLI apps
   when:
     - run_role_cli_apps | bool
@@ -28,11 +28,11 @@
     # The whole role is driven by a single tag (role_cli_apps, on the block above);
     # there are no per-app tags. Running the role tag runs every selected app's
     # (idempotent) tasks.
-    - name: yt-dlp
+    - name: Yt-dlp
       ansible.builtin.import_tasks: apps/ytdlp.yaml
       when: "'ytdlp' in cli_apps_config"
     # candy-tools: shared apt repo (dibs, linux-candy, todo).
     # Repo is added once if any is selected, then the subset is installed together.
-    - name: candy-tools apps
+    - name: Candy-tools apps
       ansible.builtin.import_tasks: apps/candy-tools.yaml
       when: candy_tools_apps | intersect(cli_apps_config.keys() | list) | length > 0

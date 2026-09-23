@@ -1,0 +1,57 @@
+---
+# ============================================================================================================
+# copilot-cli — GitHub Copilot CLI
+# https://github.com/github/copilot-cli/releases  (version -> sha256 of copilot-linux-x64.tar.gz)
+#
+# The release tarball holds a single self-contained `copilot` binary; it is
+# installed to /usr/local/bin/copilot. The root-owned binary cannot be replaced
+# by `copilot update`; bump the version here instead.
+# ============================================================================================================
+- name: Resolve the selected Copilot CLI version
+  ansible.builtin.set_fact:
+    copilot_cli_version: "{{ (dev_ai_config['copilot-cli'] | default({}, true)).version | default(copilot_cli_default_version, true) }}"
+
+- name: Validate the selected Copilot CLI version is available
+  ansible.builtin.assert:
+    that:
+      - copilot_cli_version in copilot_cli_versions
+    fail_msg: >-
+      Unknown copilot-cli version '{{ copilot_cli_version }}'.
+      Available: {{ copilot_cli_versions.keys() | list | join(', ') }}
+
+# `copilot --version` prints "GitHub Copilot CLI 1.0.88." on its first line.
+- name: Get current Copilot CLI version
+  ansible.builtin.shell: "set -o pipefail && copilot --version | awk 'NR==1 {sub(/\\.$/, \"\", $4); print $4}'"
+  args:
+    executable: /bin/bash
+  register: copilot_cli_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update Copilot CLI
+  when: copilot_cli_current_version.stdout != copilot_cli_version
+  block:
+    - name: Download Copilot CLI
+      ansible.builtin.get_url:
+        url: "{{ copilot_cli_base_url }}/v{{ copilot_cli_version }}/copilot-linux-x64.tar.gz"
+        dest: "/tmp/copilot-linux-x64.tar.gz"
+        checksum: "sha256:{{ copilot_cli_versions[copilot_cli_version] }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install Copilot CLI binary
+      ansible.builtin.unarchive:
+        src: "/tmp/copilot-linux-x64.tar.gz"
+        dest: /usr/local/bin
+        include:
+          - copilot
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Remove the Copilot CLI tarball
+      ansible.builtin.file:
+        path: "/tmp/copilot-linux-x64.tar.gz"
+        state: absent

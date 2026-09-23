@@ -21,7 +21,9 @@
 
     - name: Fail if contrib repository is not enabled
       ansible.builtin.fail:
-        msg: "The contrib repository is not enabled. ZFS packages require the contrib repository to be enabled. Please enable it with: sudo apt-add-repository contrib"
+        msg: >-
+          The contrib repository is not enabled. ZFS packages require the contrib repository to be enabled.
+          Please enable it with: sudo apt-add-repository contrib
       when: "'contrib' not in apt_cache_policy.stdout"
 
     - name: Include distribution-specific ZFS installation tasks

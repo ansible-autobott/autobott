@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # PCSX2
 # https://github.com/PCSX2/pcsx2/releases  (version -> sha256 of the AppImage)
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected pcsx2 version
   ansible.builtin.set_fact:
     pcsx2_version: "{{ (gui_apps_config['pcsx2'] | default({}, true)).version | default(pcsx2_default_version, true) }}"
@@ -19,7 +19,7 @@
   ansible.builtin.file:
     path: "/opt/pcsx2"
     state: directory
-    mode: '0755'
+    mode: "0755"
     owner: root
     group: root
 
@@ -27,12 +27,14 @@
   ansible.builtin.copy:
     src: pcsx2/PCSX2.png
     dest: "/opt/pcsx2/icon.png"
-    mode: '0644'
+    mode: "0644"
     owner: root
     group: root
 
 - name: Get current pcsx2 version
-  ansible.builtin.shell: "ls -l /opt/pcsx2/ | grep pcsx2 | awk -F ' ' '{print $9}' | awk -F '-' '{print $2}'"
+  ansible.builtin.shell: "set -o pipefail && ls -l /opt/pcsx2/ | grep pcsx2 | awk -F ' ' '{print $9}' | awk -F '-' '{print $2}'"
+  args:
+    executable: /bin/bash
   register: pcsx2_current_version
   failed_when: false
   changed_when: false
@@ -45,12 +47,13 @@
         url: "https://github.com/PCSX2/pcsx2/releases/download/{{ pcsx2_version }}/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
         dest: "/opt/pcsx2/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
         checksum: "sha256:{{ pcsx2_versions[pcsx2_version] }}"
+        mode: "0755"
 
     - name: Ensure pcsx2 AppImage is executable
       ansible.builtin.file:
         path: "/opt/pcsx2/pcsx2-{{ pcsx2_version }}-linux-AppImage-32bit.AppImage"
         state: file
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
 
@@ -64,6 +67,6 @@
       ansible.builtin.template:
         src: pcsx2/pcsx2-desktop.entry.j2
         dest: "/usr/share/applications/pcsx2.desktop"
-        mode: '0644'
+        mode: "0644"
         owner: root
         group: root

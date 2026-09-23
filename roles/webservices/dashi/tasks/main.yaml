@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Dashi Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Dashi installation and configuration
   tags:
@@ -33,7 +33,7 @@
         state: directory
         owner: "{{ dashi_config.user.name }}"
         group: "{{ dashi_config.user.group }}"
-        mode: 0750
+        mode: "0750"
       loop:
         - "{{ dashi_config.paths.base_dir }}"
         - "{{ dashi_config.paths.data_dir }}"
@@ -82,48 +82,54 @@
       notify:
         - restart dashi
 
-    - name: get current dashi version
-      shell: "{{ dashi_config.paths.base_dir }}/dashi version | head -n 1 | awk '{print $2}'"
+    - name: Get current dashi version
+      ansible.builtin.shell: "set -o pipefail && {{ dashi_config.paths.base_dir }}/dashi version | head -n 1 | awk '{print $2}'"
+      args:
+        executable: /bin/bash
       register: dashi_current_version
       failed_when: false
       changed_when: false
 
-    - name: install or update dashi
+    - name: Install or update dashi
       when: dashi_current_version.stdout != dashi_config.version
       block:
-
-        - file:
+        - name: Create dashi download directory
+          ansible.builtin.file:
             path: "/tmp/dashi"
             state: directory
-            mode: 0700
+            mode: "0700"
             owner: root
             group: root
 
         - name: Download dashi
-          get_url:
+          ansible.builtin.get_url:
             url: "https://github.com/andresbott/dashi/releases/download/v{{ dashi_config.version }}/dashi_Linux_x86_64_v3.zip"
             dest: "/tmp/dashi/dashi.zip"
             checksum: "sha256:{{ dashi_checksums[dashi_config.version] }}"
+            mode: "0600"
 
         - name: Extract dashi
-          unarchive:
+          ansible.builtin.unarchive:
             src: "/tmp/dashi/dashi.zip"
             dest: "/tmp/dashi"
-            remote_src: yes
+            remote_src: true
 
         - name: Move dashi
-          command: "mv /tmp/dashi/dashi {{ dashi_config.paths.base_dir }}/dashi"
+          ansible.builtin.command: "mv /tmp/dashi/dashi {{ dashi_config.paths.base_dir }}/dashi"
+          changed_when: true
 
-        - file:
+        - name: Remove dashi download directory
+          ansible.builtin.file:
             path: "/tmp/dashi"
             state: absent
 
-        - file:
+        - name: Set dashi binary permissions
+          ansible.builtin.file:
             path: "{{ dashi_config.paths.base_dir }}/dashi"
             state: file
             owner: "{{ dashi_config.user.name }}"
             group: "{{ dashi_config.user.group }}"
-            mode: 0750
+            mode: "0750"
           notify:
             - restart dashi
 

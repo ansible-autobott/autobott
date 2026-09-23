@@ -1,6 +1,6 @@
 ---
 - name: Create webservice database
-  community.mysql.mysql_db:
+  ansible.mysql.mysql_db:
     name: >-
       {{ webservice.mariadb.db_name
          if (webservice.mariadb.db_name is defined and webservice.mariadb.db_name | trim != '')
@@ -19,7 +19,7 @@
     - webservice.mariadb.enabled | default(false)
 
 - name: Delete deactivated webservice databases
-  community.mysql.mysql_db:
+  ansible.mysql.mysql_db:
     name: >-
       {{ webservice.mariadb.db_name
          if webservice.mariadb.db_name is defined and webservice.mariadb.db_name != 'default'
@@ -27,12 +27,12 @@
     state: absent
   when:
     - webservice.mariadb is defined
-    - webservice.enabled | default(true) | bool == false
-    - webservice.delete_data | default(false) | bool == true
-    - webservice.mariadb.enabled | default(true) | bool == false
+    - not (webservice.enabled | default(true) | bool)
+    - webservice.delete_data | default(false) | bool
+    - not (webservice.mariadb.enabled | default(true) | bool)
 
 - name: Create webservice mariadb user
-  community.mysql.mysql_user:
+  ansible.mysql.mysql_user:
     name: >-
       {{ webservice.mariadb.user
          if (webservice.mariadb.user is defined and webservice.mariadb.user | trim != '')
@@ -48,7 +48,7 @@
     - webservice.mariadb.enabled | default(false)
 
 - name: Delete webservice mariadb user
-  community.mysql.mysql_user:
+  ansible.mysql.mysql_user:
     name: >-
       {{ webservice.mariadb.user
          if (webservice.mariadb.user is defined and webservice.mariadb.user | trim != '')
@@ -57,6 +57,6 @@
     state: absent
   when:
     - webservice.mariadb is defined
-    - webservice.enabled | default(true) | bool == false
-    - webservice.delete_data | default(false) | bool == true
-    - webservice.mariadb.enabled | default(true) | bool == false
+    - not (webservice.enabled | default(true) | bool)
+    - webservice.delete_data | default(false) | bool
+    - not (webservice.mariadb.enabled | default(true) | bool)

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Firewall  Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Role execution flag
 run_role_firewall: false
@@ -12,11 +12,10 @@ firewall: {}
 firewall_defaults:
 
   allow_inbound_tcp:
-    - 80    # HTTP
-    - 443   # HTTPS
+    - 80 # HTTP
+    - 443 # HTTPS
 
   allow_inbound_udp: []
-
 
   # Customize allowed outbound ports (e.g., DNS, HTTP/S, APT)
   allowed_outbound_tcp: []
@@ -25,10 +24,10 @@ firewall_defaults:
 
   # make docker services not publicly available,
   # check https://github.com/chaifeng/ufw-docker# for details
-  block_docker_public: True
+  block_docker_public: true
 
   # allow local network to access docker interfaces
-  allow_between_containers: True
+  allow_between_containers: true
 
 # this is the bare minimum of ports needed for autobott to work.
 # change at own risk if you know what you are doing.
@@ -36,13 +35,13 @@ firewall_defaults:
 firewall_required:
 
   allow_inbound_tcp:
-    - 22    # SSH
+    - 22 # SSH
   allow_inbound_udp: []
 
   allowed_outbound_tcp:
-    - 53    # DNS
-    - 80    # HTTP, needed e.g. for apt-get
-    - 443   # HTTPS, needed e.g. for apt-get
+    - 53 # DNS
+    - 80 # HTTP, needed e.g. for apt-get
+    - 443 # HTTPS, needed e.g. for apt-get
 
   allowed_outbound_udp:
-    - 53    # DNS
+    - 53 # DNS

@@ -1,9 +1,9 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # kubectl (+ Azure kubelogin)
 # https://kubernetes.io/releases/            (version -> sha256, kubectl_versions)
 # https://github.com/Azure/kubelogin/releases (version -> sha256, kubelogin_versions)
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected kubectl / kubelogin versions
   ansible.builtin.set_fact:
     kubectl_version: "{{ (dev_k8s_config['kubectl'] | default({}, true)).version | default(kubectl_default_version, true) }}"
@@ -27,7 +27,9 @@
 
 # ============================== kubectl ============================== #
 - name: Get current kubectl version
-  ansible.builtin.shell: "kubectl version --client=true --output=json | grep gitVersion | awk '{print $2}' | tr -d '\"' | tr -d ','"
+  ansible.builtin.shell: "set -o pipefail && kubectl version --client=true --output=json | grep gitVersion | awk '{print $2}' | tr -d '\"' | tr -d ','"
+  args:
+    executable: /bin/bash
   register: kube_current_version
   failed_when: false
   changed_when: false
@@ -42,7 +44,7 @@
         checksum: "sha256:{{ kubectl_versions[kubectl_version] }}"
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
 - name: Make sure .bashrc.d exists
   ansible.builtin.file:
@@ -50,13 +52,13 @@
     state: directory
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
-    mode: '0750'
+    mode: "0750"
 
 - name: Copy .bashrc.d template
   ansible.builtin.template:
     src: kubectl/kubectl.bashrc
     dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/10_kubectl.bashrc"
-    mode: '0750'
+    mode: "0750"
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
 
@@ -64,13 +66,15 @@
   ansible.builtin.file:
     path: "/home/{{ linux_desktop_config.user }}/.kube"
     state: directory
-    mode: '0750'
+    mode: "0750"
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
 
 # ============================== Azure kubelogin ============================== #
 - name: Get current kubelogin version
-  ansible.builtin.shell: "kubelogin --version | grep hash | awk -F '/' '{print $1}' | awk -F ' ' '{print $3}'"
+  ansible.builtin.shell: "set -o pipefail && kubelogin --version | grep hash | awk -F '/' '{print $1}' | awk -F ' ' '{print $3}'"
+  args:
+    executable: /bin/bash
   register: kubelogin_current_version
   failed_when: false
   changed_when: false
@@ -82,7 +86,7 @@
       ansible.builtin.file:
         path: "/tmp/kubelogin"
         state: directory
-        mode: '0700'
+        mode: "0700"
         owner: root
         group: root
 
@@ -99,7 +103,7 @@
         checksum: "sha256:{{ kubelogin_versions[kubelogin_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Unpack kubelogin
       ansible.builtin.unarchive:
@@ -109,6 +113,7 @@
 
     - name: Move kubelogin
       ansible.builtin.command: "mv /tmp/kubelogin/bin/linux_amd64/kubelogin /usr/local/bin/kubelogin"
+      changed_when: true
 
     - name: Remove kubelogin download dir
       ansible.builtin.file:
@@ -119,6 +124,6 @@
       ansible.builtin.file:
         path: "/usr/local/bin/kubelogin"
         state: file
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root

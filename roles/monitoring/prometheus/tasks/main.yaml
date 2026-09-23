@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Prometheus Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Prometheus installation and configuration
   tags:
@@ -40,18 +40,20 @@
         - "{{ prometheus_config.paths.config_dir }}/rules"
         - "{{ prometheus_config.paths.base_dir }}/install"
 
-    #====================================================
+    # ====================================================
     # Install
-    #====================================================
+    # ====================================================
 
     - name: Download Prometheus tarball
       ansible.builtin.get_url:
-        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_config.version }}/prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
-        dest: "{{ prometheus_config.paths.base_dir }}/install/prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_config.version }}/{{ prometheus_tarball }}"
+        dest: "{{ prometheus_config.paths.base_dir }}/install/{{ prometheus_tarball }}"
         owner: "{{ prometheus_config.user.name }}"
         group: "{{ prometheus_config.user.group }}"
         mode: "0644"
         checksum: "sha256:{{ prometheus_checksums[prometheus_config.version] }}"
+      vars:
+        prometheus_tarball: "prometheus-{{ prometheus_config.version }}.linux-amd64.tar.gz"
 
     - name: Extract Prometheus tarball
       ansible.builtin.unarchive:
@@ -99,9 +101,9 @@
       loop: "{{ prometheus_dirs.files }}"
       when: "'prometheus-' ~ prometheus_config.version ~ '.linux-amd64' not in item.path"
 
-      #====================================================
+      # ====================================================
       # Config
-      #====================================================
+      # ====================================================
 
     - name: Main prometheus configuration
       ansible.builtin.template:
@@ -132,9 +134,9 @@
       notify:
         - restart prometheus
 
-    #====================================================
+    # ====================================================
     # Service
-    #====================================================
+    # ====================================================
 
     - name: Setup Prometheus systemd service
       ansible.builtin.template:

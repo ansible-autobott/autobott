@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Etna Fiance Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Etna Finance installation and configuration
   tags:
@@ -34,7 +34,7 @@
         state: directory
         owner: "{{ etnafiance_config.user.name }}"
         group: "{{ etnafiance_config.user.group }}"
-        mode: 0750
+        mode: "0750"
       loop:
         - "{{ etnafiance_config.paths.base_dir }}"
         - "{{ etnafiance_config.paths.data_dir }}"
@@ -49,53 +49,56 @@
       notify:
         - restart etnafiance
 
-    - name: get current etnafiance version
-      shell: "{{ etnafiance_config.paths.base_dir }}/etnafinance version | head -n 1 | awk '{print $2}'"
+    - name: Get current etnafiance version
+      ansible.builtin.shell: "set -o pipefail && {{ etnafiance_config.paths.base_dir }}/etnafinance version | head -n 1 | awk '{print $2}'"
+      args:
+        executable: /bin/bash
       register: etnafiance_current_version
       failed_when: false
       changed_when: false
 
-    - name: install or update etnafiance
+    - name: Install or update etnafiance
       when: etnafiance_current_version.stdout != etnafiance_config.version
       block:
-
-
-        - file:
+        - name: Create etnafiance download directory
+          ansible.builtin.file:
             path: "/tmp/etnafiance"
             state: directory
-            mode: 0700
+            mode: "0700"
             owner: root
             group: root
 
         - name: Download etnafiance
-          get_url:
+          ansible.builtin.get_url:
             url: "https://github.com/andresbott/etna-finance/releases/download/v{{ etnafiance_config.version }}/etna-finance_Linux_x86_64_v3.zip"
             dest: "/tmp/etnafiance/etna-finance.zip"
             checksum: "sha256:{{ etnafiance_checksums[etnafiance_config.version] }}"
+            mode: "0600"
 
         - name: Extract etnafiance
-          unarchive:
+          ansible.builtin.unarchive:
             src: "/tmp/etnafiance/etna-finance.zip"
             dest: "/tmp/etnafiance"
-            remote_src: yes
+            remote_src: true
 
         - name: Move etnafiance
-          command: "mv /tmp/etnafiance/etna-finance {{ etnafiance_config.paths.base_dir }}/etnafinance"
+          ansible.builtin.command: "mv /tmp/etnafiance/etna-finance {{ etnafiance_config.paths.base_dir }}/etnafinance"
+          changed_when: true
 
-        - file:
+        - name: Remove etnafiance download directory
+          ansible.builtin.file:
             path: "/tmp/etnafiance"
             state: absent
 
-        - file:
+        - name: Set etnafiance binary permissions
+          ansible.builtin.file:
             path: "{{ etnafiance_config.paths.base_dir }}/etnafinance"
             state: file
             owner: "{{ etnafiance_config.user.name }}"
             group: "{{ etnafiance_config.user.group }}"
-            mode: 0750
+            mode: "0750"
           notify:
             - restart etnafiance
-
-
 
     - name: Configure systemd service
       ansible.builtin.template:

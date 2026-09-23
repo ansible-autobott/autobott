@@ -7,4 +7,4 @@
   loop:
     - sshd
     - ssh
-  ignore_errors: true # in case one of the services does not exist
+  failed_when: false # in case one of the services does not exist

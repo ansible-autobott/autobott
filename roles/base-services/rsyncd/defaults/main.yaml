@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Rsyncd Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Flag to enable/disable the role
 run_role_rsyncd: false
@@ -12,24 +12,24 @@ rsyncd: {}
 rsyncd_defaults:
   # Global daemon settings
   global:
-    address: ""                 # "" = bind all interfaces
+    address: "" # "" = bind all interfaces
     port: "873"
-    max_connections: "0"        # 0 = unlimited
-    motd_file: ""               # "" = no banner
-    timeout: "600"              # I/O timeout in seconds (0 = none)
+    max_connections: "0" # 0 = unlimited
+    motd_file: "" # "" = no banner
+    timeout: "600" # I/O timeout in seconds (0 = none)
 
   # Default module (share) settings, can be overwritten per module
   module_defaults:
     comment: ""
-    read_only: true             # rsync's safe default
+    read_only: true # rsync's safe default
     write_only: false
-    list: true                  # show the module in listings
-    use_chroot: true            # rsync default; more secure
-    uid: "root"                 # Unix identity the daemon uses for file access
+    list: true # show the module in listings
+    use_chroot: true # rsync default; more secure
+    uid: "root" # Unix identity the daemon uses for file access
     gid: "root"
-    hosts_allow: []             # empty = allow all
+    hosts_allow: [] # empty = allow all
     hosts_deny: []
-    dir_owner: "root"           # module directory ownership (like samba share_owner)
+    dir_owner: "root" # module directory ownership (like samba share_owner)
     dir_group: "root"
     dir_mode: "0755"
     # Force modes on files/dirs received by the daemon (rsyncd "incoming chmod").

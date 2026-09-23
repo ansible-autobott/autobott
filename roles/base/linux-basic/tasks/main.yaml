@@ -56,7 +56,7 @@
             mode: "0644"
           register: hostname_change
 
-        - name: Reboot system if hostname changed
+        - name: Reboot system if hostname changed # noqa: no-handler
           ansible.builtin.reboot:
             reboot_timeout: 3600
             msg: "Rebooting to apply hostname change"
@@ -68,8 +68,8 @@
         create: true
         mode: "0644"
         block: |
-          {% set hostname = (linux_basic.fqdn | default(ansible_facts.fqdn)) %}
-    
+          {% set hostname = linux_basic.fqdn | default(ansible_facts.fqdn) %}
+
           127.0.1.1 {% if '.' in hostname %}
           {{ hostname }} {{ hostname.split('.')[0] }}
           {% else %}
@@ -133,7 +133,7 @@
             dest: /etc/default/locale
             mode: "0644"
 
-        - name: Generate locales
+        - name: Generate locales # noqa: no-handler
           ansible.builtin.command:
             cmd: locale-gen
           when: locale_gen_updated.changed
@@ -192,7 +192,7 @@
             mode: "0644"
           register: sysctl_conf_changed
 
-        - name: Reload sysctl settings
+        - name: Reload sysctl settings # noqa: no-handler
           ansible.builtin.command: sysctl --system
           when: sysctl_conf_changed.changed
           changed_when: true

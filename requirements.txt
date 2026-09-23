@@ -3,4 +3,4 @@ passlib==1.7.4
 argon2-cffi
 bcrypt==4.0.1
 paramiko
-ansible-lint
+ansible-lint==26.9.0

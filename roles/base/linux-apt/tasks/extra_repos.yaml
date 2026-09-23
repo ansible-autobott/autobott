@@ -54,7 +54,7 @@
 
 # Inline (not a handler): the caller installs packages from these repositories
 # right after this file, so the cache has to be fresh now.
-- name: "Update APT cache after adding extra repositories"  # noqa: no-handler
+- name: "Update APT cache after adding extra repositories" # noqa: no-handler
   ansible.builtin.apt:
     update_cache: true
   when: linux_apt_extra_repos_result is changed

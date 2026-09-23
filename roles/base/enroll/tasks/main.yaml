@@ -88,9 +88,9 @@
         mode: "0600"
       when: autobott_enroll_data.root_bashrc
 
-#============================================================================================================
+# ============================================================================================================
 # Version Control
-#============================================================================================================
+# ============================================================================================================
 
     - name: Manage Autobott version
       block:
@@ -106,21 +106,21 @@
           register: current_version_raw
 
         - name: Decode current version
-          set_fact:
+          ansible.builtin.set_fact:
             current_version: "{{ current_version_raw.content | b64decode | trim }}"
           when: version_file_stat.stat.exists
 
         - name: Extract desired major version
-          set_fact:
+          ansible.builtin.set_fact:
             desired_major: "{{ (autobot_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
 
         - name: Extract current major version (only if file exists)
-          set_fact:
+          ansible.builtin.set_fact:
             current_major: "{{ (current_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
           when: version_file_stat.stat.exists
 
         - name: Set upgrade validity flag
-          set_fact:
+          ansible.builtin.set_fact:
             invalid_upgrade: >-
               {{ version_file_stat.stat.exists
                  and (desired_major | int != current_major | int)
@@ -139,14 +139,13 @@
             msg: "Upgrade blocked due to invalid version transition (see above)."
           when: invalid_upgrade | bool
 
-
 - name: Write new version to host
   ansible.builtin.copy:
     dest: "/etc/autobott_version"
     content: "{{ autobot_version }}\n"
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
   when:
     - run_role_autobott_enroll | bool
     - run_autobott_write_version | bool

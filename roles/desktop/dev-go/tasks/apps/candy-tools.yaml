@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # candy-tools — shared apt repo (go-deps-view)
 # https://candy-tools.github.io/debian-repo/
 #
@@ -10,8 +10,8 @@
 # once, idempotently), then installs the selected subset in a single
 # `apt install`. Add new packages to `candy_tools_apps` in defaults/main.yaml
 # (and to `dev_go_available`).
-#============================================================================================================
-- name: Ensure the candy-tools apt repository  # noqa: role-name[path]
+# ============================================================================================================
+- name: Ensure the candy-tools apt repository # noqa: role-name[path]
   ansible.builtin.import_role:
     name: base/linux-apt
     tasks_from: extra_repos

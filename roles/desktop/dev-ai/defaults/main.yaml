@@ -1,0 +1,61 @@
+---
+# ============================================================================================================
+# dev-ai — AI coding agent tools role — defaults
+# ============================================================================================================
+
+# Master on/off for the whole role
+run_role_dev_ai: true
+
+# App selection. Keys are tool names; value is an optional { version: } override
+# (must be one of that tool's catalogued versions below); an empty value installs
+# the tool's default version.
+# Example:
+#   dev_ai_config:
+#     herdr:
+#     claude-code:
+#       version: "2.1.267"
+#     pi:
+#     copilot-cli:
+dev_ai_config: {}
+
+# Source of truth for validation — every key allowed in dev_ai_config.
+dev_ai_available:
+  - herdr
+  - claude-code
+  - pi
+  - copilot-cli
+
+# ============================================================================================================
+# Per-tool version catalogs (version -> checksum; the sha is a separate lookup)
+# ============================================================================================================
+
+# ----- herdr (runtime platform for coding agents) -----
+# https://github.com/herdrdev/herdr/releases  (version -> sha256 of the linux binary)
+herdr_default_version: "0.9.1"
+herdr_versions:
+  "0.9.0": "4fa1a01158dd8043da92d31b270780b0dcc10603038d9b61cac4d81ab63fb71f"
+  "0.9.1": "2a02fed16beb651ef006e1d43f048f652ca4dc58ad053cd2d44450563d5c54b7"
+herdr_base_url: "https://github.com/herdrdev/herdr/releases/download"
+
+# ----- claude-code (Anthropic's coding agent CLI) -----
+# Native binary from the release bucket; version -> sha256 of the linux-x64 binary,
+# from <base_url>/<version>/manifest.json (.platforms["linux-x64"].checksum).
+# Latest stable version: <base_url>/stable
+claude_code_default_version: "2.1.267"
+claude_code_versions:
+  "2.1.267": "0399c793ff571d5946ef923d80b4f330d05ac4b6842a6b0775468f5d389403c0"
+claude_code_base_url: "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
+
+# ----- pi (pi coding agent) -----
+# https://github.com/badlogic/pi-mono/releases  (version -> sha256 of pi-linux-x64.tar.gz)
+pi_default_version: "0.87.1"
+pi_versions:
+  "0.87.1": "80d78dd62d50049a006b981d994c61255bcc10e730b0c278d4ea0a755909764c"
+pi_base_url: "https://github.com/badlogic/pi-mono/releases/download"
+
+# ----- copilot-cli (GitHub Copilot CLI) -----
+# https://github.com/github/copilot-cli/releases  (version -> sha256 of copilot-linux-x64.tar.gz)
+copilot_cli_default_version: "1.0.88"
+copilot_cli_versions:
+  "1.0.88": "42f40c08ff8a8ff78522161e4b5e2b86340ad8bb0853a5f1aa64ce65b48d007b"
+copilot_cli_base_url: "https://github.com/github/copilot-cli/releases/download"

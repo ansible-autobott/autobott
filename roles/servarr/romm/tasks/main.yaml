@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # romm
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main romm block
   tags:
@@ -15,12 +15,12 @@
         romm_config: "{{ romm_defaults | combine(romm, recursive=true) }}"
 
     - name: Fail if app_secret is not set or is empty
-      fail:
+      ansible.builtin.fail:
         msg: "The variable 'romm_config.app_secret' is required and cannot be empty."
       when: romm_config.app_secret is not defined or romm_config.app_secret | length == 0
 
     - name: Fail if db_pass is not set or is empty
-      fail:
+      ansible.builtin.fail:
         msg: "The variable 'romm_config.db_pass' is required and cannot be empty."
       when: romm_config.db_pass is not defined or romm_config.db_pass | length == 0
 
@@ -63,6 +63,7 @@
         state: directory
         owner: "{{ romm_config.user.name }}"
         group: "{{ romm_config.user.group }}"
+        mode: "0755"
       loop:
         - "{{ romm_config.paths.data_dir }}/assets"
         - "{{ romm_config.paths.data_dir }}/resources"

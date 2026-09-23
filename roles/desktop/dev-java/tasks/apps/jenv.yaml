@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # jenv — Java version manager (per-user, installed under the desktop user's home)
 # https://github.com/jenv/jenv
 #
@@ -9,7 +9,7 @@
 # here we only discover the installed JDKs under /usr/lib/jvm and register each
 # with `jenv add`, giving the user working multi-version switching (jenv global /
 # jenv local) out of the box.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected jenv version
   ansible.builtin.set_fact:
     jenv_version: "{{ (dev_java_config['jenv'] | default({}, true)).version | default(jenv_default_version, true) }}"
@@ -34,7 +34,7 @@
     state: directory
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_config.user }}"
-    mode: '0755'
+    mode: "0755"
 
 - name: Check whether jenv is already installed
   ansible.builtin.stat:
@@ -51,7 +51,7 @@
         checksum: "sha256:{{ jenv_versions[jenv_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Install jenv from tarball
       ansible.builtin.unarchive:
@@ -75,7 +75,7 @@
     state: directory
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_config.user }}"
-    mode: '0750'
+    mode: "0750"
 
 - name: Copy jenv .bashrc.d hook
   ansible.builtin.template:
@@ -83,7 +83,7 @@
     dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/jenv.bashrc"
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_config.user }}"
-    mode: '0750'
+    mode: "0750"
 
 # ============================== export plugin (JAVA_HOME) ============================== #
 # `jenv enable-plugin` is a shell-function command (libexec/jenv-sh-enable-plugin), only
@@ -98,7 +98,7 @@
         state: directory
         owner: "{{ linux_desktop_config.user }}"
         group: "{{ linux_desktop_config.user }}"
-        mode: '0755'
+        mode: "0755"
 
     - name: Link the export plugin into the jenv plugins directory
       ansible.builtin.file:
@@ -116,7 +116,7 @@
   ansible.builtin.find:
     paths: /usr/lib/jvm
     file_type: directory
-    patterns: 'java-*-openjdk-*'
+    patterns: "java-*-openjdk-*"
     recurse: false
   register: jenv_jvm_dirs
 

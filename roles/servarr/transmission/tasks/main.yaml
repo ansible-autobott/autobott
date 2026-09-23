@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Transmission Daemon Role Tasks
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main transmission installation block
   tags:
@@ -138,17 +138,17 @@
         state: restarted
       changed_when: false
 
-    #============================================================================================================
+    # ============================================================================================================
     # automatic cleanup
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Ensure cleanup config directory exists
-      file:
+      ansible.builtin.file:
         path: /etc/transmission-cleanup.d
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Create cleanup configs
       ansible.builtin.template:
@@ -160,14 +160,14 @@
       loop: "{{ transmission_config.autoclean }}"
 
     - name: Get list of all existing cleanup config files
-      find:
+      ansible.builtin.find:
         paths: /etc/transmission-cleanup.d
-        patterns: '*.conf'
+        patterns: "*.conf"
         file_type: file
       register: existing_configs
 
     - name: Remove stale cleanup config files
-      file:
+      ansible.builtin.file:
         path: "{{ item.path }}"
         state: absent
       loop: "{{ existing_configs.files }}"
@@ -181,22 +181,21 @@
         dest: /usr/local/bin/transmission-cleanup.sh
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Create cron.daily entry to run as torrentcleaner
-      copy:
+      ansible.builtin.copy:
         dest: /etc/cron.daily/transmission-cleanup
         content: |
           #!/bin/sh
           exec runuser -u debian-transmission -- /usr/local/bin/transmission-cleanup.sh >> /var/log/transmission-cleanup.log 2>&1
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
-
-#============================================================================================================
+# ============================================================================================================
 # Transmission Removal Block
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main transmission removal block
   tags:
@@ -213,7 +212,7 @@
       ansible.builtin.service:
         name: transmission-daemon
         state: stopped
-      ignore_errors: true
+      failed_when: false
 
     - name: Remove transmission packages
       ansible.builtin.apt:

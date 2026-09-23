@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Google Chrome
-#============================================================================================================
+# ============================================================================================================
 - name: Set merged google-chrome configuration
   ansible.builtin.set_fact:
     google_chrome_config: "{{ google_chrome_defaults | combine(gui_apps_config['google-chrome'] | default({}, true), recursive=true) }}"
@@ -32,7 +32,7 @@
   ansible.builtin.copy:
     src: google-chrome/google-chrome.gpg
     dest: /etc/apt/keyrings/google-chrome.gpg
-    mode: '0644'
+    mode: "0644"
 
 - name: Add repository
   ansible.builtin.deb822_repository:
@@ -52,7 +52,7 @@
     path: /etc/apt/sources.list.d/google-chrome.list
     state: absent
 
-- name: Update apt cache if repository changed
+- name: Update apt cache if repository changed # noqa: no-handler
   ansible.builtin.apt:
     update_cache: true
   when: chrome_repo.changed

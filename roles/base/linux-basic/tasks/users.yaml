@@ -25,9 +25,10 @@
       ansible.builtin.group:
         name: "{{ item }}"
         state: present
-      loop: "{{ (linux_basic.users | union(linux_basic.users_extra) | union(linux_basic.system_users | default([])))
-                | selectattr('enabled', 'defined') | selectattr('enabled')
-                | map(attribute='groups', default=[]) | flatten | unique }}"
+      loop: >-
+        {{ (linux_basic.users | union(linux_basic.users_extra) | union(linux_basic.system_users | default([])))
+        | selectattr('enabled', 'defined') | selectattr('enabled')
+        | map(attribute='groups', default=[]) | flatten | unique }}
       loop_control:
         label: "{{ item }}"
 
@@ -82,8 +83,9 @@
             groups: "{{ item.groups | default([]) | join(',') }}"
             append: "{{ not item.enforce_groups | default(false) }}"
             shell: "{{ item.shell | default('/bin/bash') }}"
-            password: "{{ item.password | default('') | password_hash('sha512', 65534 | random(seed=inventory_hostname) | string) if item.password | default('') else
-              '!' }}"
+            password: >-
+              {{ item.password | default('') | password_hash('sha512', 65534 | random(seed=inventory_hostname) | string)
+              if item.password | default('') else '!' }}
             state: present
             create_home: true
             home: "{{ item.home | default( '/home/' ~ item.username  ) }}"
@@ -104,7 +106,7 @@
             user: "{{ item.0.username }}"
             key: "{{ item.1 }}"
             state: absent
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  | subelements('ssh_key_revoked', skip_missing=True)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) | subelements('ssh_key_revoked', skip_missing=True) }}"
           when: item.0.enabled | default(false)
 
         - name: Ensure .ssh directory exists for users with ssh_config
@@ -174,7 +176,7 @@
             owner: "{{ item.username }}"
             group: "{{ item.primary_group | default('users') }}"
             mode: "0600"
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           when: item.enabled | default(false)
 
         - name: Create user shell configuration directory
@@ -184,7 +186,7 @@
             owner: "{{ item.username }}"
             group: "{{ item.primary_group | default('users') }}"
             mode: "0750"
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           when: item.enabled | default(false)
 
         - name: Set correct home directory permissions
@@ -194,7 +196,7 @@
             group: "{{ item.primary_group | default('users') }}"
             mode: "0750"
             state: directory
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           when: item.enabled | default(false)
 
     # User Cleanup
@@ -205,14 +207,14 @@
             name: "{{ item.username }}"
             state: absent
             remove: "{{ item.delete_home | default(false) }}"
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           when: not item.enabled | default(false)
 
         - name: Remove home directories of disabled users
           ansible.builtin.file:
             path: "{{ item.home | default( '/home/' ~ item.username  ) }}"
             state: absent
-          loop: "{{ linux_basic.users | union(linux_basic.users_extra)  }}"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
           when:
             - not item.enabled | default(false)
             - item.delete_home | default(false)

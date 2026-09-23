@@ -1,10 +1,10 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # jellium-desktop
 # https://github.com/andresbott/jellium-desktop/releases
 # The release .deb is per Debian/Ubuntu release, so the checksum catalog is
 # nested: version -> { <distribution_release>: sha256 }.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected jellium-desktop version
   ansible.builtin.set_fact:
     jellium_desktop_version: "{{ (gui_apps_config['jellium-desktop'] | default({}, true)).version | default(jellium_desktop_default_version, true) }}"
@@ -40,24 +40,27 @@
 
 - name: Install or update jellium-desktop
   when: not (jellium_desktop_current_version.stdout | default('')).startswith(jellium_desktop_version)
+  vars:
+    jellium_desktop_deb: "jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
   block:
     - name: Create jellium-desktop download dir
       ansible.builtin.file:
         path: "/tmp/jellium-desktop"
         state: directory
-        mode: '0700'
+        mode: "0700"
         owner: root
         group: root
 
     - name: Download jellium-desktop
       ansible.builtin.get_url:
-        url: "https://github.com/andresbott/jellium-desktop/releases/download/v{{ jellium_desktop_version }}/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
-        dest: "/tmp/jellium-desktop/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
+        url: "https://github.com/andresbott/jellium-desktop/releases/download/v{{ jellium_desktop_version }}/{{ jellium_desktop_deb }}"
+        dest: "/tmp/jellium-desktop/{{ jellium_desktop_deb }}"
         checksum: "sha256:{{ jellium_desktop_versions[jellium_desktop_version][ansible_facts.distribution_release] }}"
+        mode: "0644"
 
     - name: Install jellium-desktop .deb file
       ansible.builtin.apt:
-        deb: "/tmp/jellium-desktop/jellium-desktop_{{ jellium_desktop_version }}_{{ ansible_facts.distribution_release }}_amd64.deb"
+        deb: "/tmp/jellium-desktop/{{ jellium_desktop_deb }}"
 
     - name: Remove jellium-desktop download dir
       ansible.builtin.file:

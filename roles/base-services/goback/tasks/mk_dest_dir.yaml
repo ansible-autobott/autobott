@@ -1,18 +1,16 @@
 ---
-- name: create destination directory
+- name: Create destination directory
   when: item.enabled
   block:
+    - name: "Get primary group of backup user"
+      ansible.builtin.command: "id -g {{ item.content.destination.owner | default(goback_config.user.name) }}"
+      register: goback_gid
+      changed_when: false
 
-  - name: "get primary group of backup user"
-    command: "id -g {{ item.content.destination.owner | default ( goback_config.user.name ) }}"
-    register: goback_gid
-    changed_when: false
-
-  - name: Create backup destination
-    file:
-      path: "{{ item.content.destination.path | default(goback_config.backup_dest | string ~ '/' ~ item.content.name | string) }}"
-      state: directory
-      owner: "{{ item.content.destination.owner | default ( goback_config.user.name )  }}"
-      group: "{{ goback_gid.stdout | default(omit) }}"
-      mode: "{{ item.dir_mode | default('0700') }}"
-
+    - name: Create backup destination
+      ansible.builtin.file:
+        path: "{{ item.content.destination.path | default(goback_config.backup_dest | string ~ '/' ~ item.content.name | string) }}"
+        state: directory
+        owner: "{{ item.content.destination.owner | default(goback_config.user.name) }}"
+        group: "{{ goback_gid.stdout | default(omit) }}"
+        mode: "{{ item.dir_mode | default('0700') }}"

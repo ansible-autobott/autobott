@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Rsync daemon
-#============================================================================================================
+# ============================================================================================================
 - name: Main Rsyncd block
   tags:
     - rsyncd
@@ -49,7 +49,7 @@
         enabled: false
         state: stopped
         masked: true
-      failed_when: false   # socket unit may be absent on some versions
+      failed_when: false # socket unit may be absent on some versions
 
     - name: Enable and start rsync daemon
       ansible.builtin.service:
@@ -67,11 +67,11 @@
       loop: "{{ rsyncd_config.modules }}"
       when: item.path is defined and item.path != ''
 
-#============================================================================================================
+# ============================================================================================================
 # Clean up when the role is turned off: stop the daemon and remove the config it created.
 # The rsync package is intentionally left installed, and module (share) directories are left
 # in place so their data is not destroyed.
-#============================================================================================================
+# ============================================================================================================
 - name: Rsyncd teardown block
   tags:
     - rsyncd

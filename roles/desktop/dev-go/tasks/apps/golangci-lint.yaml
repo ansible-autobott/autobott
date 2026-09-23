@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # golangci-lint — Go linters aggregator (installed from the upstream .deb)
 # https://github.com/golangci/golangci-lint/releases
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected golangci-lint version
   ansible.builtin.set_fact:
     golangci_lint_version: "{{ (dev_go_config['golangci-lint'] | default({}, true)).version | default(golangci_lint_default_version, true) }}"
@@ -21,7 +21,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0700'
+    mode: "0700"
 
 - name: Download golangci-lint
   ansible.builtin.get_url:
@@ -30,7 +30,7 @@
     checksum: "sha256:{{ golangci_lint_versions[golangci_lint_version] }}"
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Install golangci-lint
   ansible.builtin.apt:

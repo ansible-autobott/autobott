@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Stash Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Stash installation
   tags:
@@ -14,11 +14,11 @@
         stash_config: "{{ stash_defaults | combine(stash, recursive=true) }}"
 
     - name: Install ffmpeg
-      apt:
+      ansible.builtin.apt:
         name:
           - ffmpeg
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Create stash system group
       ansible.builtin.group:

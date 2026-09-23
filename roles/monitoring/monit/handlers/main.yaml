@@ -4,4 +4,3 @@
     name: monit
     state: restarted
   listen: restart monit
-

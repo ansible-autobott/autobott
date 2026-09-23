@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Linux-desktop Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Main role control variable
 run_role_linux_desktop: false
@@ -14,9 +14,9 @@ linux_desktop_defaults:
   # create folders in the home dir
   folders:
     - "Screenshots"
-  #============================================================================================================
+  # ============================================================================================================
   # Git repositories
-  #============================================================================================================
+  # ============================================================================================================
   # Clone git repositories into the desktop user's home dir. Repos are cloned only when
   # missing; existing clones are left untouched (no pull on re-run). git is installed
   # automatically when this list is non-empty.
@@ -24,9 +24,9 @@ linux_desktop_defaults:
   #  - repo: "https://github.com/user/dotfiles.git"  # required: clone URL
   #    dest: "src/dotfiles"                           # required: path, relative to home unless it starts with /
   #    version: ""                                    # optional: branch/tag/commit to check out (default: remote HEAD)
-  #============================================================================================================
+  # ============================================================================================================
   # Inventory files
-  #============================================================================================================
+  # ============================================================================================================
   # files present on the inventory and copied over to the destination
   # this allows to put a lot of files in place
   inventory_files: []
@@ -39,9 +39,9 @@ linux_desktop_defaults:
   #      - var1: "value1"
   #    state: "" # possible values are  "present" (copy) | "templated" (copy+ template)| "link" (symlink) | "absent" (delete)
 
-  #============================================================================================================
+  # ============================================================================================================
   # ImageMagick
-  #============================================================================================================
+  # ============================================================================================================
   # Install ImageMagick and/or tune its security policy (/etc/ImageMagick-6/policy.xml).
   imagemagick:
     # install the ImageMagick package
@@ -58,24 +58,24 @@ linux_desktop_defaults:
       # resource-governor caps. "" leaves the value already in policy.xml untouched
       # (i.e. the Debian default shown in parentheses). Raise for heavy image work.
       memory: "" # e.g. "2GiB"  (Debian default: 256MiB)
-      map: ""    # e.g. "4GiB"  (Debian default: 512MiB)
-      width: ""  # e.g. "20KP"  (Debian default: 16KP)
+      map: "" # e.g. "4GiB"  (Debian default: 512MiB)
+      width: "" # e.g. "20KP"  (Debian default: 16KP)
       height: "" # e.g. "20KP"  (Debian default: 16KP)
-      area: ""   # e.g. "256MP" (Debian default: 128MP)
-      disk: ""   # e.g. "5GiB"  (Debian default: 1GiB)
+      area: "" # e.g. "256MP" (Debian default: 128MP)
+      disk: "" # e.g. "5GiB"  (Debian default: 1GiB)
 
-  #============================================================================================================
+  # ============================================================================================================
   # Nerd Fonts
-  #============================================================================================================
+  # ============================================================================================================
   # Install the Hack font patched by the Nerd Fonts project (adds the icon /
   # Powerline glyphs the stock monospace fonts lack) system-wide under
   # /usr/local/share/fonts. Consumers reference it by the patched family name
   # "Hack Nerd Font Mono" (e.g. the linux-kde Konsole profiles). On by default.
   install_hack_nerd_font: true
 
-  #============================================================================================================
+  # ============================================================================================================
   # input-remapper (remap keys/buttons of input devices)
-  #============================================================================================================
+  # ============================================================================================================
   # Install input-remapper (https://github.com/sezanzeb/input-remapper) and enable its
   # system daemon, then optionally deploy per-user remapping presets into
   # ~/.config/input-remapper-2/ (the package's XDG autostart applies them on next
@@ -106,5 +106,3 @@ nerd_font_hack_sha256: cdd389472e10e2261520140ff1b382b4f8a226af5fd0b2735b975d311
 input_remapper_version: "2.2.1"
 input_remapper_sha256: "6ad397c517a05cc001d45f821122d18506fe3f4d7bf1cb966b012cac54a949d2"
 input_remapper_base_url: "https://github.com/sezanzeb/input-remapper/releases/download"
-
-

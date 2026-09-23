@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Transmission Daemon Role Defaults
 # Documentation: https://wiki.debian.org/Transmission
-#============================================================================================================
+# ============================================================================================================
 # Role execution flag
 run_role_transmission: false
 
@@ -37,11 +37,9 @@ transmission_defaults:
   # configure automatic cleanup targets
   # this will automatically delete complete torrents that are older than N days
   autoclean: []
-    #    - name: sonarr
-    #      target: /media/torrent/tv-sonar
-    #      days: 16
+  #    - name: sonarr
+  #      target: /media/torrent/tv-sonar
+  #      days: 16
 
   # Uninstall behavior
   delete_data_on_uninstall: false
-
-

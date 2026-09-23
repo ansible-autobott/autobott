@@ -29,6 +29,10 @@ linux_apt:
   automatic_updates: false # setting this to yes will make the vagrant task to fail because of lock on dpkg
   extra_repos:
     - autobott
+  # pin the kernel / firmware from trixie-backports; left off on the VM, enable on real hardware
+  pin_backported_pkg:
+    kernel: false
+    firmware: false
 
 #============================================================================================================
 # Linux Basics
@@ -53,6 +57,12 @@ linux_basic:
       lang: en_US.UTF-8
       all: en_US.UTF-8
 
+  # kernel limits written to /etc/sysctl.d/60-autobott.conf
+  limits:
+    fs_inotify_max_user_instances: 1024  # desktop / IDE file watchers
+    fs_inotify_max_user_watches: 524288  # media libraries (jellyfin, immich) and IDEs
+    vm_overcommit_memory: 1              # redis bundled with immich
+
   ssh:
     sftp_jails:
       - group_name: sftp
@@ -76,6 +86,7 @@ linux_basic:
   users:
     - username: jsmith
       enabled: true
+      editor: "joe"
       delete_home: false
       uid: 2002
       name: "The Doctor"

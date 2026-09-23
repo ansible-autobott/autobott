@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # vault
 # https://releases.hashicorp.com/vault/  (version -> sha256 of the linux_amd64 zip)
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected vault version
   ansible.builtin.set_fact:
     vault_version: "{{ (dev_generic_config['vault'] | default({}, true)).version | default(vault_default_version, true) }}"
@@ -16,7 +16,9 @@
       Available: {{ vault_versions.keys() | list | join(', ') }}
 
 - name: Get current vault version
-  ansible.builtin.shell: "vault version | awk '{print $2}' | tr -d 'v'"
+  ansible.builtin.shell: "set -o pipefail && vault version | awk '{print $2}' | tr -d 'v'"
+  args:
+    executable: /bin/bash
   register: vault_current_version
   failed_when: false
   changed_when: false
@@ -28,7 +30,7 @@
       ansible.builtin.file:
         path: "/tmp/vault"
         state: directory
-        mode: '0700'
+        mode: "0700"
         owner: root
         group: root
 
@@ -44,7 +46,7 @@
         checksum: "sha256:{{ vault_versions[vault_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Unpack vault
       ansible.builtin.unarchive:
@@ -54,6 +56,7 @@
 
     - name: Move vault
       ansible.builtin.command: "mv /tmp/vault/vault /usr/local/bin/vault"
+      changed_when: true
 
     - name: Remove vault download dir
       ansible.builtin.file:
@@ -64,6 +67,6 @@
       ansible.builtin.file:
         path: "/usr/local/bin/vault"
         state: file
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root

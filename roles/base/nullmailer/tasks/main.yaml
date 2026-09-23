@@ -1,14 +1,13 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Nullmailer
-#============================================================================================================
-- name: main nullmailer block
+# ============================================================================================================
+- name: Main nullmailer block
   tags:
     - nullmailer
   when:
     - run_role_nullmailer | bool
   block:
-
     - name: Set merged nullmailer configuration
       ansible.builtin.set_fact:
         nullmailer_config: "{{ nullmailer_defaults | combine(nullmailer, recursive=true) }}"
@@ -20,7 +19,7 @@
           - mailutils
           - bsd-mailx # this provides /usr/bin/mail needed ny some apps
         state: present
-        update_cache: yes
+        update_cache: true
 
 #    - name: Write short hostname to /etc/nullmailer/me
 #      ansible.builtin.copy:
@@ -36,7 +35,7 @@
         content: "{{ nullmailer_config.email_to }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       notify: restart nullmailer
 
     - name: Create allmailfrom file
@@ -45,7 +44,7 @@
         content: "{{ nullmailer_config.override_from }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
       when: nullmailer_config.override_from is defined and nullmailer_config.override_from | trim != ''
       notify: restart nullmailer
 
@@ -69,8 +68,9 @@
       ansible.builtin.copy:
         dest: /etc/nullmailer/remotes
         content: |
-          {{ nullmailer_config.smtp_server }} smtp --auth-login --port=587 --starttls --user={{ nullmailer_config.smtp_user }} --pass={{ nullmailer_config.smtp_pass }}
+          {{ nullmailer_config.smtp_server }} smtp --auth-login --port=587 --starttls
+          {{- ' --user=' ~ nullmailer_config.smtp_user }} --pass={{ nullmailer_config.smtp_pass }}
         owner: root
         group: mail
-        mode: '0640'
+        mode: "0640"
       notify: restart nullmailer

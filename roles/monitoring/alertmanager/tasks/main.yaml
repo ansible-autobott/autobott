@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Alertmanager Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Alertmanager installation and configuration
   tags:
@@ -34,24 +34,26 @@
         state: directory
         owner: "{{ alertmanager_config.user.name }}"
         group: "{{ alertmanager_config.user.group }}"
-        mode: 0750
+        mode: "0750"
       loop:
         - "{{ alertmanager_config.paths.data_dir }}"
         - "{{ alertmanager_config.paths.config_dir }}/rules"
         - "{{ alertmanager_config.paths.base_dir }}/install"
 
-    #====================================================
+    # ====================================================
     # Install
-    #====================================================
+    # ====================================================
 
     - name: Download Alertmanager tarball
       ansible.builtin.get_url:
-        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_config.version }}/alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
-        dest: "{{ alertmanager_config.paths.base_dir }}/install/alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
+        url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_config.version }}/{{ alertmanager_tarball }}"
+        dest: "{{ alertmanager_config.paths.base_dir }}/install/{{ alertmanager_tarball }}"
         owner: "{{ alertmanager_config.user.name }}"
         group: "{{ alertmanager_config.user.group }}"
         mode: "0644"
         checksum: "sha256:{{ alertmanager_checksums[alertmanager_config.version] }}"
+      vars:
+        alertmanager_tarball: "alertmanager-{{ alertmanager_config.version }}.linux-amd64.tar.gz"
 
     - name: Extract Alertmanager tarball
       ansible.builtin.unarchive:
@@ -99,9 +101,9 @@
       loop: "{{ alertmanager_dirs.files }}"
       when: "'alertmanager-' ~ alertmanager_config.version ~ '.linux-amd64' not in item.path"
 
-      #====================================================
+      # ====================================================
       # Config
-      #====================================================
+      # ====================================================
 
     - name: Main alertmanager configuration
       ansible.builtin.template:
@@ -115,9 +117,9 @@
 
     # TODO: ignoring message templates for now
 
-    #====================================================
+    # ====================================================
     # Service
-    #====================================================
+    # ====================================================
 
     - name: Setup Alertmanager systemd service
       ansible.builtin.template:

@@ -1,0 +1,33 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+
+      # Same venv layout as `make prepare`, without its host-tool installs
+      # (sops/age), which linting does not need.
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          venv/bin/pip install -r requirements.txt
+          venv/bin/ansible-galaxy collection install community.sops
+
+      # Fails only on violations missing from roles/.ansible-lint-ignore.
+      - name: ansible-lint
+        run: make lint

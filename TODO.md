@@ -12,9 +12,12 @@ Tracking work remaining after the ansible 11 → 14 (ansible-core 2.18 → 2.21)
     for strict modules (e.g. `community.general.xml`).
   - Strict undefined: undefined vars in `{% if %}`/conditionals now error
     (dead `run_role_node` guard already removed — watch for more leftovers).
-- [ ] (Optional) Add a CI lint gate — `.github/workflows/release.yml` runs no
-      `ansible-lint`. The tree currently meets only the `min` profile
-      (~1033 strict findings, mostly `fqcn`); consider a lint workflow + cleanup.
+- [x] Add a CI lint gate — `.github/workflows/lint.yml` runs `make lint`,
+      with existing findings baselined in `roles/.ansible-lint-ignore`.
+- [ ] Shrink the lint baseline (1188 strict findings, `make lint-all`): relax
+      the `#====` banner style in a `.yamllint` (543 `yaml[comments]`), then
+      `make lint-fix` (fqcn/yaml), then manual `name[*]`/`risky-*`/
+      `no-changed-when`; re-run `make lint-baseline` after each pass.
 - [ ] (Optional) If releasing this upgrade, bump `autobot_version` in
       `roles/base/enroll/defaults/main.yaml` before opening the PR.
 

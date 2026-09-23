@@ -151,7 +151,7 @@ run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<ta
 # (e.g. 'make run-local TAG=role_docker') takes precedence over the env file.
 RUN_LOCAL_FILE ?= run-local.env
 
-run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (default: run-local.env; command-line vars override the file)
+run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (default: run-local.env)
 	@if [ ! -f "$(RUN_LOCAL_FILE)" ]; then \
 		echo "Error: '$(RUN_LOCAL_FILE)' not found." >&2; \
 		echo "       Create it from the template:  cp run-local.env.example $(RUN_LOCAL_FILE)" >&2; \
@@ -374,15 +374,28 @@ tag: check-branch check-git-clean check-autobott-version ## tag a release and pu
 	@git push origin $(version) || true
 
 ##@ Test
-lint: ## run ansible lint
+# Known violations are baselined in roles/.ansible-lint-ignore: `lint` (also run
+# by CI) reports them as warnings and fails only on new ones. Not strict (-s):
+# strict turns the baselined warnings back into failures.
+lint: ## run ansible lint; fails only on violations not in the baseline (same as CI)
 	@. ./venv/bin/activate && \
 	cd roles && \
-	ansible-lint -s -v
+	ansible-lint -v
 
-lint-fix: ## run ansible lint
+lint-all: ## run strict ansible lint ignoring the baseline (full cleanup list)
+	@. ./venv/bin/activate && \
+	cd roles && \
+	ansible-lint -s -v -i /dev/null
+
+lint-fix: ## auto-fix ansible lint violations where possible
 	@. ./venv/bin/activate && \
 	cd roles && \
 	ansible-lint -s -v --fix
+
+lint-baseline: ## regenerate the lint baseline (roles/.ansible-lint-ignore) from the current tree
+	@. ./venv/bin/activate && \
+	cd roles && \
+	ansible-lint -s -q --generate-ignore || true
 
 ##@ Help
 .PHONY: help

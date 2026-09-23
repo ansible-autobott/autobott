@@ -7,7 +7,8 @@
 # never the ~trixie build), so add_kde_style can install and select it here too.
 kde_klassy_available: true
 # The GTK global menu (appmenu-gtk-module) stays Debian-trixie-only; that block
-# gates on the release itself.
+# gates on the release itself. The Plasma appmenu service toggle
+# (add_kde_global_menu -> kded5rc) applies here too.
 
 kde_packages:
   # core

@@ -546,6 +546,31 @@
             group: "{{ linux_desktop_user_main_group }}"
             mode: "0644"
 
+    # Plasma's kded "appmenu" service (the global-menu registrar) follows
+    # add_kde_global_menu on every release. While it runs, kded's gtkconfig tells
+    # GTK3 apps on Wayland to load appmenu-gtk-module over D-Bus (org.gtk.Settings;
+    # ~/.config/gtk-3.0/settings.ini is not consulted there), and those apps
+    # (e.g. Inkscape) then hide their in-window menu bar - which simply vanishes
+    # when no Global Menu widget is on a panel. Disabling the service keeps menus
+    # in the window. Takes effect at the user's next login.
+    - name: Toggle the Plasma appmenu service for the desktop user
+      ansible.builtin.command:
+        argv:
+          - kwriteconfig6
+          - --file
+          - kded5rc
+          - --group
+          - Module-appmenu
+          - --key
+          - autoload
+          - "{{ linux_kde_config.add_kde_global_menu | bool | string | lower }}"
+      become: true
+      become_user: "{{ linux_desktop_config.user }}"
+      environment:
+        HOME: "/home/{{ linux_desktop_config.user }}"
+      # kwriteconfig re-asserts the same value on every run; not a change.
+      changed_when: false
+
     # ============================================================================================================
     # Spectacle screenshot shortcuts
     # ============================================================================================================

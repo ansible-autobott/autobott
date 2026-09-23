@@ -1,12 +1,12 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # copilot-cli — GitHub Copilot CLI
 # https://github.com/github/copilot-cli/releases  (version -> sha256 of copilot-linux-x64.tar.gz)
 #
 # The release tarball holds a single self-contained `copilot` binary; it is
 # installed to /usr/local/bin/copilot. The root-owned binary cannot be replaced
 # by `copilot update`; bump the version here instead.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected Copilot CLI version
   ansible.builtin.set_fact:
     copilot_cli_version: "{{ (dev_ai_config['copilot-cli'] | default({}, true)).version | default(copilot_cli_default_version, true) }}"
@@ -38,7 +38,7 @@
         checksum: "sha256:{{ copilot_cli_versions[copilot_cli_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Install Copilot CLI binary
       ansible.builtin.unarchive:
@@ -49,7 +49,7 @@
         remote_src: true
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Remove the Copilot CLI tarball
       ansible.builtin.file:

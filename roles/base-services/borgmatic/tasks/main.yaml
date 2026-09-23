@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Borgmatic Backup
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Borgmatic block
   tags:
@@ -76,12 +76,12 @@
         - item.ssh_key | length > 0
 
     - name: Get Borg version
-      command: borg --version
+      ansible.builtin.command: borg --version
       register: borg_version_output
       changed_when: false
 
     - name: Extract Borg major version
-      set_fact:
+      ansible.builtin.set_fact:
         borg_major_version: "{{ borg_version_output.stdout.split()[1].split('.')[0] }}"
 
     - name: Generate borgmatic configs for each backup job
@@ -95,11 +95,10 @@
 
     - name: Remove disabled and removed borgmatic configs
       block:
-
         - name: Remove disabled borgmatic configs
-          file:
-            path:         "/etc/borgmatic.d/{{ item.name }}.yaml"
-            state:        absent
+          ansible.builtin.file:
+            path: "/etc/borgmatic.d/{{ item.name }}.yaml"
+            state: absent
           loop: "{{ borgmatic_backups }}"
           when: not item.enabled | default(true)
           no_log: true
@@ -113,7 +112,7 @@
           register: borgmatic_existing
 
         - name: Build expected borgmatic files for enabled backups
-          set_fact:
+          ansible.builtin.set_fact:
             expected_files: >-
               {{
                 borgmatic_backups
@@ -136,48 +135,47 @@
           loop: "{{ (borgmatic_existing.files | map(attribute='path') | list) | difference(expected_files) }}"
 
     - name: Validate rendered borgmatic config
-      command: borgmatic config validate
+      ansible.builtin.command: borgmatic config validate
       register: borgmatic_validation
       changed_when: false
       failed_when: borgmatic_validation.rc != 0
 
-    #============================================================================================================
+    # ============================================================================================================
     # init
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Ensure facts directory exists
-      file:
+      ansible.builtin.file:
         path: /etc/ansible/facts.d
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Check if remote fact file exists
-      stat:
+      ansible.builtin.stat:
         path: /etc/ansible/facts.d/borgmatic_repos_init.fact
       register: borgmatic_repos_init_fact
 
     - name: Initialize local fact if missing
-      copy:
+      ansible.builtin.copy:
         dest: /etc/ansible/facts.d/borgmatic_repos_init.fact
         content: '{"repos": []}'
-        mode: '0640'
+        mode: "0640"
       when: not borgmatic_repos_init_fact.stat.exists
 
     - name: Read borgmatic fact
-      slurp:
+      ansible.builtin.slurp:
         src: /etc/ansible/facts.d/borgmatic_repos_init.fact
       register: fact_raw
 
     - name: Parse current items
-      set_fact:
+      ansible.builtin.set_fact:
         init_repos: "{{ fact_raw.content | b64decode | from_json }}"
 
-    - name: ensure correct known hosts
+    - name: Ensure correct known hosts
       block:
-
         - name: Extract SSH hosts from destination paths
-          set_fact:
-            borg_ssh_hosts: "{{ borg_ssh_hosts | default([]) + [(_host_match | default(''))] }}"
+          ansible.builtin.set_fact:
+            borg_ssh_hosts: "{{ borg_ssh_hosts | default([]) + [_host_match | default('')] }}"
           vars:
             _host_match: "{{ item.1.path | regex_search('^ssh://[^@]+@([^:/]+)', '\\1') if item.1.path is match('^ssh://[^@]+@[^:/]+') else None }}"
           when:
@@ -190,12 +188,12 @@
           no_log: true
 
         - name: Remove duplicate hosts
-          set_fact:
+          ansible.builtin.set_fact:
             borg_ssh_hosts: "{{ borg_ssh_hosts | unique }}"
           when: borg_ssh_hosts is defined
 
-        - name: add ssh hosts to _known_host
-          include_tasks: scan_and_add_known_host.yaml
+        - name: Add ssh hosts to _known_host
+          ansible.builtin.include_tasks: scan_and_add_known_host.yaml
           loop: "{{ borg_ssh_hosts | flatten | select('match', '^[^\\s]+$') | list }}"
           loop_control:
             loop_var: item
@@ -207,14 +205,14 @@
       when: (item.enabled | default(false)) | bool
       no_log: true
 
-    #============================================================================================================
+    # ============================================================================================================
     # Schedule
-    #============================================================================================================
+    # ============================================================================================================
     - name: Enable daily cron job for borgmatic profile
-      template:
+      ansible.builtin.template:
         src: run_in_cron.sh
         dest: "/etc/cron.daily/borgmatic_profile_{{ item.name }}.sh"
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
       no_log: true
@@ -225,7 +223,7 @@
         - item.enabled
 
     - name: Disable daily cron job for borgmatic profile
-      file:
+      ansible.builtin.file:
         path: "/etc/cron.daily/borgmatic_profile_{{ item.name }}.sh"
         state: absent
       loop: "{{ borgmatic_backups }}"
@@ -233,10 +231,10 @@
       when: item.schedule is not defined or item.schedule != "daily" or not item.enabled
 
     - name: Enable weekly cron job for borgmatic profile
-      template:
+      ansible.builtin.template:
         src: run_in_cron.sh
         dest: "/etc/cron.weekly/borgmatic_profile_{{ item.name }}.sh"
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
       no_log: true
@@ -247,7 +245,7 @@
         - item.enabled
 
     - name: Disable weekly cron job for borgmatic profile
-      file:
+      ansible.builtin.file:
         path: "/etc/cron.weekly/borgmatic_profile_{{ item.name }}.sh"
         state: absent
       loop: "{{ borgmatic_backups }}"
@@ -255,10 +253,10 @@
       when: item.schedule is not defined or item.schedule != "weekly" or not item.enabled
 
     - name: Enable monthly cron job for borgmatic profile
-      template:
+      ansible.builtin.template:
         src: run_in_cron.sh
         dest: "/etc/cron.monthly/borgmatic_profile_{{ item.name }}.sh"
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
       no_log: true
@@ -269,7 +267,7 @@
         - item.enabled
 
     - name: Disable monthly cron job for borgmatic profile
-      file:
+      ansible.builtin.file:
         path: "/etc/cron.monthly/borgmatic_profile_{{ item.name }}.sh"
         state: absent
       loop: "{{ borgmatic_backups }}"

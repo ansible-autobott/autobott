@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # k9s
 # https://github.com/derailed/k9s/releases  (version -> sha256 of the Linux_amd64 tarball)
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected k9s version
   ansible.builtin.set_fact:
     k9s_version: "{{ (dev_k8s_config['k9s'] | default({}, true)).version | default(k9s_default_version, true) }}"
@@ -16,7 +16,9 @@
       Available: {{ k9s_versions.keys() | list | join(', ') }}
 
 - name: Get current k9s version
-  ansible.builtin.shell: "k9s version --short | grep Version | awk -F ' ' '{print $2}'"
+  ansible.builtin.shell: "set -o pipefail && k9s version --short | grep Version | awk -F ' ' '{print $2}'"
+  args:
+    executable: /bin/bash
   register: k9s_current_version
   failed_when: false
   changed_when: false
@@ -28,7 +30,7 @@
       ansible.builtin.file:
         path: "/tmp/k9s"
         state: directory
-        mode: '0700'
+        mode: "0700"
         owner: root
         group: root
 
@@ -39,7 +41,7 @@
         checksum: "sha256:{{ k9s_versions[k9s_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Unpack k9s
       ansible.builtin.unarchive:
@@ -49,6 +51,7 @@
 
     - name: Move k9s
       ansible.builtin.command: "mv /tmp/k9s/k9s /usr/local/bin/k9s"
+      changed_when: true
 
     - name: Remove k9s download dir
       ansible.builtin.file:
@@ -59,6 +62,6 @@
       ansible.builtin.file:
         path: "/usr/local/bin/k9s"
         state: file
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root

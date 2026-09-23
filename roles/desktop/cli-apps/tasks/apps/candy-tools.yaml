@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # candy-tools — shared apt repo (dibs, linux-candy, todo)
 # https://candy-tools.github.io/debian-repo/
 #
@@ -11,8 +11,8 @@
 #
 # NOTE: the same candy-tools repo also serves go-deps-view, installed by the
 # dev-go role (its own copy of this task installs that subset).
-#============================================================================================================
-- name: Ensure the candy-tools apt repository  # noqa: role-name[path]
+# ============================================================================================================
+- name: Ensure the candy-tools apt repository # noqa: role-name[path]
   ansible.builtin.import_role:
     name: base/linux-apt
     tasks_from: extra_repos

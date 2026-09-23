@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Radicale Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Radicale installation and configuration
   tags:
@@ -45,6 +45,7 @@
         state: directory
         owner: "{{ radicale_config.user.name }}"
         group: "{{ radicale_config.user.group }}"
+        mode: "0755"
       loop:
         - "{{ radicale_config.paths.data_dir }}/collections"
         - "{{ radicale_config.paths.base_dir }}"
@@ -125,14 +126,15 @@
         - reload systemd
         - restart radicale
 
-    #============================================================================================================
+    # ============================================================================================================
     # Git Integration for Collections
-    #============================================================================================================
+    # ============================================================================================================
 
-    - name: Initialize Git repository in collections directory
+    - name: Initialize Git repository in collections directory # noqa: command-instead-of-module (git module cannot init a repo)
       ansible.builtin.command: "git init {{ radicale_config.paths.data_dir }}/collections"
       args:
         creates: "{{ radicale_config.paths.data_dir }}/collections/.git"
+      become: true
       become_user: "{{ radicale_config.user.name }}"
       vars:
         ansible_ssh_pipelining: true
@@ -153,9 +155,9 @@
         group: "{{ radicale_config.user.group }}"
         mode: "0640"
 
-    #============================================================================================================
+    # ============================================================================================================
     # Final File Permission Checks
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Ensure correct permissions for data directory
       ansible.builtin.file:

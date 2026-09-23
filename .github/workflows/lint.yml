@@ -35,6 +35,5 @@ jobs:
       - name: make prepare
         run: make prepare
 
-      # Fails only on violations missing from roles/.ansible-lint-ignore.
       - name: ansible-lint
         run: make lint

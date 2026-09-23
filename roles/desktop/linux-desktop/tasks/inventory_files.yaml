@@ -1,14 +1,15 @@
+---
 # This "function-like" task copies files from an inventory location to the remote
 # giving a lot of power to the inventory to make changes on the target.
 # this should be used scarcely
 
 - name: Copy file with owner and permissions
   ansible.builtin.copy:
-    src:   "{{ lookup( 'first_found', params ) }}"
-    dest:  "{{ item.destination }}"
+    src: "{{ lookup('first_found', params) }}"
+    dest: "{{ item.destination }}"
     owner: "{{ item.user }}"
     group: "{{ item.group }}"
-    mode:  "{{ item.permissions }}"
+    mode: "{{ item.permissions }}"
   vars:
     params:
       files:
@@ -20,11 +21,11 @@
 
 - name: Template file
   ansible.builtin.template:
-    src:   "{{ lookup( 'first_found', params ) }}"
-    dest:  "{{ item.destination }}"
+    src: "{{ lookup('first_found', params) }}"
+    dest: "{{ item.destination }}"
     owner: "{{ item.user }}"
     group: "{{ item.group }}"
-    mode:  "{{ item.permissions }}"
+    mode: "{{ item.permissions }}"
   vars:
     params:
       files:
@@ -38,7 +39,7 @@
 - name: Create link
   ansible.builtin.file:
     src: "{{ item.file_name }}"
-    dest:  "{{ item.destination }}"
+    dest: "{{ item.destination }}"
     state: link
   when: item.state == "link"
 
@@ -47,5 +48,3 @@
     path: "{{ item.destination }}"
     state: absent
   when: item.state == "absent"
-
-

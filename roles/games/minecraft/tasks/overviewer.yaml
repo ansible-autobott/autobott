@@ -19,8 +19,10 @@
 
 - name: Install/update overviewer package
   ansible.builtin.apt:
-    deb: "https://github.com/andresbott/minecraft-overviewer-package/releases/download/v{{ minecraft_config.overviewer.version }}/minecraft-overviewer_{{ minecraft_config.overviewer.version
-      }}_amd64_buster.deb"
+    deb: "{{ overviewer_release_url }}/minecraft-overviewer_{{ overviewer_version }}_amd64_buster.deb"
+  vars:
+    overviewer_version: "{{ minecraft_config.overviewer.version }}"
+    overviewer_release_url: "https://github.com/andresbott/minecraft-overviewer-package/releases/download/v{{ overviewer_version }}"
   when: >
     overviewer.changed or
     overviewer_installed_version is not defined or

@@ -1,11 +1,11 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Java JDKs — install each selected JDK via its catalogued install method.
 #
 # The distinct methods among the selected JDKs are dispatched to
 # tasks/jdks/<method>.yaml; each handler installs every selected JDK that uses
 # it. Today only `apt` (OpenJDK) is implemented.
-#============================================================================================================
+# ============================================================================================================
 - name: Determine the JDK install methods needed
   ansible.builtin.set_fact:
     java_selected_methods: >-

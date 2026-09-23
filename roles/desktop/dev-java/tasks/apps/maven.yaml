@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Apache Maven — build tool (system-wide, installed from the release tarball)
 # https://maven.apache.org/
 #
@@ -7,7 +7,7 @@
 # symlink at it, and links mvn/mvnDebug into /usr/local/bin (already on PATH).
 # Maven's launcher resolves MAVEN_HOME through the symlink, so no env setup is
 # needed. Maven runs against whatever `java` is active — pairs with the jenv tool.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected Maven version
   ansible.builtin.set_fact:
     maven_version: "{{ (dev_java_config['maven'] | default({}, true)).version | default(maven_default_version, true) }}"
@@ -35,7 +35,7 @@
         checksum: "sha512:{{ maven_versions[maven_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Install Maven into /opt
       ansible.builtin.unarchive:

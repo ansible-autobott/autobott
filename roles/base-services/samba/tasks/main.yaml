@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Samba server
-#============================================================================================================
+# ============================================================================================================
 - name: Main Samba block
   tags:
     - samba
@@ -39,9 +39,9 @@
         mode: "0644"
         validate: "testparm -s %s"
 
-    #====================================================
+    # ====================================================
     # Users
-    #====================================================
+    # ====================================================
 
     - name: Check existing users
       ansible.builtin.shell: "id {{ item.name }}"
@@ -82,11 +82,12 @@
       when: item.stat.exists
       no_log: true
 
-    - set_fact:
+    - name: Assume Samba users are up to date
+      ansible.builtin.set_fact:
         samba_users_need_update: false
 
     - name: Compare stored hashes to expected hashes
-      set_fact:
+      ansible.builtin.set_fact:
         samba_users_need_update: true
       vars:
         expected_hash: "{{ item.password | hash('sha1') }}"
@@ -114,14 +115,14 @@
       when: samba_users_need_update
 
     - name: Create Samba users
-      ansible.builtin.shell: "(echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd -s -a '{{ item.name }}'"
+      ansible.builtin.shell: "set -o pipefail && (echo '{{ item.password }}'; echo '{{ item.password }}') | smbpasswd -s -a '{{ item.name }}'"
       args:
         executable: /bin/bash
       loop: "{{ samba_config.users }}"
       register: create_user_output
       changed_when: "'Added user' in create_user_output.stdout"
       no_log: true
-#      when: user_changed.changed
+      #      when: user_changed.changed
       when: samba_users_need_update
 
     - name: Create Samba user hash
@@ -149,9 +150,9 @@
       loop: "{{ samba_config.users }}"
       no_log: true
 
-    #====================================================
+    # ====================================================
     # Shares
-    #====================================================
+    # ====================================================
 
     - name: Create share directories
       ansible.builtin.file:

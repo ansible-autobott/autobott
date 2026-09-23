@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Kavita Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Kavita installation and configuration
   tags:
@@ -39,9 +39,9 @@
         - "{{ kavita_config.paths.data_dir }}"
         - "{{ kavita_config.paths.base_dir }}/install/{{ kavita_config.version }}"
 
-    #====================================================
+    # ====================================================
     # Install
-    #====================================================
+    # ====================================================
 
     - name: Download Kavita tarball
       ansible.builtin.get_url:
@@ -111,7 +111,7 @@
         - reload systemd
         - restart kavita
 
-    - name: Set proper permissions excluding the Kavita binary
+    - name: Set proper permissions excluding the Kavita binary # noqa: no-handler
       ansible.builtin.shell: |
         find {{ kavita_config.paths.base_dir }}/install/latest/ -type d -exec chmod -c 0750 {} +
         find {{ kavita_config.paths.base_dir }}/install/latest/ -type f ! -name 'Kavita' -exec chmod -c 0640 {} +
@@ -124,9 +124,9 @@
         path: "{{ kavita_config.paths.base_dir }}/install/latest/Kavita/Kavita"
         mode: "0750"
 
-    #============================================================================================================
+    # ============================================================================================================
     # Kavita Configuration
-    #============================================================================================================
+    # ============================================================================================================
     - name: Configure kavita settings
       ansible.builtin.lineinfile:
         path: "{{ kavita_config.paths.base_dir }}/install/latest/Kavita/config/appsettings.json"

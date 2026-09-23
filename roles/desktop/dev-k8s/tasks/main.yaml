@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # dev-k8s — Kubernetes developer tools role — main tasks
-#============================================================================================================
+# ============================================================================================================
 - name: Dev Kubernetes apps
   when:
     - run_role_dev_k8s | bool
@@ -28,9 +28,9 @@
     # The whole role is driven by a single tag (role_dev_k8s, on the block above);
     # there are no per-app tags. Running the role tag runs every selected app's
     # (idempotent) tasks.
-    - name: kubectl
+    - name: Kubectl
       ansible.builtin.import_tasks: apps/kubectl.yaml
       when: "'kubectl' in dev_k8s_config"
-    - name: k9s
+    - name: K9s
       ansible.builtin.import_tasks: apps/k9s.yaml
       when: "'k9s' in dev_k8s_config"

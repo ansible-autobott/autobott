@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # input-remapper — remap keys/buttons of input devices
 # https://github.com/sezanzeb/input-remapper
 #
@@ -12,7 +12,7 @@
 # into ~/.config/input-remapper-2/. The package's XDG autostart applies them on the
 # next desktop login. The pinned release + hash are role vars (input_remapper_version /
 # input_remapper_sha256), bumpable via the upgrade-packages workflow.
-#============================================================================================================
+# ============================================================================================================
 - name: Install and configure input-remapper
   vars:
     ir: "{{ linux_desktop_config.input_remapper }}"
@@ -48,7 +48,7 @@
                 checksum: "sha256:{{ input_remapper_sha256 }}"
                 owner: root
                 group: root
-                mode: '0644'
+                mode: "0644"
 
             - name: Install input-remapper (apt resolves dependencies)
               ansible.builtin.apt:
@@ -80,7 +80,7 @@
             state: directory
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: '0755'
+            mode: "0755"
           loop:
             - "/home/{{ linux_desktop_config.user }}/.config/input-remapper-2"
             - "/home/{{ linux_desktop_config.user }}/.config/input-remapper-2/presets"
@@ -91,7 +91,7 @@
             state: directory
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: '0755'
+            mode: "0755"
           loop: "{{ ir.presets }}"
           loop_control:
             label: "{{ item.device }}"
@@ -102,7 +102,7 @@
             dest: "/home/{{ linux_desktop_config.user }}/.config/input-remapper-2/presets/{{ item.device }}/{{ item.name }}.json"
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: '0644'
+            mode: "0644"
           loop: "{{ ir.presets }}"
           loop_control:
             label: "{{ item.device }}/{{ item.name }}"
@@ -113,4 +113,4 @@
             dest: "/home/{{ linux_desktop_config.user }}/.config/input-remapper-2/config.json"
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: '0644'
+            mode: "0644"

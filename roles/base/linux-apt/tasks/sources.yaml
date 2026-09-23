@@ -33,7 +33,7 @@
       retries: 10
       delay: 30
 
-    - name: "Update APT cache after source changes"
+    - name: "Update APT cache after source changes" # noqa: no-handler
       ansible.builtin.apt:
         update_cache: true
         cache_valid_time: 0
@@ -50,7 +50,7 @@
             state: present
             update_cache: true
 
-        - name: "Configure additional repositories"
+        - name: "Configure additional repositories" # noqa: args[module] - types is templated
           ansible.builtin.deb822_repository:
             name: "{{ item.name }}"
             types: "{{ item.types | default('deb') }}"

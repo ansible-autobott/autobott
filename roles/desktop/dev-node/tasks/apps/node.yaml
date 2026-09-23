@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Node (via nvm — Node Version Manager)
 # Special-cased: this file is imported unconditionally by tasks/main.yaml so it
 # can uninstall nvm when 'node' is NOT selected in dev_node_config.
@@ -8,7 +8,7 @@
 # the desktop user; it installs nvm into ~/.nvm. Node itself is then installed
 # via `nvm install <target>` — nvm fetches Node, so the node version is a plain
 # selector: "lts" (default), "node" (latest), or an exact version.
-#============================================================================================================
+# ============================================================================================================
 - name: Install Node Version Manager
   when: "'node' in dev_node_config"
   block:
@@ -42,7 +42,7 @@
         checksum: "sha256:{{ nvm_versions[nvm_version] }}"
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
       when: not nvm_stat.stat.exists
 
     - name: Install nvm
@@ -67,13 +67,13 @@
         state: directory
         owner: "{{ linux_desktop_config.user }}"
         group: "{{ linux_desktop_config.user }}"
-        mode: '0750'
+        mode: "0750"
 
     - name: Copy .bashrc.d template
       ansible.builtin.template:
         src: node/nvm.bashrc
         dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/nvm.bashrc"
-        mode: '0750'
+        mode: "0750"
         owner: "{{ linux_desktop_config.user }}"
         group: "{{ linux_desktop_config.user }}"
 

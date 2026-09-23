@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # claude-code — Anthropic's coding agent CLI
 # https://code.claude.com/docs
 #
@@ -7,7 +7,7 @@
 # version + sha256 (from the release manifest.json). The system-wide binary is
 # root-owned, so Claude Code's self-updater cannot replace it; bump the version
 # here instead.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected Claude Code version
   ansible.builtin.set_fact:
     claude_code_version: "{{ (dev_ai_config['claude-code'] | default({}, true)).version | default(claude_code_default_version, true) }}"
@@ -37,4 +37,4 @@
     checksum: "sha256:{{ claude_code_versions[claude_code_version] }}"
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"

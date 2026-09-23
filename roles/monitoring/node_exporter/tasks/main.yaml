@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Node Exporter Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Node Exporter installation and configuration
   tags:
@@ -40,18 +40,20 @@
         - "{{ node_exporter_config.paths.config_dir }}/rules"
         - "{{ node_exporter_config.paths.base_dir }}/install"
 
-    #====================================================
+    # ====================================================
     # Install
-    #====================================================
+    # ====================================================
 
     - name: Download Node Exporter tarball
       ansible.builtin.get_url:
-        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_config.version }}/node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
-        dest: "{{ node_exporter_config.paths.base_dir }}/install/node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_config.version }}/{{ node_exporter_tarball }}"
+        dest: "{{ node_exporter_config.paths.base_dir }}/install/{{ node_exporter_tarball }}"
         owner: "{{ node_exporter_config.user.name }}"
         group: "{{ node_exporter_config.user.group }}"
         mode: "0644"
         checksum: "sha256:{{ node_exporter_checksums[node_exporter_config.version] }}"
+      vars:
+        node_exporter_tarball: "node_exporter-{{ node_exporter_config.version }}.linux-amd64.tar.gz"
 
     - name: Extract Node Exporter tarball
       ansible.builtin.unarchive:
@@ -99,9 +101,9 @@
       loop: "{{ node_exporter_dirs.files }}"
       when: "'node_exporter-' ~ node_exporter_config.version ~ '.linux-amd64' not in item.path"
 
-    #====================================================
+    # ====================================================
     # Config
-    #====================================================
+    # ====================================================
 
     #    - name: main node_exporter configuration
     #      ansible.builtin.template:
@@ -113,9 +115,9 @@
     #      notify:
     #        - restart node_exporter
 
-    #====================================================
+    # ====================================================
     # Service
-    #====================================================
+    # ====================================================
 
     - name: Setup Node Exporter systemd service
       ansible.builtin.template:
@@ -137,9 +139,9 @@
         - reload systemd
         - restart node_exporter
 
-    #====================================================
+    # ====================================================
     # Textfile Collector
-    #====================================================
+    # ====================================================
 
     - name: Create textfile collector export dirs
       ansible.builtin.file:
@@ -202,16 +204,16 @@
       when:
         - not item.enabled | default(false)
 
-    #====================================================
+    # ====================================================
     # Cron Management
-    #====================================================
+    # ====================================================
 
     - name: Check if node_exporter cron.d file exists
       ansible.builtin.stat:
         path: /etc/cron.d/node_exporter
       register: node_exporter_cron_file
 
-    - name: Check for obsolete cron entries
+    - name: Check for obsolete cron entries # noqa: risky-shell-pipe (the | chars are in the grep regex, not a pipeline)
       ansible.builtin.shell: >
         grep -c -v -E '(Ansible: )|({{ node_exporter_config.textfile_collectors | map(attribute="file") | join(",") }})' /etc/cron.d/node_exporter || true
       register: node_exporter_cron_check
@@ -235,8 +237,9 @@
         weekday: "{{ item.cron.split(' ')[3] }}"
         month: "{{ item.cron.split(' ')[4] }}"
         user: root
-        job: "{{ nep }}/bin/{{ item.file }} > {{ nep }}/export/{{ item.file }}.prom.$$ && mv {{ nep }}/export/{{ item.file }}.prom.$$ {{ nep }}/export/{{ item.file
-          }}.prom && chown {{ node_exporter_config.user.name }}:{{ node_exporter_config.user.group }} {{ nep }}/export/{{ item.file }}.prom"
+        job: "{{ nep }}/bin/{{ item.file }} > {{ nep }}/export/{{ item.file }}.prom.$$
+          && mv {{ nep }}/export/{{ item.file }}.prom.$$ {{ nep }}/export/{{ item.file }}.prom
+          && chown {{ node_exporter_config.user.name }}:{{ node_exporter_config.user.group }} {{ nep }}/export/{{ item.file }}.prom"
         cron_file: node_exporter
       loop: "{{ node_exporter_config.textfile_collectors }}"
       vars:

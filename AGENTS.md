@@ -36,12 +36,9 @@ source venv/bin/activate
 ## Common Commands
 
 ```bash
-# Lint — CI (.github/workflows/lint.yml) runs `make lint` on every PR.
-# Known violations are baselined in roles/.ansible-lint-ignore; only new ones fail.
-make lint              # CI gate
-make lint-all          # strict, ignores the baseline (full cleanup list)
-make lint-fix
-make lint-baseline     # regenerate the baseline after a cleanup
+# Lint (strict) — CI (.github/workflows/lint.yml) runs `make lint` on every PR
+make lint
+make lint-fix          # review the diff: the fixer can reflow Jinja/long lines
 
 # Run playbook against real inventory
 make run INV=../inventory/main.yaml HOST=myhost TAG=role_docker

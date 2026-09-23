@@ -1,11 +1,11 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Golang — installed via godeb (https://github.com/niemeyer/godeb)
 #
 # `version` selects the Go release godeb fetches from Google; there is no
 # per-version sha to pin (godeb handles the download), so golang_versions is a
 # plain allow-list. godeb itself is pinned by golang_godeb_url/golang_godeb_sha256.
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected Golang version
   ansible.builtin.set_fact:
     golang_version: "{{ (dev_go_config['golang'] | default({}, true)).version | default(golang_default_version, true) }}"
@@ -24,7 +24,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0700'
+    mode: "0700"
 
 # ============================== godeb ============================== #
 - name: Download godeb
@@ -34,7 +34,7 @@
     checksum: "sha256:{{ golang_godeb_sha256 }}"
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Install godeb
   ansible.builtin.unarchive:
@@ -43,27 +43,31 @@
     remote_src: true
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
   args:
     creates: "/usr/local/bin/godeb"
 
 # ============================== Go ============================== #
 - name: Check if go is installed
   ansible.builtin.shell:
-    cmd: go version 2>&1 | head -1 | cut -d '"' -f 2
+    cmd: set -o pipefail && go version 2>&1 | head -1 | cut -d '"' -f 2
+    executable: /bin/bash
   register: result
   check_mode: false
   changed_when: false
   failed_when: result.rc != 0 and result.rc != 127
 
 - name: Get current go version
-  ansible.builtin.shell: "go version | awk '{print $3}' | cut -c3-"
+  ansible.builtin.shell: "set -o pipefail && go version | awk '{print $3}' | cut -c3-"
+  args:
+    executable: /bin/bash
   register: go_current_version
   failed_when: false
   changed_when: false
 
 - name: Install Go if not installed or outdated
-  ansible.builtin.shell: "/usr/local/bin/godeb install {{ golang_version }}"
+  ansible.builtin.command: "/usr/local/bin/godeb install {{ golang_version }}"
+  changed_when: true
   when: >
     go_current_version.stdout == "" or
     go_current_version.stdout is version( golang_version, '<')

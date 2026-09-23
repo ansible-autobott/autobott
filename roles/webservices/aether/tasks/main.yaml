@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Aether Role
-#============================================================================================================
+# ============================================================================================================
 # Installs the aether music server from the upstream .deb (which ships the systemd unit, the aether system
 # user and /var/lib/aether) and then overwrites /etc/aether/config.yaml with a custom, managed config.
 
@@ -100,12 +100,11 @@
     - name: Install or update aether
       when: aether_current_version.stdout != aether_config.version
       block:
-
         - name: Create aether download directory
           ansible.builtin.file:
             path: /tmp/aether
             state: directory
-            mode: 0700
+            mode: "0700"
             owner: root
             group: root
 
@@ -114,7 +113,7 @@
             url: "https://github.com/andresbott/aether/releases/download/v{{ aether_config.version }}/{{ aether_deb_file }}"
             dest: "/tmp/aether/{{ aether_deb_file }}"
             checksum: "sha256:{{ aether_checksums[aether_config.version] }}"
-            mode: 0600
+            mode: "0600"
 
         - name: Install aether deb
           ansible.builtin.apt:

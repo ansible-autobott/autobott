@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # pi — pi coding agent
 # https://github.com/badlogic/pi-mono/releases  (version -> sha256 of pi-linux-x64.tar.gz)
 #
@@ -7,7 +7,7 @@
 # from beside itself (package.json, themes, wasm, native modules), so it cannot
 # be copied out alone. Extracts it to /opt/pi-<version>, points a stable /opt/pi
 # symlink at it, and links the binary into /usr/local/bin (already on PATH).
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected pi version
   ansible.builtin.set_fact:
     pi_version: "{{ (dev_ai_config['pi'] | default({}, true)).version | default(pi_default_version, true) }}"
@@ -35,7 +35,7 @@
         checksum: "sha256:{{ pi_versions[pi_version] }}"
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Create the pi install dir
       ansible.builtin.file:
@@ -43,7 +43,7 @@
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Install pi into /opt
       ansible.builtin.unarchive:

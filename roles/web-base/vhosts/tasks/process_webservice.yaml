@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Process vhosts
-#============================================================================================================
+# ============================================================================================================
 
 # This "fucntion" will check (based on a hash of the configuration) if there has been a change in the config
 # or if we can skip a specific web service all together. this speeds up role execution considerably
@@ -33,9 +33,9 @@
     existing_webservice_hash: "{{ existing_hash_file.content | b64decode }}"
   when: hash_file_stat.stat.exists
 
-#==================================
+# ==================================
 # Users
-#==================================
+# ==================================
 - name: "Perform changes on  {{ webservice.name }}"
   when: existing_webservice_hash is not defined or existing_webservice_hash != webservice_hash
   block:

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Mealie  Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Role execution flag
 run_role_mealie: false
@@ -78,17 +78,17 @@ mealie_themes:
     dark_warning: "#6F6639"
     dark_error: "#6E3E38"
   muted:
-    light_primary:  "#E3A24C"
-    light_accent:   "#1C849F"
+    light_primary: "#E3A24C"
+    light_accent: "#1C849F"
     light_secondary: "#9B3B56"
-    light_success:  "#5D8E3F"
-    light_info:     "#1B5CA6"
-    light_warning:  "#E3B44B"
-    light_error:    "#D77071"
-    dark_primary:   "#C38A41"
-    dark_accent:    "#176D85"
+    light_success: "#5D8E3F"
+    light_info: "#1B5CA6"
+    light_warning: "#E3B44B"
+    light_error: "#D77071"
+    dark_primary: "#C38A41"
+    dark_accent: "#176D85"
     dark_secondary: "#7D3247"
-    dark_success:   "#4E7539"
-    dark_info:      "#175394"
-    dark_warning:   "#C2923E"
-    dark_error:     "#B95D5D"
+    dark_success: "#4E7539"
+    dark_info: "#175394"
+    dark_warning: "#C2923E"
+    dark_error: "#B95D5D"

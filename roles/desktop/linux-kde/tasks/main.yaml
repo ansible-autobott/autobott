@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # linux_kde Role - Main Tasks
-#============================================================================================================
+# ============================================================================================================
 - name: Main linux_kde block
   tags:
     - linux_kde
@@ -18,78 +18,78 @@
     # (vars/trixie.yaml) and Ubuntu resolute (vars/resolute.yaml). Any other
     # release - the Plasma 5 ones included - has no vars file and fails here.
     - name: Load package names based on distro relese
-      include_vars: "{{ item }}"
+      ansible.builtin.include_vars: "{{ item }}"
       with_first_found:
         - "{{ ansible_facts.distribution_release }}.yaml"
 
-    - name: Installing KDE
-      apt:
+    - name: Installing KDE # noqa: package-latest (desktop keeps KDE up to date on each run)
+      ansible.builtin.apt:
         name: "{{ kde_packages }}"
         state: latest
         #    install_recommends: no
-        update_cache: yes
+        update_cache: true
 
-    - name: Installing KDE theme packages
-      apt:
+    - name: Installing KDE theme packages # noqa: package-latest (desktop keeps KDE up to date on each run)
+      ansible.builtin.apt:
         name: "{{ kde_theme_packages }}"
         state: latest
         #    install_recommends: no
-        update_cache: yes
+        update_cache: true
 
     - name: Purge packages from kde
-      apt:
+      ansible.builtin.apt:
         name: "{{ kde_packages_purge }}"
         state: absent
-        purge: yes
+        purge: true
 
     - name: Remove dependencies that are no longer required
-      apt:
-        autoremove: yes
+      ansible.builtin.apt:
+        autoremove: true
 
-    #============================================================================================================
+    # ============================================================================================================
     # kde menu actions
-    #============================================================================================================
+    # ============================================================================================================
     - name: Kde menu action block
       when: linux_kde_config.add_kde_menu_actions
       block:
         - name: Install needed packages
-          apt:
+          ansible.builtin.apt:
             name:
               - qdbus
               - imagemagick
             state: present
-            update_cache: yes
+            update_cache: true
 
-        - name: copy menu action binaries
-          copy:
-            src:          "menu_actions/{{ item }}"
-            dest:         "/usr/local/bin/{{ item }}"
-            owner:        root
-            group:        root
-            mode:         0755
+        - name: Copy menu action binaries
+          ansible.builtin.copy:
+            src: "menu_actions/{{ item }}"
+            dest: "/usr/local/bin/{{ item }}"
+            owner: root
+            group: root
+            mode: "0755"
           with_items:
             - "kim_convert"
             - "kim_flipflop"
             - "kim_rotate"
             - "kim_treatment"
 
-        - name: copy menu action launchers
-          copy:
-            src:          "menu_actions/{{ item }}"
-            dest:         "/usr/share/kservices5/ServiceMenus/{{ item }}"
-            owner:        root
-            group:        root
-            mode:         0644
+        - name: Copy menu action launchers
+          ansible.builtin.copy:
+            src: "menu_actions/{{ item }}"
+            dest: "/usr/share/kservices5/ServiceMenus/{{ item }}"
+            owner: root
+            group: root
+            mode: "0644"
           with_items:
             - "kim_convertandrotate.desktop"
 
         - name: Run apt-get clean
-          apt:
-            clean: yes
+          ansible.builtin.apt:
+            clean: true
 
-    #============================================================================================================
+    # ============================================================================================================
     # KDE style customizations
-    #============================================================================================================
+    # ============================================================================================================
     # Applies the per-user desktop styling for the primary desktop user: it pushes
     # the kwriteconfig6 script (files/kwriteconfig6.sh) and runs it as that user
     # so it writes to their ~/.config. Some settings only take effect after a
@@ -322,9 +322,9 @@
                 - konsoleui.rc
                 - sessionui.rc
 
-    #============================================================================================================
+    # ============================================================================================================
     # KDE panel layout template
-    #============================================================================================================
+    # ============================================================================================================
     # Installs a system-wide Plasma "Add Panel" layout template so the desktop
     # user can add the pre-defined "AutoBott Panel" when editing KDE. Gated by
     # add_kde_style. The files are root-owned under
@@ -345,9 +345,9 @@
             mode: "0644"
             directory_mode: "0755"
 
-    #============================================================================================================
+    # ============================================================================================================
     # Klassy window decoration / application style
-    #============================================================================================================
+    # ============================================================================================================
     # Part of add_kde_style: installs the klassy package from the autobott apt
     # repo; the repo itself comes from base/linux-apt's extra repositories catalog
     # (works regardless of run_role_linux_apt), which points apt at the suite
@@ -367,7 +367,7 @@
       vars:
         kde_style_home: "/home/{{ linux_desktop_config.user }}"
       block:
-        - name: Ensure the autobott apt repository  # noqa: role-name[path]
+        - name: Ensure the autobott apt repository # noqa: role-name[path]
           ansible.builtin.import_role:
             name: base/linux-apt
             tasks_from: extra_repos
@@ -432,9 +432,9 @@
           # Re-applying the same scheme is not a change.
           changed_when: false
 
-    #============================================================================================================
+    # ============================================================================================================
     # Twemoji colour emoji font
-    #============================================================================================================
+    # ============================================================================================================
     # Part of add_kde_style: installs the Twemoji colour emoji font (Mozilla's
     # COLR/CPAL build) system-wide under /usr/local/share/fonts and points
     # fontconfig at it as the preferred "emoji" family, replacing the stock Noto
@@ -478,14 +478,14 @@
 
         # Inline (not a handler) on purpose: the refresh belongs with the font /
         # config change that triggered it, mirroring the Nerd Font install.
-        - name: Refresh the system font cache  # noqa: no-handler
+        - name: Refresh the system font cache # noqa: no-handler
           ansible.builtin.command: fc-cache -f
           when: twemoji_download is changed or twemoji_fontconfig is changed
           changed_when: true
 
-    #============================================================================================================
+    # ============================================================================================================
     # GTK global menu (appmenu-gtk-module) - Debian 13 (trixie) only
-    #============================================================================================================
+    # ============================================================================================================
     # Installs the GTK appmenu modules and wires up GTK_MODULES so GTK apps export
     # their menus over D-Bus for the Plasma "Global Menu" widget. The widget itself
     # is a per-user Plasma panel setting and is not managed here. Skipped on any
@@ -511,7 +511,7 @@
             state: directory
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: 0755
+            mode: "0755"
           loop:
             - "{{ kde_menu_home }}/.config"
             - "{{ kde_menu_home }}/.config/environment.d"
@@ -523,7 +523,7 @@
             content: "GTK_MODULES=appmenu-gtk-module\n"
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: 0644
+            mode: "0644"
 
         - name: Load the appmenu module for GTK3 apps
           community.general.ini_file:
@@ -534,21 +534,21 @@
             no_extra_spaces: true
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: 0644
+            mode: "0644"
 
         - name: Load the appmenu module for GTK2 apps
           ansible.builtin.lineinfile:
             path: "{{ kde_menu_home }}/.gtkrc-2.0"
-            regexp: '^gtk-modules='
+            regexp: "^gtk-modules="
             line: 'gtk-modules="appmenu-gtk-module"'
             create: true
             owner: "{{ linux_desktop_config.user }}"
             group: "{{ linux_desktop_user_main_group }}"
-            mode: 0644
+            mode: "0644"
 
-    #============================================================================================================
+    # ============================================================================================================
     # Spectacle screenshot shortcuts
-    #============================================================================================================
+    # ============================================================================================================
     # Configures Spectacle (installed with kde_packages) for the primary desktop user:
     # Meta+Shift+S captures a region, Meta+Shift+W the active window. The capture is
     # saved to ~/Screenshots as JPG, copied to the clipboard, and a notification plays
@@ -589,11 +589,24 @@
             - [--file, spectacle.notifyrc, --group, Event/newScreenshotSaved, --key, Action, "Popup|Sound"]
             - [--file, spectacle.notifyrc, --group, Event/newScreenshotSaved, --key, Sound, screen-capture]
             # free Meta+Shift+S from the launch action before assigning it to the region capture.
-            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
-               --key, _launch, "Print"]
-            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
-               --key, RectangularRegionScreenShot, "Meta+Shift+S"]
-            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop,
-               --key, ActiveWindowScreenShot, "Meta+Shift+W"]
+            - [--file, kglobalshortcutsrc, --group, services, --group, org.kde.spectacle.desktop, --key, _launch, "Print"]
+            - - --file
+              - kglobalshortcutsrc
+              - --group
+              - services
+              - --group
+              - org.kde.spectacle.desktop
+              - --key
+              - RectangularRegionScreenShot
+              - "Meta+Shift+S"
+            - - --file
+              - kglobalshortcutsrc
+              - --group
+              - services
+              - --group
+              - org.kde.spectacle.desktop
+              - --key
+              - ActiveWindowScreenShot
+              - "Meta+Shift+W"
           loop_control:
             label: "{{ item[1] }} {{ item[-2] }}={{ item[-1] }}"

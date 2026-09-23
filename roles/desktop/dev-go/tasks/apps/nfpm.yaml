@@ -1,8 +1,8 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # nfpm — deb/rpm packager for Go projects (installed from the upstream .deb)
 # https://github.com/goreleaser/nfpm/releases
-#============================================================================================================
+# ============================================================================================================
 - name: Resolve the selected nfpm version
   ansible.builtin.set_fact:
     nfpm_version: "{{ (dev_go_config['nfpm'] | default({}, true)).version | default(nfpm_default_version, true) }}"
@@ -21,7 +21,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0700'
+    mode: "0700"
 
 - name: Download nfpm
   ansible.builtin.get_url:
@@ -30,7 +30,7 @@
     checksum: "sha256:{{ nfpm_versions[nfpm_version] }}"
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
 
 - name: Install nfpm
   ansible.builtin.apt:

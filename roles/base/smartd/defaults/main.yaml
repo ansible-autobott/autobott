@@ -1,9 +1,9 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Smartd
-#============================================================================================================
+# ============================================================================================================
 # Flag to disable the role
-run_role_smartd: False
+run_role_smartd: false
 # set to true to uninstall
 remove_smartd: false
 
@@ -27,7 +27,6 @@ smartd_defaults:
   # if you set something like root, and have nullmailer properly configured the admin will get the emails
   # email can be a coma separated list without spaces
   email: root
-
 
   selftest:
     short_weekly: true

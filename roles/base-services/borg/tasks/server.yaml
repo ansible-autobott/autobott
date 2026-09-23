@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Borg Server Configuration
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Borg Server Block
   when:
@@ -47,8 +47,8 @@
         block: |
           # BORG: List of individual keys with access to specific repos, one key per access
           {% for profile in borg_config.server.repos %}
-          {% for key in profile.ssh_keys %}          
-          command="cd {{ borg_config.server.data_directory }} && borg serve {% if key.permissions is defined  %}--permissions {{ key.permissions }}  {% endif -%}
+          {% for key in profile.ssh_keys %}
+          command="cd {{ borg_config.server.data_directory }} && borg serve {% if key.permissions is defined %}--permissions {{ key.permissions }}  {% endif -%}
           --restrict-to-repository {{ borg_config.server.data_directory }}/{{ profile.name -}}
           " {{ key.public_key }}
           {% endfor %}

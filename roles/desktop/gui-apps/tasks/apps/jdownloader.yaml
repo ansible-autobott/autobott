@@ -1,5 +1,5 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # JDownloader
 #
 # Deployed as the official portable bootstrap jar rather than the install4j
@@ -12,7 +12,7 @@
 # Installed in the desktop user's home: JDownloader self-updates and keeps its
 # config, logs and downloads list inside the directory it runs from, so it is
 # inherently a per-user app. Only the JRE is installed system-wide.
-#============================================================================================================
+# ============================================================================================================
 - name: Set merged jdownloader configuration
   ansible.builtin.set_fact:
     jdownloader_config: "{{ jdownloader_defaults | combine(gui_apps_config['jdownloader'] | default({}, true), recursive=true) }}"
@@ -34,7 +34,7 @@
     state: directory
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
-    mode: '0755'
+    mode: "0755"
   loop:
     - "{{ jdownloader_home }}"
     - "{{ jdownloader_apps_dir }}"
@@ -47,7 +47,7 @@
     dest: "{{ jdownloader_home }}/JDownloader.jar"
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
-    mode: '0644'
+    mode: "0644"
 
 # Path= sets the working dir, which the jar resolves its install root from.
 # Icon: the jar only unpacks its artwork on first launch, so Icon= is a bare
@@ -57,7 +57,7 @@
     dest: "{{ jdownloader_apps_dir }}/jdownloader.desktop"
     owner: "{{ linux_desktop_config.user }}"
     group: "{{ linux_desktop_user_main_group }}"
-    mode: '0644'
+    mode: "0644"
     content: |
       [Desktop Entry]
       Name=JDownloader

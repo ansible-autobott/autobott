@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Fe26 Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Fe26 installation and configuration
   tags:
@@ -33,7 +33,7 @@
         state: directory
         owner: "{{ fe26_config.user.name }}"
         group: "{{ fe26_config.user.group }}"
-        mode: 0750
+        mode: "0750"
       loop:
         - "{{ fe26_config.paths.base_dir }}"
         - "{{ fe26_config.paths.data_dir }}"
@@ -45,7 +45,7 @@
         dest: "{{ fe26_config.paths.binaries_dir }}/fe26-{{ fe26_config.version }}"
         owner: "{{ fe26_config.user.name }}"
         group: "{{ fe26_config.user.group }}"
-        mode: 0750
+        mode: "0750"
         checksum: "sha256:{{ fe26_checksums[fe26_config.version] }}"
         timeout: 300
       notify: restart fe26

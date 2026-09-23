@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Monit  Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Role execution flag
 run_role_monit: false
@@ -27,13 +27,13 @@ monit_defaults:
   checks:
     # main system alerts, cpu/disk/memory
     system:
-      enabled: True
+      enabled: true
       mem_limit: 80%
       swap_limit: 20%
-    ssh: True
-    mariadb: False
+    ssh: true
+    mariadb: false
     caddy:
-      enabled: False
+      enabled: false
       port: 80
 
   external_hosts: []

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Homepage Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Homepage installation and configuration
   tags:
@@ -53,6 +53,7 @@
         state: directory
         owner: "{{ homepage_config.user.name }}"
         group: "{{ homepage_config.user.group }}"
+        mode: "0755"
       loop:
         - "{{ homepage_config.paths.base_dir }}/config"
         - "{{ homepage_config.paths.base_dir }}/images"
@@ -62,6 +63,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: "{{ homepage_config.paths.base_dir }}/images/{{ item | basename }}"
+        mode: "0644"
       loop: >-
         {{
           (
@@ -80,6 +82,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
+        mode: "0644"
       loop: >-
         {{
           (
@@ -98,6 +101,7 @@
       ansible.builtin.copy:
         src: "{{ item }}"
         dest: "{{ homepage_config.paths.base_dir }}/icons/{{ item | basename }}"
+        mode: "0644"
       loop: >-
         {{
           (
@@ -128,7 +132,7 @@
             )
           }}
         dest: "{{ homepage_config.paths.base_dir }}/config/{{ item }}"
-        mode: '0600'
+        mode: "0600"
         owner: "{{ homepage_config.user.name }}"
         group: "{{ homepage_config.user.group }}"
       notify: restart homepage
@@ -139,7 +143,6 @@
         - bookmarks.yaml
         - widgets.yaml
         - services.yaml
-
 
     - name: "Create files needed for run docker"
       ansible.builtin.template:

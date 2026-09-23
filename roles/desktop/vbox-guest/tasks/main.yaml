@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # vbox_guest Role - Main Tasks
-#============================================================================================================
+# ============================================================================================================
 - name: Main vbox_guest block
   tags:
     - vbox_guest
@@ -22,7 +22,7 @@
     - name: Get VirtualBox version from host additions package
       ansible.builtin.command: VBoxControl --version
       register: vbox_version
-      failed_when: vbox_version.rc not in [0,1]  # may fail if not installed yet
+      failed_when: vbox_version.rc not in [0,1] # may fail if not installed yet
       changed_when: false
       ignore_errors: true
 
@@ -34,15 +34,16 @@
       ansible.builtin.get_url:
         url: "https://download.virtualbox.org/virtualbox/{{ vbox_version }}/VBoxGuestAdditions_{{ vbox_version }}.iso"
         dest: "/tmp/VBoxGuestAdditions.iso"
-        mode: '0644'
+        mode: "0644"
 
     - name: Create mount point
       ansible.builtin.file:
         path: /mnt/vbox
         state: directory
+        mode: "0755"
 
     - name: Mount VBoxGuestAdditions ISO
-      ansible.builtin.mount:
+      ansible.posix.mount:
         path: /mnt/vbox
         src: /tmp/VBoxGuestAdditions.iso
         fstype: iso9660
@@ -52,10 +53,11 @@
       ansible.builtin.command: sh /mnt/vbox/VBoxLinuxAdditions.run
       register: vboxadd_output
       failed_when: vboxadd_output.rc not in [0, 2]
+      changed_when: true
       become: true
 
     - name: Unmount ISO
-      ansible.builtin.mount:
+      ansible.posix.mount:
         path: /mnt/vbox
         state: unmounted
 

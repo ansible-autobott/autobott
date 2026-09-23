@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Minecraft Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Minecraft installation and configuration
   tags:
@@ -27,11 +27,11 @@
       ansible.builtin.apt:
         name: "{{ minecraft_java_package }}"
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Remove unnecessary packages
       ansible.builtin.apt:
-        autoremove: yes
+        autoremove: true
 
     - name: Create Minecraft group
       ansible.builtin.group:
@@ -52,7 +52,7 @@
         state: directory
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0750'
+        mode: "0750"
       loop:
         - "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
         - "{{ minecraft_config.paths.base }}/active"
@@ -64,14 +64,14 @@
         dest: "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0750'
+        mode: "0750"
         force: false
       notify: restart minecraft
 
     - name: Find downloaded JAR file
       ansible.builtin.find:
         paths: "{{ minecraft_config.paths.base }}/{{ minecraft_config.version }}"
-        patterns: '*.jar'
+        patterns: "*.jar"
       register: minecraft_jar
 
     - name: Link active server.jar
@@ -81,9 +81,9 @@
         state: link
       notify: restart minecraft
 
-    #============================================================================================================
+    # ============================================================================================================
     # Configuration
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Create EULA file
       ansible.builtin.copy:
@@ -93,7 +93,7 @@
           eula=true
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0640'
+        mode: "0640"
 
     - name: Generate Minecraft config files
       ansible.builtin.template:
@@ -101,7 +101,7 @@
         dest: "{{ minecraft_config.paths.base }}/active/{{ item }}"
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0640'
+        mode: "0640"
       loop:
         - server.properties
         - whitelist.json
@@ -116,16 +116,16 @@
         dest: "{{ minecraft_config.paths.base }}/active/{{ item }}.orig"
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0640'
+        mode: "0640"
       loop:
         - server.properties
         - whitelist.json
         - ops.json
       notify: restart minecraft
 
-    #============================================================================================================
+    # ============================================================================================================
     # Clean Old Versions
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Find non-active Minecraft installs
       ansible.builtin.find:
@@ -145,9 +145,9 @@
         state: absent
       loop: "{{ minecraft_installs.files }}"
 
-    #============================================================================================================
+    # ============================================================================================================
     # Plugin Management
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Install plugins
       ansible.builtin.copy:
@@ -155,7 +155,7 @@
         dest: "{{ minecraft_config.paths.base }}/active/plugins/{{ minecraft_plugin_data[item].file }}"
         owner: "{{ minecraft_config.user.name }}"
         group: "{{ minecraft_config.user.group }}"
-        mode: '0640'
+        mode: "0640"
       loop: "{{ minecraft_config.plugins.enable }}"
       notify: restart minecraft
 
@@ -173,9 +173,9 @@
       loop: "{{ minecraft_config.plugins.remove }}"
       notify: restart minecraft
 
-    #============================================================================================================
+    # ============================================================================================================
     # Minecraft overviewer
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Minecraft overviewer block
       ansible.builtin.import_tasks: overviewer.yaml
@@ -183,9 +183,9 @@
         - minecraft_config.overviewer.enabled is defined
         - minecraft_config.overviewer.enabled
 
-    #============================================================================================================
+    # ============================================================================================================
     # Systemd Service
-    #============================================================================================================
+    # ============================================================================================================
 
     - name: Setup Minecraft systemd service
       ansible.builtin.template:
@@ -205,9 +205,9 @@
         daemon_reload: true
       notify: restart minecraft
 
-#============================================================================================================
+# ============================================================================================================
 # remove
-#============================================================================================================
+# ============================================================================================================
 - name: Manage Minecraft service and cron
   tags:
     - minecraft
@@ -217,7 +217,7 @@
       ansible.builtin.set_fact:
         minecraft_config: "{{ minecraft_defaults | combine(minecraft, recursive=True) }}"
 
-    - name: Check if Minecraft systemd service exists and its status
+    - name: Check if Minecraft systemd service exists and its status # noqa: command-instead-of-module (read-only is-active query)
       ansible.builtin.command: systemctl is-active minecraft
       register: minecraft_status
       failed_when: false

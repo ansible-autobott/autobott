@@ -1,5 +1,6 @@
-
-- set_fact:
+---
+- name: Set repo name and config path
+  ansible.builtin.set_fact:
     repo_name: "{{ item.name }}"
     config_path: "/etc/borgmatic.d/{{ item.name }}.yaml"
 
@@ -8,4 +9,3 @@
   loop: "{{ item.destination }}"
   loop_control:
     loop_var: destination
-

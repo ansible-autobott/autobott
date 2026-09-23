@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Phpmyadmin Role
-#============================================================================================================
+# ============================================================================================================
 
 - name: Main Phpmyadmin installation and configuration
   tags:
@@ -20,7 +20,7 @@
         update_cache: false
 
     - name: Fail if blowfish_secret is not set or is empty
-      fail:
+      ansible.builtin.fail:
         msg: "The variable 'phpmyadmin_config.blowfish_secret' is required and cannot be empty."
       when: phpmyadmin_config.blowfish_secret is not defined or phpmyadmin_config.blowfish_secret | length == 0
 

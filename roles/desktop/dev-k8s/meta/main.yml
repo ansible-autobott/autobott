@@ -1,3 +1,3 @@
 ---
 dependencies:
-  - role: desktop/linux-desktop
+  - role: desktop/linux-desktop # noqa: role-name[path]

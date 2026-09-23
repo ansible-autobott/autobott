@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # dev-java — Java developer tools role — defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Master on/off for the whole role
 run_role_dev_java: true
@@ -26,7 +26,7 @@ dev_java_tools:
   - jenv
   - maven
 
-#============================================================================================================
+# ============================================================================================================
 # JDK catalog
 #
 # Every identifier allowed in dev_java_config.java_versions, mapped to its install
@@ -34,7 +34,7 @@ dev_java_tools:
 # tasks/jdks/<m>.yaml handler; no other changes are needed.
 #   apt method -> installs `package` from the distro repos.
 # Debian 13 ships only openjdk-21 and openjdk-25 (17 is bookworm-only).
-#============================================================================================================
+# ============================================================================================================
 java_available_jdks:
   openjdk-21-jdk:
     method: apt
@@ -42,15 +42,15 @@ java_available_jdks:
   openjdk-25-jdk:
     method: apt
     package: openjdk-25-jdk
-  # Future (not implemented yet), e.g. an Oracle JDK downloaded as a .deb:
-  # oracle-jdk-25:
-  #   method: oracle
-  #   url: "https://download.oracle.com/java/25/latest/jdk-25_linux-x64_bin.deb"
-  #   sha256: "..."
+# Future (not implemented yet), e.g. an Oracle JDK downloaded as a .deb:
+# oracle-jdk-25:
+#   method: oracle
+#   url: "https://download.oracle.com/java/25/latest/jdk-25_linux-x64_bin.deb"
+#   sha256: "..."
 
-#============================================================================================================
+# ============================================================================================================
 # Per-tool version catalogs (version -> checksum; the sha is a separate lookup)
-#============================================================================================================
+# ============================================================================================================
 
 # ----- jenv (Java version manager) -----
 # https://github.com/jenv/jenv/releases  (version -> sha256 of the release tarball)

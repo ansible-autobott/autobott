@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Alertmanager Role Defaults
-#============================================================================================================
+# ============================================================================================================
 
 # Role execution control
 run_role_alertmanager: false
@@ -32,13 +32,13 @@ alertmanager_defaults:
 
   receivers: [] # a list of receivers that will be put "as is" in the alertmanager configuration,
   # see https://prometheus.io/docs/alerting/latest/configuration/#receiver for details
-  #- name: sample-email
+  # - name: sample-email
   #  webhook_configs:
   #    - url: https://my-hook.com
 
   routes: [] # a list of alert routes that will be put "as is" in the alertmanager configuration,
   # see https://prometheus.io/docs/alerting/latest/configuration/#route for details
-  #- receiver: 'sample-email'
+  # - receiver: 'sample-email'
   #  group_wait: 30s
   #  group_by: [cluster, alertname]
   #  routes:
@@ -50,7 +50,7 @@ alertmanager_defaults:
   #        - service=~"mysql|cassandra"
   inhibit_rules: [] # a list of inhibit_rules that will be put "as is" in the alertmanager configuration,
   # see https://prometheus.io/docs/alerting/latest/configuration/#inhibit_rule for details
-  #- source_match:
+  # - source_match:
   #    severity: 'critical'
   #  target_match:
   #    severity: 'warning'

@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # AETHER Role Defaults
-#============================================================================================================
+# ============================================================================================================
 # Aether is a music server (https://github.com/andresbott/aether). It is installed from the upstream
 # .deb, which ships its own systemd unit, creates the `aether` system user and the /var/lib/aether data
 # directory, and drops a default config at /etc/aether/config.yaml. This role only downloads/installs that
@@ -129,8 +129,8 @@ aether_defaults:
       parallelism: 2
       queue_size: 20
       history_size: 50
-      tag_read_workers: 0   # 0 -> derived from the CPU count
-      log_dir: ""           # empty -> <data_dir>/task-logs
+      tag_read_workers: 0 # 0 -> derived from the CPU count
+      log_dir: "" # empty -> <data_dir>/task-logs
     artist_images:
       # Artist image fetching. Provide at least one provider key to enable it. A value starting with
       # "@" is read from that file's content, e.g. "@/etc/aether/fanart.api.key".

@@ -17,6 +17,7 @@
   ansible.builtin.template:
     src: "php-fpm-pool.ini.j2"
     dest: "/etc/php/{{ php_vers }}/fpm/pool.d/{{ webservice.name }}.conf"
+    mode: "0644"
   notify: restart web server
   when:
     - php_vers != ""

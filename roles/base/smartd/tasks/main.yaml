@@ -1,55 +1,53 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # Smartd
-#============================================================================================================
-- name: main smartd block
+# ============================================================================================================
+- name: Main smartd block
   tags:
     - smartd
   when:
     - run_role_smartd | bool
     - not remove_smartd | bool
   block:
-
     - name: Set merged smartd configuration
       ansible.builtin.set_fact:
         smartd_config: "{{ smartd_defaults | combine(smartd, recursive=true) }}"
 
     - name: Install smartmontools
-      apt:
+      ansible.builtin.apt:
         name:
           - smartmontools
           - unzip
           - jq
         state: present
-        update_cache: yes
+        update_cache: true
 
-    - name: configure /etc/smartd.conf
-      template:
+    - name: Configure /etc/smartd.conf
+      ansible.builtin.template:
         src: smartd.conf
         dest: /etc/smartd.conf
-        mode: '0640' # make not world readable because email is secret
+        mode: "0640" # make not world readable because email is secret
         owner: root
         group: root
 
     - name: Enable service smartd
-      service:
+      ansible.builtin.service:
         name: smartd
-        enabled: yes
+        enabled: true
         state: started
       changed_when: false
 
-#============================================================================================================
-# NanoSmart
-#============================================================================================================
-    - name: run steps for nanoSmart
+    # ============================================================================================================
+    # NanoSmart
+    # ============================================================================================================
+    - name: Run steps for nanoSmart
       when: smartd_config.nanoSmart.enabled | bool
       block:
-
         - name: Ensure install directory exists
-          file:
+          ansible.builtin.file:
             path: "{{ smartd_config.nanoSmart.path }}/data"
             state: directory
-            mode: '0755'
+            mode: "0755"
 
         - name: Check if nanoSmart is already installed
           ansible.builtin.stat:
@@ -57,14 +55,16 @@
           register: nanosmart_dir
 
         - name: Download nanoSmart zip
-          get_url:
-            url: "https://github.com/ansible-autobott/nanoSmart/releases/download/{{ smartd_config.nanoSmart.version }}/nanoSmart-{{ smartd_config.nanoSmart.version }}.zip"
+          ansible.builtin.get_url:
+            url: "https://github.com/ansible-autobott/nanoSmart/releases/download/{{ nanosmart_version }}/nanoSmart-{{ nanosmart_version }}.zip"
             dest: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
-            mode: '0644'
+            mode: "0644"
+          vars:
+            nanosmart_version: "{{ smartd_config.nanoSmart.version }}"
           when: not nanosmart_dir.stat.exists
 
         - name: Unpack nanoSmart zip
-          unarchive:
+          ansible.builtin.unarchive:
             src: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
             dest: "{{ smartd_config.nanoSmart.path }}"
             remote_src: true
@@ -72,95 +72,92 @@
           when: not nanosmart_dir.stat.exists
 
         - name: Remove downloaded nanoSmart zip
-          file:
+          ansible.builtin.file:
             path: "/tmp/nanosmart-{{ smartd_config.nanoSmart.version }}.zip"
             state: absent
           changed_when: false
 
         - name: Deploy smart_monitor config
-          template:
+          ansible.builtin.template:
             src: smart_monitor.cfg
             dest: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.conf"
-            mode: '0644'
+            mode: "0644"
 
         - name: Create symlink for the webui
-          file:
+          ansible.builtin.file:
             src: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/webui"
             dest: "{{ smartd_config.nanoSmart.path }}/webui"
             state: link
             force: true
 
         - name: Ensure api dir exists
-          file:
+          ansible.builtin.file:
             path: "{{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/webui/api"
             state: directory
-            mode: '0755'
+            mode: "0755"
 
         - name: Create symlink for the data
-          file:
+          ansible.builtin.file:
             src: "{{ smartd_config.nanoSmart.path }}/data"
             dest: "{{ smartd_config.nanoSmart.path }}/webui/api/smart"
             state: link
             force: true
 
         - name: Create smart_monitor daily cron job
-          copy:
+          ansible.builtin.copy:
             dest: /etc/cron.daily/smart_monitor
-            mode: '0755'
+            mode: "0755"
             content: |
               #!/bin/bash
               {{ smartd_config.nanoSmart.path }}/nanoSmart-{{ smartd_config.nanoSmart.version }}/cron/smart_monitor.sh  > /dev/null
 
         - name: Run smart_monitor script immediately
-          command: /etc/cron.daily/smart_monitor
+          ansible.builtin.command: /etc/cron.daily/smart_monitor
           changed_when: false
 
-    - name: cleanup steps for nanoSmart
+    - name: Cleanup steps for nanoSmart
       when: not smartd_config.nanoSmart.enabled | bool
       block:
-
         - name: Remove smart_monitor daily cron job
-          file:
+          ansible.builtin.file:
             path: /etc/cron.daily/smart_monitor
             state: absent
 
         - name: Remove nanoSmart install dir
-          file:
+          ansible.builtin.file:
             path: "{{ smartd_config.nanoSmart.path }}"
             state: absent
 
-#============================================================================================================
+# ============================================================================================================
 # Remove
-#============================================================================================================
-- name: main smartd block
+# ============================================================================================================
+- name: Main smartd block
   tags:
     - smartd
   when:
     - run_role_smartd | bool
     - remove_smartd | bool
   block:
-
     - name: Set merged smartd configuration
       ansible.builtin.set_fact:
         smartd_config: "{{ smartd_defaults | combine(smartd, recursive=true) }}"
 
-    - name: Check if smartd service exist
-      shell: service smartd status
+    - name: Check if smartd service exist # noqa: command-instead-of-module - needs the raw status exit code
+      ansible.builtin.command: service smartd status
       register: smartd_status
       failed_when: not(smartd_status.rc == 3 or smartd_status.rc == 0 or smartd_status.rc == 4)
       changed_when: false
 
     - name: Disable service smartd
-      service:
+      ansible.builtin.service:
         name: smartd
-        enabled: no
+        enabled: false
         state: stopped
       when: smartd_status.rc == 0
 
-    - name: uninstall smartmontools
-      apt:
+    - name: Uninstall smartmontools
+      ansible.builtin.apt:
         name:
           - smartmontools
         state: absent
-        purge: yes
-
+        purge: true

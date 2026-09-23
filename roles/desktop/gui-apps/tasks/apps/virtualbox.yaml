@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # virtualbox
-#============================================================================================================
+# ============================================================================================================
 - name: Set merged virtualbox configuration
   ansible.builtin.set_fact:
     virtualbox_config: "{{ virtualbox_defaults | combine(gui_apps_config['virtualbox'] | default({}, true), recursive=true) }}"
@@ -11,19 +11,19 @@
     path: /etc/apt/trusted.gpg
     state: absent
 
-- name: "apt | ensure python3-debian present (required by deb822_repository)"
+- name: "Apt | ensure python3-debian present (required by deb822_repository)"
   ansible.builtin.apt:
     name: python3-debian
     state: present
     update_cache: true
 
-- name: "apt | ensure virtualBox linux signing key present"
+- name: "Apt | ensure virtualBox linux signing key present"
   ansible.builtin.copy:
     src: virtualbox/oracle_vbox.gpg
     dest: /usr/share/keyrings/oracle_vbox.gpg
     mode: "0644"
 
-- name: "apt | ensure virtualBox repo present"
+- name: "Apt | ensure virtualBox repo present"
   ansible.builtin.deb822_repository:
     name: virtualbox
     types: deb
@@ -35,12 +35,12 @@
     state: present
     mode: "0644"
 
-- name: "apt | remove legacy virtualBox .list source (migrated to deb822 .sources)"
+- name: "Apt | remove legacy virtualBox .list source (migrated to deb822 .sources)"
   ansible.builtin.file:
     path: /etc/apt/sources.list.d/virtualbox.list
     state: absent
 
-- name: "apt | ensure virtualBox present"
+- name: "Apt | ensure virtualBox present"
   ansible.builtin.apt:
     name: "{{ virtualbox_config.package }}"
     state: present

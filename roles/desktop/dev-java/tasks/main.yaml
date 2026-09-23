@@ -1,7 +1,7 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # dev-java — Java developer tools role — main tasks
-#============================================================================================================
+# ============================================================================================================
 - name: Dev Java apps
   when:
     - run_role_dev_java | bool
@@ -42,9 +42,9 @@
     # The whole role is driven by a single tag (role_dev_java, on the block above);
     # there are no per-tool tags. Running the role tag runs every selected tool's
     # (idempotent) tasks.
-    - name: jenv
+    - name: Jenv
       ansible.builtin.import_tasks: apps/jenv.yaml
       when: "'jenv' in dev_java_config"
-    - name: maven
+    - name: Maven
       ansible.builtin.import_tasks: apps/maven.yaml
       when: "'maven' in dev_java_config"

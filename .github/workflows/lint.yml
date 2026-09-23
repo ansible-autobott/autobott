@@ -20,13 +20,20 @@ jobs:
           python-version: '3.14'
           cache: pip
 
-      # Same venv layout as `make prepare`, without its host-tool installs
-      # (sops/age), which linting does not need.
-      - name: Install dependencies
+      # `make prepare` requires sops and age (check-tools) and cannot prompt to
+      # install them in CI, so install them first. The sops version comes from
+      # the Makefile's SOPS_VERSION.
+      - name: Install sops and age
         run: |
-          python -m venv venv
-          venv/bin/pip install -r requirements.txt
-          venv/bin/ansible-galaxy collection install community.sops
+          sudo apt-get update
+          sudo apt-get install -y age
+          ver="$(make -s --eval 'print-sops-version: ; @echo $(SOPS_VERSION)' print-sops-version)"
+          deb="sops_${ver#v}_$(dpkg --print-architecture).deb"
+          curl -fLo "/tmp/$deb" "https://github.com/getsops/sops/releases/download/${ver}/${deb}"
+          sudo apt-get install -y "/tmp/$deb"
+
+      - name: make prepare
+        run: make prepare
 
       # Fails only on violations missing from roles/.ansible-lint-ignore.
       - name: ansible-lint

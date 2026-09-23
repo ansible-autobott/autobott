@@ -1,0 +1,75 @@
+---
+#============================================================================================================
+# pi — pi coding agent
+# https://github.com/badlogic/pi-mono/releases  (version -> sha256 of pi-linux-x64.tar.gz)
+#
+# The release tarball is a pi/ directory: the binary plus the assets it loads
+# from beside itself (package.json, themes, wasm, native modules), so it cannot
+# be copied out alone. Extracts it to /opt/pi-<version>, points a stable /opt/pi
+# symlink at it, and links the binary into /usr/local/bin (already on PATH).
+#============================================================================================================
+- name: Resolve the selected pi version
+  ansible.builtin.set_fact:
+    pi_version: "{{ (dev_ai_config['pi'] | default({}, true)).version | default(pi_default_version, true) }}"
+
+- name: Validate the selected pi version is available
+  ansible.builtin.assert:
+    that:
+      - pi_version in pi_versions
+    fail_msg: >-
+      Unknown pi version '{{ pi_version }}'.
+      Available: {{ pi_versions.keys() | list | join(', ') }}
+
+- name: Check whether this pi version is already installed
+  ansible.builtin.stat:
+    path: "/opt/pi-{{ pi_version }}/pi"
+  register: pi_installed
+
+- name: Install pi from the release tarball
+  when: not pi_installed.stat.exists
+  block:
+    - name: Download pi release tarball
+      ansible.builtin.get_url:
+        url: "{{ pi_base_url }}/v{{ pi_version }}/pi-linux-x64.tar.gz"
+        dest: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
+        checksum: "sha256:{{ pi_versions[pi_version] }}"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create the pi install dir
+      ansible.builtin.file:
+        path: "/opt/pi-{{ pi_version }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Install pi into /opt
+      ansible.builtin.unarchive:
+        src: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
+        dest: "/opt/pi-{{ pi_version }}"
+        extra_opts:
+          - --strip-components=1
+        remote_src: true
+        owner: root
+        group: root
+
+    - name: Remove the pi tarball
+      ansible.builtin.file:
+        path: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
+        state: absent
+
+- name: Point /opt/pi at the installed version
+  ansible.builtin.file:
+    src: "/opt/pi-{{ pi_version }}"
+    dest: /opt/pi
+    state: link
+    force: true
+
+- name: Link pi into /usr/local/bin
+  ansible.builtin.file:
+    src: /opt/pi/pi
+    dest: /usr/local/bin/pi
+    state: link
+    force: true

@@ -1,0 +1,40 @@
+---
+#============================================================================================================
+# claude-code — Anthropic's coding agent CLI
+# https://code.claude.com/docs
+#
+# Installs the native Linux x64 binary to /usr/local/bin/claude, pinned by
+# version + sha256 (from the release manifest.json). The system-wide binary is
+# root-owned, so Claude Code's self-updater cannot replace it; bump the version
+# here instead.
+#============================================================================================================
+- name: Resolve the selected Claude Code version
+  ansible.builtin.set_fact:
+    claude_code_version: "{{ (dev_ai_config['claude-code'] | default({}, true)).version | default(claude_code_default_version, true) }}"
+
+- name: Validate the selected Claude Code version is available
+  ansible.builtin.assert:
+    that:
+      - claude_code_version in claude_code_versions
+    fail_msg: >-
+      Unknown claude-code version '{{ claude_code_version }}'.
+      Available: {{ claude_code_versions.keys() | list | join(', ') }}
+
+# `claude --version` prints "2.1.267 (Claude Code)".
+- name: Get current Claude Code version
+  ansible.builtin.shell: "set -o pipefail && claude --version | awk 'NR==1 {print $1}'"
+  args:
+    executable: /bin/bash
+  register: claude_code_current_version
+  failed_when: false
+  changed_when: false
+
+- name: Install or update Claude Code binary
+  when: claude_code_current_version.stdout != claude_code_version
+  ansible.builtin.get_url:
+    url: "{{ claude_code_base_url }}/{{ claude_code_version }}/linux-x64/claude"
+    dest: /usr/local/bin/claude
+    checksum: "sha256:{{ claude_code_versions[claude_code_version] }}"
+    owner: root
+    group: root
+    mode: '0755'

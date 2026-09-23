@@ -115,6 +115,7 @@
     - desktop/dev-go
     - desktop/dev-java
     - desktop/dev-k8s
+    - desktop/dev-ai
     - desktop/dev-generic
 
 #============================================================================================================

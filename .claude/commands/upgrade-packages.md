@@ -41,7 +41,7 @@ append a new `"<version>": "<hash>"` entry to the checksums map.**
 
 ## The other pattern: per-tool version catalogs (the dev-* roles)
 
-The `roles/desktop/dev-*` roles (dev-generic, dev-go, dev-java, dev-k8s, dev-node) do
+The `roles/desktop/dev-*` roles (dev-ai, dev-generic, dev-go, dev-java, dev-k8s, dev-node) do
 **not** follow the Authelia shape. Each tool in the role has its own pair of top-level vars
 in `defaults/main.yaml`:
 
@@ -152,8 +152,11 @@ bump `<tool>_default_version`, append `"<V>": "<hash>"` to `<tool>_versions`. Al
 
 | Role (dir) | version key | catalog var | algo | latest command | tag → stored | artifact URL (with `V`) |
 |---|---|---|---|---|---|---|
+| desktop/dev-ai | `herdr_default_version` | `herdr_versions` | sha256 | `gh api repos/herdrdev/herdr/releases/latest --jq .tag_name` | strip `v` | `https://github.com/herdrdev/herdr/releases/download/vV/herdr-linux-x86_64` |
+| desktop/dev-ai | `claude_code_default_version` | `claude_code_versions` | sha256 | `curl -s <claude_code_base_url>/stable` | as-is (no `v`) | binary: `<claude_code_base_url>/V/linux-x64/claude` — hash from the manifest: `curl -s <claude_code_base_url>/V/manifest.json \| jq -r '.platforms["linux-x64"].checksum'` (no download needed). Use the `stable` channel, not `latest`. |
+| desktop/dev-ai | `pi_default_version` | `pi_versions` | sha256 | `gh api repos/badlogic/pi-mono/releases/latest --jq .tag_name` | strip `v` | `https://github.com/badlogic/pi-mono/releases/download/vV/pi-linux-x64.tar.gz` (sidecar: `SHA256SUMS`) |
+| desktop/dev-ai | `copilot_cli_default_version` | `copilot_cli_versions` | sha256 | `gh api repos/github/copilot-cli/releases/latest --jq .tag_name` | strip `v` | `https://github.com/github/copilot-cli/releases/download/vV/copilot-linux-x64.tar.gz` (sidecar: `SHA256SUMS.txt`) |
 | desktop/dev-generic | `vault_default_version` | `vault_versions` | sha256 | `curl -s https://api.releases.hashicorp.com/v1/releases/vault/latest \| jq -r .version` | as-is (no `v`) | `https://releases.hashicorp.com/vault/V/vault_V_linux_amd64.zip` |
-| desktop/dev-generic | `herdr_default_version` | `herdr_versions` | sha256 | `gh api repos/herdrdev/herdr/releases/latest --jq .tag_name` | strip `v` | `https://github.com/herdrdev/herdr/releases/download/vV/herdr-linux-x86_64` |
 | desktop/dev-go | `goreleaser_default_version` | `goreleaser_versions` | sha256 | `gh api repos/goreleaser/goreleaser/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/goreleaser/releases/download/vV/goreleaser_V_amd64.deb` |
 | desktop/dev-go | `nfpm_default_version` | `nfpm_versions` | sha256 | `gh api repos/goreleaser/nfpm/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/nfpm/releases/download/vV/nfpm_V_amd64.deb` |
 | desktop/dev-go | `golangci_lint_default_version` | `golangci_lint_versions` | sha256 | `gh api repos/golangci/golangci-lint/releases/latest --jq .tag_name` | strip `v` | `https://github.com/golangci/golangci-lint/releases/download/vV/golangci-lint-V-linux-amd64.deb` |

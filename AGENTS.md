@@ -95,7 +95,7 @@ roles/
   monitoring/    # prometheus, alertmanager, node_exporter, grafana, monit
   webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
-  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-generic
+  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-ai, dev-generic
   games/         # minecraft
   validation/    # test roles
 ```
@@ -111,8 +111,10 @@ roles/
 > - **`desktop/dev-go`** — Go toolchain + go-deps-view (via `dev_go_config`)
 > - **`desktop/dev-java`** — jenv + maven (via `dev_java_config`)
 > - **`desktop/dev-k8s`** — kubectl + k9s (via `dev_k8s_config`)
-> - **`desktop/dev-generic`** — other dev tools: vagrant, vault, herdr,
->   github-cli (via `dev_generic_config`)
+> - **`desktop/dev-ai`** — AI coding agents: herdr, claude-code, pi,
+>   copilot-cli (via `dev_ai_config`)
+> - **`desktop/dev-generic`** — other dev tools: vagrant, vault, github-cli
+>   (via `dev_generic_config`)
 >
 > The candy-tools shared apt repo is used by both `cli-apps` (dibs, linux-candy,
 > todo) and `dev-go` (go-deps-view); each role adds it idempotently.

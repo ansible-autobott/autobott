@@ -1,0 +1,42 @@
+---
+#============================================================================================================
+# dev-ai — AI coding agent tools role — main tasks
+#============================================================================================================
+- name: Dev AI apps
+  when:
+    - run_role_dev_ai | bool
+  tags:
+    - role_dev_ai
+    - linux-desktop-all
+  block:
+    - name: Validate dev_ai_config is a mapping
+      ansible.builtin.assert:
+        that:
+          - dev_ai_config is mapping
+        fail_msg: "dev_ai_config must be a mapping of app-name -> overrides (or empty), got {{ dev_ai_config | type_debug }}."
+
+    - name: Validate dev_ai_config only references known apps
+      ansible.builtin.assert:
+        that:
+          - (dev_ai_config.keys() | list | difference(dev_ai_available)) | length == 0
+        fail_msg: >-
+          Unknown app(s) in dev_ai_config:
+          {{ dev_ai_config.keys() | list | difference(dev_ai_available) | join(', ') }}.
+          Available: {{ dev_ai_available | join(', ') }}
+
+    # --- app catalog (one import_tasks per app; selection via dev_ai_config) ---
+    # The whole role is driven by a single tag (role_dev_ai, on the block above);
+    # there are no per-app tags. Running the role tag runs every selected app's
+    # (idempotent) tasks.
+    - name: Herdr
+      ansible.builtin.import_tasks: apps/herdr.yaml
+      when: "'herdr' in dev_ai_config"
+    - name: Claude Code
+      ansible.builtin.import_tasks: apps/claude-code.yaml
+      when: "'claude-code' in dev_ai_config"
+    - name: Pi coding agent
+      ansible.builtin.import_tasks: apps/pi.yaml
+      when: "'pi' in dev_ai_config"
+    - name: GitHub Copilot CLI
+      ansible.builtin.import_tasks: apps/copilot-cli.yaml
+      when: "'copilot-cli' in dev_ai_config"

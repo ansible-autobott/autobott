@@ -3,8 +3,8 @@
 # CLI apps role — defaults
 #
 # General (non-language-toolchain) CLI utilities. Language/platform developer
-# tools live in dedicated roles: dev-node, dev-go, dev-java, dev-k8s and the
-# catch-all dev-generic.
+# tools live in dedicated roles: dev-node, dev-go, dev-java, dev-k8s, dev-ai and
+# the catch-all dev-generic.
 #============================================================================================================
 
 # Master on/off for the whole role

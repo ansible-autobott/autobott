@@ -10,7 +10,7 @@
 #============================================================================================================
 - name: Resolve the selected herdr version
   ansible.builtin.set_fact:
-    herdr_version: "{{ (dev_generic_config['herdr'] | default({}, true)).version | default(herdr_default_version, true) }}"
+    herdr_version: "{{ (dev_ai_config['herdr'] | default({}, true)).version | default(herdr_default_version, true) }}"
 
 - name: Validate the selected herdr version is available
   ansible.builtin.assert:

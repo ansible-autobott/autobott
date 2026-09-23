@@ -34,9 +34,6 @@
     - name: Vault
       ansible.builtin.import_tasks: apps/vault.yaml
       when: "'vault' in dev_generic_config"
-    - name: herdr
-      ansible.builtin.import_tasks: apps/herdr.yaml
-      when: "'herdr' in dev_generic_config"
     - name: GitHub CLI
       ansible.builtin.import_tasks: apps/github-cli.yaml
       when: "'github-cli' in dev_generic_config"

@@ -11,6 +11,16 @@ linux_desktop: {}
 # Default Linux-desktop configuration structure
 linux_desktop_defaults:
   user: "" # define a linux desktop user
+  # ============================================================================================================
+  # Symlinks
+  # ============================================================================================================
+  # Symlinks in the desktop user's home dir, created before `folders` so folder paths
+  # may go through them (e.g. link datos -> .datos, then folder "datos/edit"). A missing
+  # target is created as a directory owned by the user; an existing target is left
+  # untouched. A real file/dir already at `path` is never replaced (the task fails).
+  links: []
+  #  - path: "datos"      # required: link path, relative to home unless it starts with /
+  #    target: ".datos"   # required: link target, relative to home unless it starts with /
   # create folders in the home dir
   folders:
     - "Screenshots"

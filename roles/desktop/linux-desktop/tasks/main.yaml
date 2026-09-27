@@ -34,6 +34,7 @@
       ansible.builtin.command: "id -g {{ linux_desktop_config.user }}"
       register: desktop_user_result
       changed_when: false
+      check_mode: false # read-only; the group is needed by later tasks in --check too
 
     - name: Set fact with main group
       ansible.builtin.set_fact:
@@ -46,6 +47,37 @@
   when:
     - run_role_linux_desktop | bool
   block:
+    # ============================================================================================================
+    # Symlinks: created before the folders so folder paths may go through them
+    # ============================================================================================================
+    - name: Check symlink targets in the home dir
+      ansible.builtin.stat:
+        path: "{{ item.target if item.target.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.target }}"
+      register: linux_desktop_link_targets
+      loop: "{{ linux_desktop_config.links }}"
+
+    - name: Create missing symlink targets as directories
+      ansible.builtin.file:
+        path: "{{ item.item.target if item.item.target.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.item.target }}"
+        state: directory
+        mode: "0750"
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+      loop: "{{ linux_desktop_link_targets.results }}"
+      loop_control:
+        label: "{{ item.item.target }}"
+      when: not item.stat.exists
+
+    - name: Create symlinks in the home dir
+      ansible.builtin.file:
+        path: "{{ item.path if item.path.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.path }}"
+        src: "{{ item.target if item.target.startswith('/') else '/home/' ~ linux_desktop_config.user ~ '/' ~ item.target }}"
+        state: link
+        owner: "{{ linux_desktop_config.user }}"
+        group: "{{ linux_desktop_user_main_group }}"
+        follow: false
+      loop: "{{ linux_desktop_config.links }}"
+
     - name: Create user space folders in the home dir
       ansible.builtin.file:
         path: "/home/{{ linux_desktop_config.user }}/{{ item }}"

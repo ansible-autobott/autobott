@@ -15,28 +15,38 @@
       Unknown nfpm version '{{ nfpm_version }}'.
       Available: {{ nfpm_versions.keys() | list | join(', ') }}
 
-- name: Create nfpm download directory
-  ansible.builtin.file:
-    path: /tmp/nfpm-dl
-    state: directory
-    owner: root
-    group: root
-    mode: "0700"
+- name: Get the installed nfpm version
+  ansible.builtin.command: "dpkg-query -W -f=${Version} nfpm"
+  register: nfpm_current_version
+  failed_when: false
+  changed_when: false
+  check_mode: false
 
-- name: Download nfpm
-  ansible.builtin.get_url:
-    url: "https://github.com/goreleaser/nfpm/releases/download/v{{ nfpm_version }}/nfpm_{{ nfpm_version }}_amd64.deb"
-    dest: /tmp/nfpm-dl/nfpm.deb
-    checksum: "sha256:{{ nfpm_versions[nfpm_version] }}"
-    owner: root
-    group: root
-    mode: "0644"
+- name: Install or update nfpm
+  when: nfpm_current_version.stdout != nfpm_version
+  block:
+    - name: Create nfpm download directory
+      ansible.builtin.file:
+        path: /tmp/nfpm-dl
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
 
-- name: Install nfpm
-  ansible.builtin.apt:
-    deb: /tmp/nfpm-dl/nfpm.deb
+    - name: Download nfpm
+      ansible.builtin.get_url:
+        url: "https://github.com/goreleaser/nfpm/releases/download/v{{ nfpm_version }}/nfpm_{{ nfpm_version }}_amd64.deb"
+        dest: /tmp/nfpm-dl/nfpm.deb
+        checksum: "sha256:{{ nfpm_versions[nfpm_version] }}"
+        owner: root
+        group: root
+        mode: "0644"
 
-- name: Remove nfpm download directory
-  ansible.builtin.file:
-    path: /tmp/nfpm-dl
-    state: absent
+    - name: Install nfpm
+      ansible.builtin.apt:
+        deb: /tmp/nfpm-dl/nfpm.deb
+
+    - name: Remove nfpm download directory
+      ansible.builtin.file:
+        path: /tmp/nfpm-dl
+        state: absent

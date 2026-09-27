@@ -18,45 +18,6 @@
       Unknown golang version '{{ golang_version }}'.
       Available: {{ golang_versions | join(', ') }}
 
-- name: Create Go download directory
-  ansible.builtin.file:
-    path: /tmp/golang-dl
-    state: directory
-    owner: root
-    group: root
-    mode: "0700"
-
-# ============================== godeb ============================== #
-- name: Download godeb
-  ansible.builtin.get_url:
-    url: "{{ golang_godeb_url }}"
-    dest: /tmp/golang-dl/godeb-amd64.tar.gz
-    checksum: "sha256:{{ golang_godeb_sha256 }}"
-    owner: root
-    group: root
-    mode: "0644"
-
-- name: Install godeb
-  ansible.builtin.unarchive:
-    src: /tmp/golang-dl/godeb-amd64.tar.gz
-    dest: "/usr/local/bin/"
-    remote_src: true
-    owner: root
-    group: root
-    mode: "0755"
-  args:
-    creates: "/usr/local/bin/godeb"
-
-# ============================== Go ============================== #
-- name: Check if go is installed
-  ansible.builtin.shell:
-    cmd: set -o pipefail && go version 2>&1 | head -1 | cut -d '"' -f 2
-    executable: /bin/bash
-  register: result
-  check_mode: false
-  changed_when: false
-  failed_when: result.rc != 0 and result.rc != 127
-
 - name: Get current go version
   ansible.builtin.shell: "set -o pipefail && go version | awk '{print $3}' | cut -c3-"
   args:
@@ -64,16 +25,51 @@
   register: go_current_version
   failed_when: false
   changed_when: false
+  check_mode: false
 
+# godeb is only needed to install Go, so it is fetched only when Go is missing or
+# older than the selected version.
 - name: Install Go if not installed or outdated
-  ansible.builtin.command: "/usr/local/bin/godeb install {{ golang_version }}"
-  changed_when: true
   when: >
     go_current_version.stdout == "" or
-    go_current_version.stdout is version( golang_version, '<')
+    go_current_version.stdout is version(golang_version, '<')
+  block:
+    - name: Create Go download directory
+      ansible.builtin.file:
+        path: /tmp/golang-dl
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
 
-# ============================== Cleanup ============================== #
-- name: Remove Go download directory
-  ansible.builtin.file:
-    path: /tmp/golang-dl
-    state: absent
+    # ============================== godeb ============================== #
+    - name: Download godeb
+      ansible.builtin.get_url:
+        url: "{{ golang_godeb_url }}"
+        dest: /tmp/golang-dl/godeb-amd64.tar.gz
+        checksum: "sha256:{{ golang_godeb_sha256 }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install godeb
+      ansible.builtin.unarchive:
+        src: /tmp/golang-dl/godeb-amd64.tar.gz
+        dest: "/usr/local/bin/"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0755"
+      args:
+        creates: "/usr/local/bin/godeb"
+
+    # ============================== Go ============================== #
+    - name: Install Go
+      ansible.builtin.command: "/usr/local/bin/godeb install {{ golang_version }}"
+      changed_when: true
+
+    # ============================== Cleanup ============================== #
+    - name: Remove Go download directory
+      ansible.builtin.file:
+        path: /tmp/golang-dl
+        state: absent

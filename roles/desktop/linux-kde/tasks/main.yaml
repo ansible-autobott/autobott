@@ -275,10 +275,14 @@
         # *settings* are re-asserted by the kwriteconfig script above; here we
         # deploy the files that settings can't express:
         #   - the profiles + their colorschemes, and
-        #   - the KXMLGUI files with the main + session <ToolBar> elements removed.
-        #     Konsole shows those toolbars by default and the [Toolbar] Hidden= key
-        #     is ignored in KF6, so dropping the <ToolBar> elements is the reliable
-        #     way to remove the bar (verified on Konsole 25.04.3).
+        #   - the KXMLGUI files without visible toolbars. Konsole shows its main +
+        #     session toolbars by default and the [Toolbar] Hidden= key is ignored
+        #     in KF6, so the session <ToolBar> is dropped and the main one is kept
+        #     with hidden="true". At least one toolbar must remain: with none,
+        #     KXmlGuiWindow::toolBarMenuAction() dereferences an empty list and
+        #     Konsole segfaults when it builds the hamburger menu - which, with the
+        #     menubar off, happens on every terminal right-click (Konsole 25.12.3,
+        #     KF6 6.24).
         # copy's default (force: true) upserts the box to match the role source on
         # every run.
         #
@@ -311,7 +315,7 @@
                 - prodsystem.profile
                 - Dracula.colorscheme
 
-            - name: Deploy the Konsole GUI files with the toolbars removed (upsert)
+            - name: Deploy the Konsole GUI files with the toolbars hidden (upsert)
               ansible.builtin.copy:
                 src: "konsole/{{ item }}"
                 dest: "{{ kde_style_home }}/.local/share/kxmlgui5/konsole/{{ item }}"

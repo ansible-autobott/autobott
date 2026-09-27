@@ -15,28 +15,38 @@
       Unknown goreleaser version '{{ goreleaser_version }}'.
       Available: {{ goreleaser_versions.keys() | list | join(', ') }}
 
-- name: Create goreleaser download directory
-  ansible.builtin.file:
-    path: /tmp/goreleaser-dl
-    state: directory
-    owner: root
-    group: root
-    mode: "0700"
+- name: Get the installed goreleaser version
+  ansible.builtin.command: "dpkg-query -W -f=${Version} goreleaser"
+  register: goreleaser_current_version
+  failed_when: false
+  changed_when: false
+  check_mode: false
 
-- name: Download goreleaser
-  ansible.builtin.get_url:
-    url: "https://github.com/goreleaser/goreleaser/releases/download/v{{ goreleaser_version }}/goreleaser_{{ goreleaser_version }}_amd64.deb"
-    dest: /tmp/goreleaser-dl/goreleaser.deb
-    checksum: "sha256:{{ goreleaser_versions[goreleaser_version] }}"
-    owner: root
-    group: root
-    mode: "0644"
+- name: Install or update goreleaser
+  when: goreleaser_current_version.stdout != goreleaser_version
+  block:
+    - name: Create goreleaser download directory
+      ansible.builtin.file:
+        path: /tmp/goreleaser-dl
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
 
-- name: Install goreleaser
-  ansible.builtin.apt:
-    deb: /tmp/goreleaser-dl/goreleaser.deb
+    - name: Download goreleaser
+      ansible.builtin.get_url:
+        url: "https://github.com/goreleaser/goreleaser/releases/download/v{{ goreleaser_version }}/goreleaser_{{ goreleaser_version }}_amd64.deb"
+        dest: /tmp/goreleaser-dl/goreleaser.deb
+        checksum: "sha256:{{ goreleaser_versions[goreleaser_version] }}"
+        owner: root
+        group: root
+        mode: "0644"
 
-- name: Remove goreleaser download directory
-  ansible.builtin.file:
-    path: /tmp/goreleaser-dl
-    state: absent
+    - name: Install goreleaser
+      ansible.builtin.apt:
+        deb: /tmp/goreleaser-dl/goreleaser.deb
+
+    - name: Remove goreleaser download directory
+      ansible.builtin.file:
+        path: /tmp/goreleaser-dl
+        state: absent

@@ -15,28 +15,40 @@
       Unknown golangci-lint version '{{ golangci_lint_version }}'.
       Available: {{ golangci_lint_versions.keys() | list | join(', ') }}
 
-- name: Create golangci-lint download directory
-  ansible.builtin.file:
-    path: /tmp/golangci-lint-dl
-    state: directory
-    owner: root
-    group: root
-    mode: "0700"
+- name: Get the installed golangci-lint version
+  ansible.builtin.command: "dpkg-query -W -f=${Version} golangci-lint"
+  register: golangci_lint_current_version
+  failed_when: false
+  changed_when: false
+  check_mode: false
 
-- name: Download golangci-lint
-  ansible.builtin.get_url:
-    url: "https://github.com/golangci/golangci-lint/releases/download/v{{ golangci_lint_version }}/golangci-lint-{{ golangci_lint_version }}-linux-amd64.deb"
-    dest: /tmp/golangci-lint-dl/golangci-lint.deb
-    checksum: "sha256:{{ golangci_lint_versions[golangci_lint_version] }}"
-    owner: root
-    group: root
-    mode: "0644"
+- name: Install or update golangci-lint
+  when: golangci_lint_current_version.stdout != golangci_lint_version
+  block:
+    - name: Create golangci-lint download directory
+      ansible.builtin.file:
+        path: /tmp/golangci-lint-dl
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
 
-- name: Install golangci-lint
-  ansible.builtin.apt:
-    deb: /tmp/golangci-lint-dl/golangci-lint.deb
+    - name: Download golangci-lint
+      ansible.builtin.get_url:
+        url: >-
+          https://github.com/golangci/golangci-lint/releases/download/v{{ golangci_lint_version
+          }}/golangci-lint-{{ golangci_lint_version }}-linux-amd64.deb
+        dest: /tmp/golangci-lint-dl/golangci-lint.deb
+        checksum: "sha256:{{ golangci_lint_versions[golangci_lint_version] }}"
+        owner: root
+        group: root
+        mode: "0644"
 
-- name: Remove golangci-lint download directory
-  ansible.builtin.file:
-    path: /tmp/golangci-lint-dl
-    state: absent
+    - name: Install golangci-lint
+      ansible.builtin.apt:
+        deb: /tmp/golangci-lint-dl/golangci-lint.deb
+
+    - name: Remove golangci-lint download directory
+      ansible.builtin.file:
+        path: /tmp/golangci-lint-dl
+        state: absent

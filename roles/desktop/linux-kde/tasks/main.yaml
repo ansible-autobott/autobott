@@ -275,10 +275,14 @@
         # *settings* are re-asserted by the kwriteconfig script above; here we
         # deploy the files that settings can't express:
         #   - the profiles + their colorschemes, and
-        #   - the KXMLGUI files with the main + session <ToolBar> elements removed.
-        #     Konsole shows those toolbars by default and the [Toolbar] Hidden= key
-        #     is ignored in KF6, so dropping the <ToolBar> elements is the reliable
-        #     way to remove the bar (verified on Konsole 25.04.3).
+        #   - the KXMLGUI files without visible toolbars. Konsole shows its main +
+        #     session toolbars by default and the [Toolbar] Hidden= key is ignored
+        #     in KF6, so the session <ToolBar> is dropped and the main one is kept
+        #     with hidden="true". At least one toolbar must remain: with none,
+        #     KXmlGuiWindow::toolBarMenuAction() dereferences an empty list and
+        #     Konsole segfaults when it builds the hamburger menu - which, with the
+        #     menubar off, happens on every terminal right-click (Konsole 25.12.3,
+        #     KF6 6.24).
         # copy's default (force: true) upserts the box to match the role source on
         # every run.
         #
@@ -311,7 +315,7 @@
                 - prodsystem.profile
                 - Dracula.colorscheme
 
-            - name: Deploy the Konsole GUI files with the toolbars removed (upsert)
+            - name: Deploy the Konsole GUI files with the toolbars hidden (upsert)
               ansible.builtin.copy:
                 src: "konsole/{{ item }}"
                 dest: "{{ kde_style_home }}/.local/share/kxmlgui5/konsole/{{ item }}"
@@ -592,19 +596,24 @@
         #   - kglobalshortcutsrc: desktop-file actions live under
         #     [services][<desktop id>] and the value is only the key sequence. These
         #     replace the stock Meta+Shift+Print / Meta+Print. kglobalaccel reads this
-        #     file at login, so the new shortcuts work after the next login.
+        #     file at login, so the new shortcuts work after the next login. A
+        #     running session keeps its old shortcuts until then, so a run that
+        #     changes one prints a reminder to log out.
         #   - _launch is Spectacle's own launch action; its .desktop default binds it
         #     to "Print,Meta+Shift+S", so we drop Meta+Shift+S from it (keeping Print
         #     -> open Spectacle) to free that key for the region capture below.
-        - name: Configure Spectacle and its global shortcuts for the desktop user
+        # The last element of each list is the value; without it the list is also a
+        # valid kreadconfig6 argument list, so each value is read first and only
+        # written when it differs - that way a run reports a real change.
+        - name: Read the current Spectacle settings of the desktop user
           ansible.builtin.command:
-            argv: "{{ ['kwriteconfig6'] + item }}"
+            argv: "{{ ['kreadconfig6'] + item[:-1] }}"
           become: true
           become_user: "{{ linux_desktop_config.user }}"
           environment:
             HOME: "{{ kde_screenshots_home }}"
-          # kwriteconfig re-asserts the same values on every run; not a change.
           changed_when: false
+          register: kde_screenshots_current
           loop:
             - [--file, spectaclerc, --group, General, --key, autoSaveImage, "true"]
             - [--file, spectaclerc, --group, General, --key, clipboardGroup, PostScreenshotCopyImage]
@@ -634,4 +643,31 @@
               - ActiveWindowScreenShot
               - "Meta+Shift+W"
           loop_control:
-            label: "{{ item[1] }} {{ item[-2] }}={{ item[-1] }}"
+            label: "{{ item[1] }} {{ item[-2] }}"
+
+        - name: Configure Spectacle and its global shortcuts for the desktop user
+          ansible.builtin.command:
+            argv: "{{ ['kwriteconfig6'] + item.item }}"
+          become: true
+          become_user: "{{ linux_desktop_config.user }}"
+          environment:
+            HOME: "{{ kde_screenshots_home }}"
+          when: item.stdout != item.item[-1]
+          changed_when: true
+          register: kde_screenshots_written
+          loop: "{{ kde_screenshots_current.results }}"
+          loop_control:
+            label: "{{ item.item[1] }} {{ item.item[-2] }}={{ item.item[-1] }}"
+
+        - name: Remind to log out for the new Spectacle shortcuts
+          ansible.builtin.debug:
+            msg: >-
+              The Spectacle global shortcuts of {{ linux_desktop_config.user }} changed.
+              kglobalaccel only reads them at login: log out and back in for
+              Meta+Shift+S / Meta+Shift+W to take effect.
+          when: >-
+            kde_screenshots_written.results
+            | selectattr('changed')
+            | map(attribute='item.item.1')
+            | select('equalto', 'kglobalshortcutsrc')
+            | list | length > 0

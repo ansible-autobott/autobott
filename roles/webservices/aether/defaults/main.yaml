@@ -15,7 +15,7 @@ aether: {}
 
 # Default configuration structure
 aether_defaults:
-  version: 0.6.0
+  version: 0.12.4
 
   # System packages installed with the role. libchromaprint-tools provides `fpcalc`
   # (Chromaprint/AcoustID audio fingerprinting), used by aether for track and album identification.
@@ -33,9 +33,10 @@ aether_defaults:
 
   # Extra filesystem paths the service is allowed to write to. The packaged .deb unit runs with
   # ProtectSystem=strict and ReadWritePaths=/var/lib/aether, so the whole filesystem is read-only
-  # to the service except its data dir. To let aether edit tags/embedded artwork in the media
-  # library, list the library root(s) here; each is rendered as a ReadWritePaths= line in the
-  # systemd drop-in. Paths must already exist on the host. Empty -> none added.
+  # to the service except its data dir. The metadata editor writes tags, covers and artist images
+  # back into the scan folders, so to use it list every config.scan_folders path here; each is
+  # rendered as a ReadWritePaths= line in the systemd drop-in. Paths must already exist on the
+  # host. Empty -> none added.
   readwrite_paths: []
 
   # Paths owned/created by the .deb package (kept here so tasks and uninstall can reference them).
@@ -66,7 +67,10 @@ aether_defaults:
     server:
       # Public HTTP server (web player + OpenSubsonic API).
       port: 8075
-      # Bind address. Empty means all interfaces. Set to 127.0.0.1 behind a reverse proxy.
+      # Bind address. Set to 127.0.0.1 behind a reverse proxy. What empty means depends on
+      # auth.method (v0.8+): with none it is 127.0.0.1 and a wildcard such as 0.0.0.0 is
+      # refused at startup (expose an unauthenticated instance on a specific LAN address
+      # instead); with native or proxy-header it is all interfaces.
       bind_ip: "127.0.0.1"
     observability:
       # Health / Prometheus metrics endpoints on a separate server. Disabled by default
@@ -75,18 +79,19 @@ aether_defaults:
       enabled: false
       port: 9009
       bind_ip: "127.0.0.1"
-    # Music libraries provisioned from the config file (v0.5+). Additive with libraries
-    # created in the admin UI: entries here are materialized at every startup and are
-    # read-only in the UI. Removing an entry does NOT delete the library (it becomes an
-    # ordinary editable one), but changing an entry's path wipes that library's scanned
-    # tracks — the next scan refills it. Only name and path are required per entry;
-    # optional keys: exclude_patterns (list of Go regexes; matching files are skipped),
-    # follow_symlinks (default true), show_artists (default true), default_view
-    # (albums | artists), icon (PrimeIcons name without the "pi pi-" prefix) and
-    # cover_style (auto | classic | bauhaus | rings | waves | poster | remix).
-    # Paths must be readable by the aether service user; add the media group via
-    # extra_groups and list the path in readwrite_paths if aether should edit tags.
-    libraries: []
+    # Directories aether scans for music (v0.11+). They are declared only here — there is no
+    # UI to add one — so with none configured nothing is scanned and nothing plays. Libraries
+    # are no longer configured in the file: they are saved filters over the scanned catalog,
+    # created in the admin UI (Settings -> Libraries). Only name and path are required per
+    # entry; optional keys: exclude_patterns (list of Go regexes; matching files/directories
+    # are skipped — a pattern starting with "@" is read as a file path, so write Synology's
+    # "@eaDir" as "^@eaDir$") and follow_symlinks (default true). Use absolute paths; roots
+    # must not be equal or nested, and a root that is itself a symlink is refused. Removing
+    # an entry removes its tracks at the next scan, together with their stars, playlist
+    # entries and play history. Paths must be readable by the aether service user; add the
+    # media group via extra_groups and list the path in readwrite_paths if aether should
+    # edit tags.
+    scan_folders: []
     # Authentication (v0.4+). One of:
     #   none         -> no authentication at all. Trusted LAN only.
     #   native       -> users live in the aether database; aether renders its own login form.
@@ -145,3 +150,5 @@ aether_checksums:
   "0.4.0": "6a37785485d8e38e2b3a85438a9dcea8f561744375739532fd0d772142f984f3"
   "0.5.0": "45b1571b149f59442f2bb36b401758287ae1bc4cac4677c1a36c975c054b8f64"
   "0.6.0": "d8b0bf0cc1130181a04a07d8cc1ef2773edb27f9e12ccfea4e65286f8e2dfcb8"
+  "0.12.3": "a3520deb127df3d2f79eb6a83f7398355ccd9dbb5a95037a2d838511bb66e341"
+  "0.12.4": "33a384c25132dafb5494e7ab42115a3b951f10b02def96e732e3f0bfac29a012"

@@ -10,8 +10,10 @@
 
 Server:
   Port: {{ aether_config.config.server.port | default(8075) }}
-  # Bind address. Empty means all interfaces. Set to 127.0.0.1 when a reverse
-  # proxy (nginx/Traefik/Caddy) fronts the server.
+  # Bind address. What empty means depends on Auth.Method: with "none" it is
+  # 127.0.0.1 (localhost only), and a wildcard like 0.0.0.0 is refused at
+  # startup; with "native"/"proxy-header" it is all interfaces. Set to
+  # 127.0.0.1 when a reverse proxy (nginx/Traefik/Caddy) fronts the server.
   BindIp: "{{ aether_config.config.server.bind_ip | default('') }}"
 
 # Observability endpoints (health, Prometheus metrics) on a separate server.
@@ -25,35 +27,25 @@ Observability:
 # Database, cached artwork and task logs live here. Owned by the aether user.
 DataDir: "{{ aether_config.paths.data_dir }}"
 
-{% set libraries = aether_config.config.libraries | default([]) %}
-{% if libraries | length > 0 %}
-# Music libraries provisioned from this file (v0.5+). Additive with UI-created
-# libraries; these entries are materialized at every startup and are read-only in
-# the UI. Removing one here does not delete it — it becomes editable in the UI.
-Libraries:
-{% for lib in libraries %}
-  - Name: "{{ lib.name }}"
-    Path: "{{ lib.path }}"
-{% if lib.exclude_patterns | default([]) | length > 0 %}
+{% set scan_folders = aether_config.config.scan_folders | default([]) %}
+{% if scan_folders | length > 0 %}
+# The directories aether scans for music (v0.11+), declared here and nowhere
+# else. Removing an entry removes its tracks at the next scan, together with
+# their stars, playlist entries and play history. What users browse —
+# "libraries" — are saved filters created in Settings → Libraries, not here.
+ScanFolders:
+{% for folder in scan_folders %}
+  - Name: "{{ folder.name }}"
+    Path: "{{ folder.path }}"
+{% if folder.exclude_patterns | default([]) | length > 0 %}
+    # Single-quoted so regex backslashes (e.g. \.) reach aether verbatim.
     ExcludePatterns:
-{% for pattern in lib.exclude_patterns %}
-      - "{{ pattern }}"
+{% for pattern in folder.exclude_patterns %}
+      - '{{ pattern | replace("'", "''") }}'
 {% endfor %}
 {% endif %}
-{% if lib.follow_symlinks is defined %}
-    FollowSymlinks: {{ lib.follow_symlinks | bool | lower }}
-{% endif %}
-{% if lib.show_artists is defined %}
-    ShowArtists: {{ lib.show_artists | bool | lower }}
-{% endif %}
-{% if lib.default_view is defined %}
-    DefaultView: "{{ lib.default_view }}"
-{% endif %}
-{% if lib.icon is defined %}
-    Icon: "{{ lib.icon }}"
-{% endif %}
-{% if lib.cover_style is defined %}
-    CoverStyle: "{{ lib.cover_style }}"
+{% if folder.follow_symlinks is defined %}
+    FollowSymlinks: {{ folder.follow_symlinks | bool | lower }}
 {% endif %}
 {% endfor %}
 {% endif %}

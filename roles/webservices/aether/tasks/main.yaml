@@ -41,21 +41,31 @@
         quiet: true
       when: aether_config.config.auth.method == 'native'
 
-    # Libraries provisioned from config (v0.5+) need at least name and path, and aether
-    # refuses to start on an invalid default_view or cover_style.
-    - name: Validate aether config-provisioned libraries
+    # v0.11 dropped config-provisioned libraries: the config now only declares the scan
+    # folders, and libraries became saved filters managed in the admin UI. The template no
+    # longer renders the old key, so a leftover entry would otherwise vanish silently and
+    # leave nothing scanned.
+    - name: Fail on the removed aether libraries setting
+      ansible.builtin.assert:
+        that:
+          - aether_config.config.libraries | default([]) | length == 0
+        fail_msg: >-
+          aether.config.libraries is no longer supported (aether v0.11+). Declare the music
+          directories as aether.config.scan_folders (name, path, exclude_patterns and
+          follow_symlinks carry over) and recreate the libraries as filters in the admin UI
+          (Settings -> Libraries).
+        quiet: true
+
+    # Scan folders (v0.11+) need at least name and path; aether refuses to start otherwise.
+    - name: Validate aether scan folders
       ansible.builtin.assert:
         that:
           - item.name | default('') | length > 0
           - item.path | default('') | length > 0
-          - item.default_view | default('albums') in ['albums', 'artists']
-          - item.cover_style | default('auto') in ['auto', 'classic', 'bauhaus', 'rings', 'waves', 'poster', 'remix']
         fail_msg: >-
-          Each entry in aether.config.libraries needs name and path; default_view must be
-          albums or artists and cover_style one of auto, classic, bauhaus, rings, waves,
-          poster or remix (got '{{ item }}').
+          Each entry in aether.config.scan_folders needs name and path (got '{{ item }}').
         quiet: true
-      loop: "{{ aether_config.config.libraries | default([]) }}"
+      loop: "{{ aether_config.config.scan_folders | default([]) }}"
       loop_control:
         label: "{{ item.name | default(item.path) | default('<unnamed>') }}"
 
@@ -69,6 +79,22 @@
           auth.proxy_header.admin_group to be set; aether refuses to start otherwise.
         quiet: true
       when: aether_config.config.auth.method == 'proxy-header'
+
+    # Without authentication (v0.8+) aether refuses to start on a wildcard bind address —
+    # 0.0.0.0, :: or any other spelling of the unspecified address, bracketed or not.
+    - name: Validate aether bind address for unauthenticated access
+      vars:
+        aether_bind_ip: "{{ aether_config.config.server.bind_ip | default('') | trim | replace('[', '') | replace(']', '') }}"
+      ansible.builtin.assert:
+        that:
+          - aether_bind_ip is not match('^(0[.]0[.]0[.]0|[0:]*:[0:]*)$')
+        fail_msg: >-
+          auth.method 'none' must not bind to all interfaces (got
+          '{{ aether_config.config.server.bind_ip }}'); aether refuses to start. Set
+          aether.config.server.bind_ip to 127.0.0.1 or a specific LAN address, or use
+          native or proxy-header auth.
+        quiet: true
+      when: aether_config.config.auth.method == 'none'
 
     # proxy-header trusts identity headers on the request, so aether must not be reachable
     # directly — anyone who can hit it could otherwise assert any user and group.

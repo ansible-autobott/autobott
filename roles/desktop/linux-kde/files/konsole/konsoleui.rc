@@ -62,6 +62,12 @@
    <text>Help</text>
   </Menu>
  </MenuBar>
+ <ToolBar name="mainToolBar" hidden="true">
+  <text>Main Toolbar</text>
+  <index>0</index>
+  <Action name="new-tab"/>
+  <Action name="split-view"/>
+ </ToolBar>
  <ActionProperties>
   <Action name="clone-tab" shortcut=""/>
   <Action name="help_contents" shortcut=""/>

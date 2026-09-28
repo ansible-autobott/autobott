@@ -45,3 +45,13 @@ firewall_required:
 
   allowed_outbound_udp:
     - 53 # DNS
+
+# Drop-in rules: other roles (e.g. k3s) register the UFW rules they need as one JSON file each in this
+# directory. The firewall always applies every drop-in, so these rules survive the reset done on config changes.
+firewall_dropin_dir: /etc/ufw/autobott.d
+
+# Set by a role that imports the firewall role, writes <firewall_dropin_dir>/<name>.json before applying.
+# Each rule takes community.general.ufw parameters: rule (default allow), route, direction, from_ip,
+# to_ip, port, proto, interface, comment.
+firewall_dropin_name: ""
+firewall_dropin_rules: []

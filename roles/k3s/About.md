@@ -44,6 +44,26 @@ Internet → Caddy (TLS on host) → 127.0.0.1:80 → Traefik (HTTP in cluster) 
 - This provides network isolation — even with shell access on the host, individual services can't be reached directly (only via Traefik with proper Host headers).
 - Multiple replicas work naturally since there's no hostPort conflict on application pods.
 
+### Firewall (UFW) is always on
+
+- The k3s role imports `security/firewall` with `run_role_firewall: true`, so enabling k3s turns the firewall on
+  even if the host does not enable it. The API (`6443`), kubelet (`10250`), Calico BGP (`179`) and NodePorts are
+  not reachable from outside: the firewall rejects all inbound traffic except the allowed ports.
+- k3s registers its rules as a drop-in file (`/etc/ufw/autobott.d/k3s.json`). The firewall role applies every
+  drop-in, so the rules survive the UFW reset it does whenever its own config changes.
+- Rules (found by running without them and reading the UFW block log):
+  - **host → pods** (`allow out to <cluster_cidr>`): the firewall rejects outgoing traffic by default, which
+    breaks kubelet probes and API server → pod calls (metrics-server, webhooks).
+  - **pods → anywhere** (`route allow from <cluster_cidr>`): on hosts that also run Docker, the ufw-docker rules
+    drop forwarded traffic to private addresses, which includes pod → pod (e.g. CoreDNS) and CoreDNS → a private
+    upstream resolver.
+- Not needed: pods → host (e.g. the API) is accepted by Calico before UFW sees it
+  (`FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT`), and service IPs are already rewritten to pod IPs when UFW checks
+  the packet.
+- **Limit:** Calico accepts forwarded pod traffic at the end of the `FORWARD` chain, so the firewall's outbound
+  port allowlist does not apply to pods — pods can reach any port on the internet. Restricting pod egress needs
+  Calico network policies.
+
 ### kubeconfig access control
 
 - `write-kubeconfig-mode: 0640` — only root and the `k3s-admin` group can read the kubeconfig.
@@ -56,6 +76,7 @@ Internet → Caddy (TLS on host) → 127.0.0.1:80 → Traefik (HTTP in cluster) 
 | Layer | What it protects |
 |-------|-----------------|
 | Caddy (host) | TLS termination, only external entry point |
+| UFW (always on) | API, kubelet, BGP and NodePorts not reachable from outside |
 | hostPort 127.0.0.1 | Traefik not reachable from network, only from host |
 | Traefik Ingress rules | Routes only matching hostname/path, not a generic proxy |
 | Calico NetworkPolicies | Pod-to-pod isolation, only Traefik reaches app pods |

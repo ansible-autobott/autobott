@@ -11,7 +11,10 @@
     - untagged
   when: run_role_k3s | bool
   block:
+    # always: the firewall tasks imported below also run with -t firewall and need k3s_config
     - name: Set merged k3s configuration
+      tags:
+        - always
       ansible.builtin.set_fact:
         k3s_config: "{{ k3s_defaults | combine(k3s, recursive=true) }}"
 
@@ -112,6 +115,31 @@
         mode: "0600"
       notify:
         - restart k3s
+
+    #====================================================
+    # Firewall
+    #====================================================
+    # k3s always runs behind the firewall: this turns the firewall role on and registers the rules k3s
+    # needs (see About.md):
+    # - host -> pods (kubelet probes, API server -> pods): the firewall rejects outgoing traffic by default.
+    # - pods -> anywhere (pod to pod, CoreDNS upstream): on hosts that also run Docker, the ufw-docker
+    #   rules drop forwarded traffic to private addresses, which includes the pod network.
+    # Pods -> host (e.g. the API) is accepted by Calico before UFW sees it, and service IPs are already
+    # rewritten to pod IPs when UFW checks the packet.
+
+    - name: Enable the firewall with the rules k3s needs # noqa: role-name[path] var-naming[no-role-prefix]
+      ansible.builtin.import_role:
+        name: security/firewall
+      vars:
+        run_role_firewall: true
+        firewall_dropin_name: k3s
+        firewall_dropin_rules:
+          - direction: out
+            to_ip: "{{ k3s_config.cluster_cidr }}"
+            comment: host to k3s pods
+          - route: true
+            from_ip: "{{ k3s_config.cluster_cidr }}"
+            comment: k3s pods to anywhere
 
     #====================================================
     # Service

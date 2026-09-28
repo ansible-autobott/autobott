@@ -18,6 +18,41 @@
         state: present
         update_cache: true
 
+    #====================================================
+    # Drop-in rules registered by other roles
+    #====================================================
+
+    - name: Create firewall drop-in directory
+      ansible.builtin.file:
+        path: "{{ firewall_dropin_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write drop-in rules of the importing role
+      ansible.builtin.copy:
+        content: "{{ {'rules': firewall_dropin_rules} | to_nice_json }}\n"
+        dest: "{{ firewall_dropin_dir }}/{{ firewall_dropin_name }}.json"
+        owner: root
+        group: root
+        mode: "0644"
+      when: firewall_dropin_name | length > 0
+
+    - name: Find firewall drop-in files
+      ansible.builtin.find:
+        paths: "{{ firewall_dropin_dir }}"
+        patterns: "*.json"
+      register: firewall_dropin_files
+
+    - name: Read firewall drop-in files
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ firewall_dropin_files.files | sort(attribute='path') }}"
+      loop_control:
+        label: "{{ item.path }}"
+      register: firewall_dropin_content
+
     - name: Add required ports to config
       ansible.builtin.set_fact:
         firewall_config: >-
@@ -28,7 +63,9 @@
               "allowed_outbound_tcp": (firewall_config.allowed_outbound_tcp + firewall_required.allowed_outbound_tcp) | unique,
               "allowed_outbound_udp": (firewall_config.allowed_outbound_udp + firewall_required.allowed_outbound_udp) | unique,
               "allow_between_containers": firewall_config.allow_between_containers,
-              "block_docker_public": firewall_config.block_docker_public
+              "block_docker_public": firewall_config.block_docker_public,
+              "dropin_rules": firewall_dropin_content.results | map(attribute='content') | map('b64decode')
+                | map('from_json') | map(attribute='rules') | flatten(levels=1)
             }
           }}
 
@@ -117,6 +154,21 @@
             direction: out
             proto: udp
           loop: "{{ firewall_config.allowed_outbound_udp }}"
+
+        - name: Apply drop-in rules registered by other roles
+          community.general.ufw:
+            rule: "{{ item.rule | default('allow') }}"
+            route: "{{ item.route | default(omit) }}"
+            direction: "{{ item.direction | default(omit) }}"
+            from_ip: "{{ item.from_ip | default(omit) }}"
+            to_ip: "{{ item.to_ip | default(omit) }}"
+            port: "{{ item.port | default(omit) }}"
+            proto: "{{ item.proto | default(omit) }}"
+            interface: "{{ item.interface | default(omit) }}"
+            comment: "{{ item.comment | default(omit) }}"
+          loop: "{{ firewall_config.dropin_rules }}"
+          loop_control:
+            label: "{{ item.comment | default(item) }}"
 
         - name: Make docker services not publicly available
           when: firewall_config.block_docker_public | bool

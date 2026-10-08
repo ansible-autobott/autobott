@@ -1,0 +1,40 @@
+---
+# ============================================================================================================
+# Preconditions
+# ============================================================================================================
+- name: Main preconditions block
+  tags:
+    - role_preconditions
+    - preconditions
+    - always
+  when:
+    - run_role_preconditions | bool
+  block:
+    - name: Set merged preconditions configuration
+      ansible.builtin.set_fact:
+        preconditions_config: "{{ preconditions_defaults | combine(preconditions, recursive=true) }}"
+
+    # ====================================================
+    # APT sources
+    # ====================================================
+    - name: Disable the APT sources that make apt-get update fail
+      ansible.builtin.script:
+        cmd: "apt-disable-broken-sources.sh {{ preconditions_config.apt_sources.protected | map('quote') | join(' ') }}"
+      register: preconditions_apt_sources
+      changed_when: preconditions_apt_sources.stdout | trim | length > 0
+      when: preconditions_config.apt_sources.disable_broken | bool
+
+    - name: Report the disabled APT sources
+      ansible.builtin.debug:
+        msg: >-
+          Disabled APT sources (apt-get update failed for them):
+          {{ preconditions_apt_sources.stdout_lines | join(', ') }}.
+          The role that manages a source re-enables it.
+      when: preconditions_apt_sources.stdout_lines | default([]) | length > 0
+
+    - name: Report why no APT source was disabled
+      ansible.builtin.debug:
+        msg: "{{ preconditions_apt_sources.stderr | trim }}"
+      when:
+        - preconditions_apt_sources is not skipped
+        - preconditions_apt_sources.stderr | default('') | trim | length > 0

@@ -1,0 +1,25 @@
+---
+# ============================================================================================================
+# Preconditions
+# ============================================================================================================
+# Runs first, before enroll, and on every run (tagged `always`, so tag-limited runs get it
+# too): puts the host in a state where the rest of the playbook can run at all.
+
+# Flag to disable the role
+run_role_preconditions: true
+
+# User overrides - will be combined with defaults
+preconditions: {}
+
+preconditions_defaults:
+  apt_sources:
+    # Disable the sources in /etc/apt/sources.list.d that make `apt-get update` fail
+    # (rotated signing key, dropped suite, dead host), so one outdated repository cannot
+    # fail every apt task. The role that manages a source re-enables it by rewriting its
+    # file. See files/apt-disable-broken-sources.sh.
+    disable_broken: true
+    # Files in sources.list.d that are never disabled: the distro's own sources. When one
+    # of these fails, nothing is disabled. /etc/apt/sources.list is always protected.
+    protected:
+      - debian.sources
+      - ubuntu.sources

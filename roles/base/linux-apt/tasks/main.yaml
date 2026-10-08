@@ -14,6 +14,24 @@
       ansible.builtin.set_fact:
         linux_apt_data: "{{ linux_apt_defaults | combine(linux_apt, recursive=True) }}"
 
+    # Catalog repositories stay configured once a role has added them. Refresh
+    # their keys before the first cache update: if one rotated its signing key,
+    # `apt update` fails for every source until the new key is in place.
+    - name: "Find catalog repositories already configured on the host"
+      ansible.builtin.stat:
+        path: "/etc/apt/sources.list.d/{{ item }}.sources"
+      loop: "{{ linux_apt_extra_repos_catalog.keys() | list }}"
+      register: linux_apt_configured_extra_repos
+
+    - name: "Refresh the signing keys of configured catalog repositories"
+      ansible.builtin.copy:
+        src: "keyrings/{{ linux_apt_extra_repos_catalog[item].key }}"
+        dest: "/etc/apt/keyrings/{{ linux_apt_extra_repos_catalog[item].key }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ linux_apt_configured_extra_repos.results | selectattr('stat.exists') | map(attribute='item') | list }}"
+
     - name: "Configure APT package sources"
       ansible.builtin.include_tasks:
         file: sources.yaml

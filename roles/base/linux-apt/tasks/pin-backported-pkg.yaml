@@ -2,8 +2,9 @@
 # ============================================================================
 # Optional: install and pin selected packages from <release>-backports, each
 # group written to its own preferences.d pin file.
-#   pin_backported_pkg.kernel   -> amd64 kernel (+ AMD GPU firmware if detected)
-#   pin_backported_pkg.firmware -> general firmware (firmware-linux + non-free)
+#   pin_backported_pkg.kernel   -> host-arch kernel (+ AMD GPU firmware if detected)
+#   pin_backported_pkg.firmware -> general firmware (firmware-linux + non-free;
+#                                  pins every package built from src:firmware-nonfree)
 # ============================================================================
 
 - name: "Set backports suite and empty package lists"
@@ -23,6 +24,14 @@
 - name: "Backport kernel — build list and pin"
   when: linux_apt_data.pin_backported_pkg.kernel | default(false) | bool
   block:
+    - name: "Require a supported architecture for the backport kernel"
+      ansible.builtin.assert:
+        that: ansible_facts.architecture in linux_apt_arch_map
+        fail_msg: >-
+          pin_backported_pkg.kernel: unsupported architecture '{{ ansible_facts.architecture }}'.
+          Supported: {{ linux_apt_arch_map.keys() | list | join(', ') }}
+        quiet: true
+
     - name: "Detect AMD/ATI GPU (PCI vendor 0x1002)"
       ansible.builtin.shell: |
         if grep -qxs 0x1002 /sys/bus/pci/devices/*/vendor; then
@@ -35,11 +44,13 @@
       check_mode: false
       failed_when: false
 
+    # linux-base is also in stable, but the backport kernel PreDepends a newer one.
     - name: "Build kernel backport list"
       ansible.builtin.set_fact:
         linux_apt_backport_kernel_pkgs:
-          - linux-image-amd64
-          - linux-headers-amd64
+          - "linux-image-{{ linux_apt_arch_map[ansible_facts.architecture] }}"
+          - "linux-headers-{{ linux_apt_arch_map[ansible_facts.architecture] }}"
+          - linux-base
 
     - name: "Add AMD GPU firmware when an AMD GPU is present"
       ansible.builtin.set_fact:
@@ -73,6 +84,10 @@
           - firmware-linux
           - firmware-linux-nonfree
 
+    # Pin the whole source package, not just the metapackages: firmware-linux-nonfree
+    # depends on the exact same version of firmware-misc-nonfree, firmware-amd-graphics,
+    # ... and those also exist in stable, so pinning only the metapackages leaves apt
+    # unable to satisfy the dependencies.
     - name: "Pin firmware backport packages to {{ linux_apt_backport_suite }}"
       ansible.builtin.template:
         src: pin-backported-pkg.pref.j2
@@ -81,7 +96,7 @@
         group: root
         mode: "0644"
       vars:
-        pin_pkgs: "{{ linux_apt_backport_firmware_pkgs }}"
+        pin_pkgs: ["src:firmware-nonfree"]
         pin_suite: "{{ linux_apt_backport_suite }}"
 
 - name: "Backport firmware — remove pin when disabled"

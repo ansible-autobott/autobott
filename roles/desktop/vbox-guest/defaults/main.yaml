@@ -1,7 +1,20 @@
----
 # ============================================================================================================
 # vbox_guest Role Defaults
 # ============================================================================================================
 
 # Main role control variable
 run_role_vbox_guest: false
+
+# Guest Additions version to install; must be a key of vbox_guest_versions. Keep it at (or
+# close to) the VirtualBox version of the host. arm64 guests need 7.1 or later.
+vbox_guest_version: "7.2.20"
+
+# https://download.virtualbox.org/virtualbox/<version>/SHA256SUMS
+# (version -> sha256 of VBoxGuestAdditions_<version>.iso)
+vbox_guest_versions:
+  "7.2.20": "4c6ba898e37b307cf9088be8ff480d9aec13bb0e395aaf31c78d564bb35916e7"
+
+# Installer inside the ISO for each guest CPU architecture (ansible_facts.architecture)
+vbox_guest_installers:
+  x86_64: VBoxLinuxAdditions.run
+  aarch64: VBoxLinuxAdditions-arm64.run

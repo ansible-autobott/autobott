@@ -22,6 +22,13 @@
       with_first_found:
         - "{{ ansible_facts.distribution_release }}.yaml"
 
+    # Several tasks below run as the desktop user (become_user); Ansible needs
+    # setfacl to hand its temp files to an unprivileged user.
+    - name: Ensure acl is installed
+      ansible.builtin.apt:
+        name: acl
+        state: present
+
     - name: Installing KDE # noqa: package-latest (desktop keeps KDE up to date on each run)
       ansible.builtin.apt:
         name: "{{ kde_packages }}"

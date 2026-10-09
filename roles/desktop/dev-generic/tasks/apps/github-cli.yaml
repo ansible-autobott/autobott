@@ -23,7 +23,7 @@
     uris: https://cli.github.com/packages
     suites: stable
     components: main
-    architectures: amd64
+    architectures: [amd64, arm64]
     signed_by: /usr/share/keyrings/githubcli-archive-keyring.gpg
     state: present
     mode: "0644"

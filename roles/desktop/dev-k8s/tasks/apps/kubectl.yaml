@@ -1,8 +1,8 @@
 ---
 # ============================================================================================================
 # kubectl (+ Azure kubelogin)
-# https://kubernetes.io/releases/            (version -> sha256, kubectl_versions)
-# https://github.com/Azure/kubelogin/releases (version -> sha256, kubelogin_versions)
+# https://kubernetes.io/releases/            (version -> arch -> sha256, kubectl_versions)
+# https://github.com/Azure/kubelogin/releases (version -> arch -> sha256, kubelogin_versions)
 # ============================================================================================================
 - name: Resolve the selected kubectl / kubelogin versions
   ansible.builtin.set_fact:
@@ -13,17 +13,19 @@
   ansible.builtin.assert:
     that:
       - kubectl_version in kubectl_versions
+      - dev_k8s_arch in kubectl_versions[kubectl_version]
     fail_msg: >-
-      Unknown kubectl version '{{ kubectl_version }}'.
-      Available: {{ kubectl_versions.keys() | list | join(', ') }}
+      Unknown kubectl version '{{ kubectl_version }}' for {{ dev_k8s_arch }}.
+      Available: {{ kubectl_versions | dict2items | selectattr('value', 'contains', dev_k8s_arch) | map(attribute='key') | join(', ') }}
 
 - name: Validate the selected kubelogin version is available
   ansible.builtin.assert:
     that:
       - kubelogin_version in kubelogin_versions
+      - dev_k8s_arch in kubelogin_versions[kubelogin_version]
     fail_msg: >-
-      Unknown kubelogin version '{{ kubelogin_version }}'.
-      Available: {{ kubelogin_versions.keys() | list | join(', ') }}
+      Unknown kubelogin version '{{ kubelogin_version }}' for {{ dev_k8s_arch }}.
+      Available: {{ kubelogin_versions | dict2items | selectattr('value', 'contains', dev_k8s_arch) | map(attribute='key') | join(', ') }}
 
 # ============================== kubectl ============================== #
 - name: Get current kubectl version
@@ -39,9 +41,9 @@
   block:
     - name: Download kubectl
       ansible.builtin.get_url:
-        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/{{ dev_k8s_arch }}/kubectl"
         dest: /usr/local/bin/kubectl
-        checksum: "sha256:{{ kubectl_versions[kubectl_version] }}"
+        checksum: "sha256:{{ kubectl_versions[kubectl_version][dev_k8s_arch] }}"
         owner: root
         group: root
         mode: "0755"
@@ -98,9 +100,9 @@
 
     - name: Download kubelogin
       ansible.builtin.get_url:
-        url: "https://github.com/Azure/kubelogin/releases/download/{{ kubelogin_version }}/kubelogin-linux-amd64.zip"
+        url: "https://github.com/Azure/kubelogin/releases/download/{{ kubelogin_version }}/kubelogin-linux-{{ dev_k8s_arch }}.zip"
         dest: "/tmp/kubelogin/kubelogin.zip"
-        checksum: "sha256:{{ kubelogin_versions[kubelogin_version] }}"
+        checksum: "sha256:{{ kubelogin_versions[kubelogin_version][dev_k8s_arch] }}"
         owner: root
         group: root
         mode: "0644"
@@ -112,7 +114,7 @@
         remote_src: true
 
     - name: Move kubelogin
-      ansible.builtin.command: "mv /tmp/kubelogin/bin/linux_amd64/kubelogin /usr/local/bin/kubelogin"
+      ansible.builtin.command: "mv /tmp/kubelogin/bin/linux_{{ dev_k8s_arch }}/kubelogin /usr/local/bin/kubelogin"
       changed_when: true
 
     - name: Remove kubelogin download dir

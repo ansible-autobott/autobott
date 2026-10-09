@@ -47,14 +47,20 @@ in `defaults/main.yaml`:
 
 - `<tool>_default_version` — the scalar version installed when the tool is selected without
   an explicit pin. **This is the field you bump.**
-- `<tool>_versions:` — a **map** `"<version>": "<hash>"` (the checksum lookup), *or* for
-  a couple of tools a plain **allow-list** of version strings with no hash.
+- `<tool>_versions:` — the checksum lookup, in one of three shapes:
+  - a **per-architecture map** `"<version>": { amd64: "<hash>", arm64: "<hash>" }` for tools
+    that ship CPU-specific builds. The role resolves the host's Debian arch name into
+    `<role>_arch` (via `<role>_arch_names`) and verifies via
+    `checksum: "<algo>:{{ <tool>_versions[<tool>_version][<role>_arch] }}"`.
+  - a **flat map** `"<version>": "<hash>"` for arch-independent artifacts (jenv, maven, nvm),
+    verified via `checksum: "<algo>:{{ <tool>_versions[<tool>_version] }}"`.
+  - a plain **allow-list** of version strings with no hash (golang).
 
-The task verifies via `checksum: "<algo>:{{ <tool>_versions[<tool>_version] }}"`. So an
-upgrade here is: **bump `<tool>_default_version` → download the new artifact → append a new
-`"<version>": "<hash>"` entry to `<tool>_versions` (keep the old entries — the catalog is an
-allow-list, existing pins stay valid).** For the allow-list tools, just prepend the new
-version string; there is no hash. See [Tier 1b](#tier-1b--per-tool-version-catalogs-desktopdev-roles).
+So an upgrade here is: **bump `<tool>_default_version` → download the new artifact (for a
+per-architecture tool, the build for every architecture already in the catalog) → append a
+new entry to `<tool>_versions` with a hash for each of them (keep the old entries — the
+catalog is an allow-list, existing pins stay valid).** For the allow-list tools, just prepend
+the new version string; there is no hash. See [Tier 1b](#tier-1b--per-tool-version-catalogs-desktopdev-roles).
 
 ## Per-role procedure
 
@@ -147,24 +153,27 @@ Then edit `roles/web-base/authelia/defaults/main.yaml`: set `version: 4.39.22` a
 ## Tier 1b — per-tool version catalogs (desktop/dev-* roles)
 
 The [per-tool catalog pattern](#the-other-pattern-per-tool-version-catalogs-the-dev--roles):
-bump `<tool>_default_version`, append `"<V>": "<hash>"` to `<tool>_versions`. Algo is
-**sha256 unless noted**. `V` = the new stored version (after the tag transform).
+bump `<tool>_default_version`, append the `"<V>"` entry to `<tool>_versions`. Algo is
+**sha256 unless noted**. `V` = the new stored version (after the tag transform). Rows whose
+URL has a `{amd64-name,arm64-name}` group are **per-architecture**: hash the build for each
+alternative and store them as `"<V>": { amd64: "<hash>", arm64: "<hash>" }` (the first
+alternative is the `amd64` build, the second the `arm64` one).
 
 | Role (dir) | version key | catalog var | algo | latest command | tag → stored | artifact URL (with `V`) |
 |---|---|---|---|---|---|---|
-| desktop/dev-ai | `herdr_default_version` | `herdr_versions` | sha256 | `gh api repos/herdrdev/herdr/releases/latest --jq .tag_name` | strip `v` | `https://github.com/herdrdev/herdr/releases/download/vV/herdr-linux-x86_64` |
-| desktop/dev-ai | `claude_code_default_version` | `claude_code_versions` | sha256 | `curl -s <claude_code_base_url>/stable` | as-is (no `v`) | binary: `<claude_code_base_url>/V/linux-x64/claude` — hash from the manifest: `curl -s <claude_code_base_url>/V/manifest.json \| jq -r '.platforms["linux-x64"].checksum'` (no download needed). Use the `stable` channel, not `latest`. |
-| desktop/dev-ai | `pi_default_version` | `pi_versions` | sha256 | `gh api repos/badlogic/pi-mono/releases/latest --jq .tag_name` | strip `v` | `https://github.com/badlogic/pi-mono/releases/download/vV/pi-linux-x64.tar.gz` (sidecar: `SHA256SUMS`) |
-| desktop/dev-ai | `copilot_cli_default_version` | `copilot_cli_versions` | sha256 | `gh api repos/github/copilot-cli/releases/latest --jq .tag_name` | strip `v` | `https://github.com/github/copilot-cli/releases/download/vV/copilot-linux-x64.tar.gz` (sidecar: `SHA256SUMS.txt`) |
-| desktop/dev-generic | `vault_default_version` | `vault_versions` | sha256 | `curl -s https://api.releases.hashicorp.com/v1/releases/vault/latest \| jq -r .version` | as-is (no `v`) | `https://releases.hashicorp.com/vault/V/vault_V_linux_amd64.zip` |
-| desktop/dev-go | `goreleaser_default_version` | `goreleaser_versions` | sha256 | `gh api repos/goreleaser/goreleaser/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/goreleaser/releases/download/vV/goreleaser_V_amd64.deb` |
-| desktop/dev-go | `nfpm_default_version` | `nfpm_versions` | sha256 | `gh api repos/goreleaser/nfpm/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/nfpm/releases/download/vV/nfpm_V_amd64.deb` |
-| desktop/dev-go | `golangci_lint_default_version` | `golangci_lint_versions` | sha256 | `gh api repos/golangci/golangci-lint/releases/latest --jq .tag_name` | strip `v` | `https://github.com/golangci/golangci-lint/releases/download/vV/golangci-lint-V-linux-amd64.deb` |
+| desktop/dev-ai | `herdr_default_version` | `herdr_versions` | sha256 | `gh api repos/herdrdev/herdr/releases/latest --jq .tag_name` | strip `v` | `https://github.com/herdrdev/herdr/releases/download/vV/herdr-linux-{x86_64,aarch64}` |
+| desktop/dev-ai | `claude_code_default_version` | `claude_code_versions` | sha256 | `curl -s <claude_code_base_url>/stable` | as-is (no `v`) | binary: `<claude_code_base_url>/V/linux-{x64,arm64}/claude` — hashes from the manifest: `curl -s <claude_code_base_url>/V/manifest.json \| jq -r '.platforms["linux-x64"].checksum, .platforms["linux-arm64"].checksum'` (no download needed). Use the `stable` channel, not `latest`. |
+| desktop/dev-ai | `pi_default_version` | `pi_versions` | sha256 | `gh api repos/badlogic/pi-mono/releases/latest --jq .tag_name` | strip `v` | `https://github.com/badlogic/pi-mono/releases/download/vV/pi-linux-{x64,arm64}.tar.gz` (sidecar: `SHA256SUMS`) |
+| desktop/dev-ai | `copilot_cli_default_version` | `copilot_cli_versions` | sha256 | `gh api repos/github/copilot-cli/releases/latest --jq .tag_name` | strip `v` | `https://github.com/github/copilot-cli/releases/download/vV/copilot-linux-{x64,arm64}.tar.gz` (sidecar: `SHA256SUMS.txt`) |
+| desktop/dev-generic | `vault_default_version` | `vault_versions` | sha256 | `curl -s https://api.releases.hashicorp.com/v1/releases/vault/latest \| jq -r .version` | as-is (no `v`) | `https://releases.hashicorp.com/vault/V/vault_V_linux_{amd64,arm64}.zip` |
+| desktop/dev-go | `goreleaser_default_version` | `goreleaser_versions` | sha256 | `gh api repos/goreleaser/goreleaser/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/goreleaser/releases/download/vV/goreleaser_V_{amd64,arm64}.deb` |
+| desktop/dev-go | `nfpm_default_version` | `nfpm_versions` | sha256 | `gh api repos/goreleaser/nfpm/releases/latest --jq .tag_name` | strip `v` | `https://github.com/goreleaser/nfpm/releases/download/vV/nfpm_V_{amd64,arm64}.deb` |
+| desktop/dev-go | `golangci_lint_default_version` | `golangci_lint_versions` | sha256 | `gh api repos/golangci/golangci-lint/releases/latest --jq .tag_name` | strip `v` | `https://github.com/golangci/golangci-lint/releases/download/vV/golangci-lint-V-linux-{amd64,arm64}.deb` |
 | desktop/dev-java | `jenv_default_version` | `jenv_versions` | sha256 | `gh api repos/jenv/jenv/releases/latest --jq .tag_name` | as-is (no `v`) | `https://github.com/jenv/jenv/archive/refs/tags/V.tar.gz` |
 | desktop/dev-java | `maven_default_version` | `maven_versions` | **sha512** | see maven note below | as-is (no `v`) | `https://archive.apache.org/dist/maven/maven-3/V/binaries/apache-maven-V-bin.tar.gz` |
-| desktop/dev-k8s | `kubectl_default_version` | `kubectl_versions` | sha256 | `curl -sL https://dl.k8s.io/release/stable.txt` | as-is (**with** `v`) | binary: `https://dl.k8s.io/release/V/bin/linux/amd64/kubectl` — hash from sidecar: `curl -sL https://dl.k8s.io/release/V/bin/linux/amd64/kubectl.sha256` (no download needed). NB: the legacy `storage.googleapis.com/kubernetes-release/...` host no longer serves new releases — use `dl.k8s.io`. |
-| desktop/dev-k8s | `kubelogin_default_version` | `kubelogin_versions` | sha256 | `gh api repos/Azure/kubelogin/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/Azure/kubelogin/releases/download/V/kubelogin-linux-amd64.zip` |
-| desktop/dev-k8s | `k9s_default_version` | `k9s_versions` | sha256 | `gh api repos/derailed/k9s/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/derailed/k9s/releases/download/V/k9s_Linux_amd64.tar.gz` |
+| desktop/dev-k8s | `kubectl_default_version` | `kubectl_versions` | sha256 | `curl -sL https://dl.k8s.io/release/stable.txt` | as-is (**with** `v`) | binary: `https://dl.k8s.io/release/V/bin/linux/{amd64,arm64}/kubectl` — hash from sidecar: `curl -sL https://dl.k8s.io/release/V/bin/linux/<arch>/kubectl.sha256` (no download needed). NB: the legacy `storage.googleapis.com/kubernetes-release/...` host no longer serves new releases — use `dl.k8s.io`. |
+| desktop/dev-k8s | `kubelogin_default_version` | `kubelogin_versions` | sha256 | `gh api repos/Azure/kubelogin/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/Azure/kubelogin/releases/download/V/kubelogin-linux-{amd64,arm64}.zip` |
+| desktop/dev-k8s | `k9s_default_version` | `k9s_versions` | sha256 | `gh api repos/derailed/k9s/releases/latest --jq .tag_name` | as-is (**with** `v`) | `https://github.com/derailed/k9s/releases/download/V/k9s_Linux_{amd64,arm64}.tar.gz` |
 | desktop/dev-node | `nvm_default_version` | `nvm_versions` | sha256 | `gh api repos/nvm-sh/nvm/releases/latest --jq .tag_name` | strip `v` | `https://raw.githubusercontent.com/nvm-sh/nvm/vV/install.sh` |
 
 Special cases inside the dev-* roles:

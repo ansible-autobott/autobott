@@ -1,7 +1,7 @@
 ---
 # ============================================================================================================
 # vault
-# https://releases.hashicorp.com/vault/  (version -> sha256 of the linux_amd64 zip)
+# https://releases.hashicorp.com/vault/  (version -> arch -> sha256 of the linux_<arch> zip)
 # ============================================================================================================
 - name: Resolve the selected vault version
   ansible.builtin.set_fact:
@@ -11,9 +11,10 @@
   ansible.builtin.assert:
     that:
       - vault_version in vault_versions
+      - dev_generic_arch in vault_versions[vault_version]
     fail_msg: >-
-      Unknown vault version '{{ vault_version }}'.
-      Available: {{ vault_versions.keys() | list | join(', ') }}
+      Unknown vault version '{{ vault_version }}' for {{ dev_generic_arch }}.
+      Available: {{ vault_versions | dict2items | selectattr('value', 'contains', dev_generic_arch) | map(attribute='key') | join(', ') }}
 
 - name: Get current vault version
   ansible.builtin.shell: "set -o pipefail && vault version | awk '{print $2}' | tr -d 'v'"
@@ -41,9 +42,9 @@
 
     - name: Download vault
       ansible.builtin.get_url:
-        url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_amd64.zip"
+        url: "https://releases.hashicorp.com/vault/{{ vault_version }}/vault_{{ vault_version }}_linux_{{ dev_generic_arch }}.zip"
         dest: "/tmp/vault/vault.zip"
-        checksum: "sha256:{{ vault_versions[vault_version] }}"
+        checksum: "sha256:{{ vault_versions[vault_version][dev_generic_arch] }}"
         owner: root
         group: root
         mode: "0644"

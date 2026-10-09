@@ -41,8 +41,8 @@ linux_apt_defaults:
 
   # Install and pin selected packages from <release>-backports (requires
   # use_backports: true). Independent toggles:
-  #   kernel   - amd64 kernel; also pins firmware-amd-graphics when an AMD GPU
-  #              is auto-detected.
+  #   kernel   - kernel metapackage for the host arch (see linux_apt_arch_map);
+  #              also pins firmware-amd-graphics when an AMD GPU is auto-detected.
   #   firmware - general firmware: firmware-linux + firmware-linux-nonfree.
   pin_backported_pkg:
     kernel: false
@@ -66,6 +66,12 @@ linux_apt_defaults:
   # e.g. ["autobott"]. Roles that install packages from one of them configure it
   # themselves, so list a repository here only to use it directly.
   extra_repos: []
+
+# ansible_facts.architecture -> Debian arch, used as the suffix of the kernel
+# metapackages (linux-image-<arch>, linux-headers-<arch>).
+linux_apt_arch_map:
+  x86_64: amd64
+  aarch64: arm64
 
 # ============================================================================================================
 # Extra repositories catalog

@@ -11,9 +11,10 @@
   ansible.builtin.assert:
     that:
       - golangci_lint_version in golangci_lint_versions
+      - dev_go_arch in golangci_lint_versions[golangci_lint_version]
     fail_msg: >-
-      Unknown golangci-lint version '{{ golangci_lint_version }}'.
-      Available: {{ golangci_lint_versions.keys() | list | join(', ') }}
+      Unknown golangci-lint version '{{ golangci_lint_version }}' for {{ dev_go_arch }}.
+      Available: {{ golangci_lint_versions | dict2items | selectattr('value', 'contains', dev_go_arch) | map(attribute='key') | join(', ') }}
 
 - name: Get the installed golangci-lint version
   ansible.builtin.command: "dpkg-query -W -f=${Version} golangci-lint"
@@ -37,9 +38,9 @@
       ansible.builtin.get_url:
         url: >-
           https://github.com/golangci/golangci-lint/releases/download/v{{ golangci_lint_version
-          }}/golangci-lint-{{ golangci_lint_version }}-linux-amd64.deb
+          }}/golangci-lint-{{ golangci_lint_version }}-linux-{{ dev_go_arch }}.deb
         dest: /tmp/golangci-lint-dl/golangci-lint.deb
-        checksum: "sha256:{{ golangci_lint_versions[golangci_lint_version] }}"
+        checksum: "sha256:{{ golangci_lint_versions[golangci_lint_version][dev_go_arch] }}"
         owner: root
         group: root
         mode: "0644"

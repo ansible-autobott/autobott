@@ -1,7 +1,7 @@
 ---
 # ============================================================================================================
 # pi — pi coding agent
-# https://github.com/badlogic/pi-mono/releases  (version -> sha256 of pi-linux-x64.tar.gz)
+# https://github.com/badlogic/pi-mono/releases  (version -> arch -> sha256 of pi-<platform>.tar.gz)
 #
 # The release tarball is a pi/ directory: the binary plus the assets it loads
 # from beside itself (package.json, themes, wasm, native modules), so it cannot
@@ -16,9 +16,10 @@
   ansible.builtin.assert:
     that:
       - pi_version in pi_versions
+      - dev_ai_arch in pi_versions[pi_version]
     fail_msg: >-
-      Unknown pi version '{{ pi_version }}'.
-      Available: {{ pi_versions.keys() | list | join(', ') }}
+      Unknown pi version '{{ pi_version }}' for {{ dev_ai_arch }}.
+      Available: {{ pi_versions | dict2items | selectattr('value', 'contains', dev_ai_arch) | map(attribute='key') | join(', ') }}
 
 - name: Check whether this pi version is already installed
   ansible.builtin.stat:
@@ -30,9 +31,9 @@
   block:
     - name: Download pi release tarball
       ansible.builtin.get_url:
-        url: "{{ pi_base_url }}/v{{ pi_version }}/pi-linux-x64.tar.gz"
-        dest: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
-        checksum: "sha256:{{ pi_versions[pi_version] }}"
+        url: "{{ pi_base_url }}/v{{ pi_version }}/pi-{{ dev_ai_platforms[dev_ai_arch] }}.tar.gz"
+        dest: "/tmp/pi-{{ pi_version }}.tar.gz"
+        checksum: "sha256:{{ pi_versions[pi_version][dev_ai_arch] }}"
         owner: root
         group: root
         mode: "0644"
@@ -47,7 +48,7 @@
 
     - name: Install pi into /opt
       ansible.builtin.unarchive:
-        src: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
+        src: "/tmp/pi-{{ pi_version }}.tar.gz"
         dest: "/opt/pi-{{ pi_version }}"
         extra_opts:
           - --strip-components=1
@@ -57,7 +58,7 @@
 
     - name: Remove the pi tarball
       ansible.builtin.file:
-        path: "/tmp/pi-{{ pi_version }}-linux-x64.tar.gz"
+        path: "/tmp/pi-{{ pi_version }}.tar.gz"
         state: absent
 
 - name: Point /opt/pi at the installed version

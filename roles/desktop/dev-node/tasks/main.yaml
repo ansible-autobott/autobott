@@ -9,6 +9,12 @@
     - role_dev_node
     - linux-desktop-all
   block:
+    # A selection whose entries are all commented out parses as null: treat it
+    # as "nothing selected" instead of rejecting it below.
+    - name: Treat an empty dev_node_config as no tools selected
+      ansible.builtin.set_fact:
+        dev_node_config: "{{ dev_node_config | default({}, true) }}"
+
     - name: Validate dev_node_config is a mapping
       ansible.builtin.assert:
         that:

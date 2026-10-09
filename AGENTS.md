@@ -85,7 +85,7 @@ the version file must already reflect the intended release by the time the PR is
 
 ```
 roles/
-  base/          # enroll, linux-apt, linux-basic, zfs, nullmailer, smartd, hdparm
+  base/          # preconditions, enroll, linux-apt, linux-basic, zfs, nullmailer, smartd, hdparm
   base-services/ # wireguard, tailscale, docker, samba, mariadb, borg, borgmatic, goback
   security/      # lynis, malwarescan, crowdsec, firewall
   web-base/      # php-fpm, caddy, authelia, vhosts

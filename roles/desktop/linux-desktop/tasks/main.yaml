@@ -90,9 +90,12 @@
     # ============================================================================================================
     # Git repositories: clone repos into the user's home dir (clone-only; existing clones left untouched)
     # ============================================================================================================
-    - name: Ensure git is installed for cloning repositories
+    # acl: the clone runs as the desktop user (become_user), which needs setfacl.
+    - name: Ensure git and acl are installed for cloning repositories
       ansible.builtin.apt:
-        name: git
+        name:
+          - git
+          - acl
         state: present
       when: linux_desktop_config.git_repos | length > 0
 
@@ -153,9 +156,12 @@
         nerd_font_install_dir: /usr/local/share/fonts/nerd-fonts/Hack
         nerd_font_hack_tarball: "{{ nerd_font_cache_dir }}/Hack-{{ nerd_font_version }}.tar.xz"
       block:
-        - name: Ensure xz-utils is present (required to unpack the .tar.xz)
+        # fontconfig provides fc-cache; minimal hosts (no desktop yet) lack it.
+        - name: Ensure xz-utils (to unpack the .tar.xz) and fontconfig (fc-cache) are present
           ansible.builtin.apt:
-            name: xz-utils
+            name:
+              - xz-utils
+              - fontconfig
             state: present
             update_cache: true
 

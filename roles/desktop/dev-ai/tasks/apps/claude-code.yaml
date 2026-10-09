@@ -3,10 +3,10 @@
 # claude-code — Anthropic's coding agent CLI
 # https://code.claude.com/docs
 #
-# Installs the native Linux x64 binary to /usr/local/bin/claude, pinned by
-# version + sha256 (from the release manifest.json). The system-wide binary is
-# root-owned, so Claude Code's self-updater cannot replace it; bump the version
-# here instead.
+# Installs the native Linux binary for the host architecture to
+# /usr/local/bin/claude, pinned by version + sha256 (from the release
+# manifest.json). The system-wide binary is root-owned, so Claude Code's
+# self-updater cannot replace it; bump the version here instead.
 # ============================================================================================================
 - name: Resolve the selected Claude Code version
   ansible.builtin.set_fact:
@@ -16,9 +16,10 @@
   ansible.builtin.assert:
     that:
       - claude_code_version in claude_code_versions
+      - dev_ai_arch in claude_code_versions[claude_code_version]
     fail_msg: >-
-      Unknown claude-code version '{{ claude_code_version }}'.
-      Available: {{ claude_code_versions.keys() | list | join(', ') }}
+      Unknown claude-code version '{{ claude_code_version }}' for {{ dev_ai_arch }}.
+      Available: {{ claude_code_versions | dict2items | selectattr('value', 'contains', dev_ai_arch) | map(attribute='key') | join(', ') }}
 
 # `claude --version` prints "2.1.267 (Claude Code)".
 - name: Get current Claude Code version
@@ -32,9 +33,9 @@
 - name: Install or update Claude Code binary
   when: claude_code_current_version.stdout != claude_code_version
   ansible.builtin.get_url:
-    url: "{{ claude_code_base_url }}/{{ claude_code_version }}/linux-x64/claude"
+    url: "{{ claude_code_base_url }}/{{ claude_code_version }}/{{ dev_ai_platforms[dev_ai_arch] }}/claude"
     dest: /usr/local/bin/claude
-    checksum: "sha256:{{ claude_code_versions[claude_code_version] }}"
+    checksum: "sha256:{{ claude_code_versions[claude_code_version][dev_ai_arch] }}"
     owner: root
     group: root
     mode: "0755"

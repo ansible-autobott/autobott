@@ -5,6 +5,10 @@
 - hosts: all
   become: true
   roles:
+    # ===============  Preconditions  =============== #
+    # first, before enroll: fixes what would make the whole run fail (e.g. broken apt sources)
+    - base/preconditions
+
     # ===============  Base  =============== #
     - base/enroll
     - base/linux-apt

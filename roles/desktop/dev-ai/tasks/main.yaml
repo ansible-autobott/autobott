@@ -9,6 +9,12 @@
     - role_dev_ai
     - linux-desktop-all
   block:
+    # A selection whose entries are all commented out parses as null: treat it
+    # as "nothing selected" instead of rejecting it below.
+    - name: Treat an empty dev_ai_config as no tools selected
+      ansible.builtin.set_fact:
+        dev_ai_config: "{{ dev_ai_config | default({}, true) }}"
+
     - name: Validate dev_ai_config is a mapping
       ansible.builtin.assert:
         that:
@@ -23,6 +29,12 @@
           Unknown app(s) in dev_ai_config:
           {{ dev_ai_config.keys() | list | difference(dev_ai_available) | join(', ') }}.
           Available: {{ dev_ai_available | join(', ') }}
+
+    # An unmapped architecture passes through unchanged, so a selected tool then
+    # fails its checksum lookup with a clear message.
+    - name: Resolve the Debian name of the host architecture
+      ansible.builtin.set_fact:
+        dev_ai_arch: "{{ dev_ai_arch_names[ansible_facts.architecture] | default(ansible_facts.architecture) }}"
 
     # --- app catalog (one import_tasks per app; selection via dev_ai_config) ---
     # The whole role is driven by a single tag (role_dev_ai, on the block above);

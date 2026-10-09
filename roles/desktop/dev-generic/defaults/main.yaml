@@ -24,15 +24,25 @@ dev_generic_available:
   - vault
   - github-cli
 
+# Host CPU architecture (ansible_facts.architecture) -> its Debian name, which selects
+# the download and keys the per-architecture checksums in the catalogs below.
+dev_generic_arch_names:
+  x86_64: amd64
+  aarch64: arm64
+
 # ============================================================================================================
-# Per-tool version catalogs (version -> checksum; the sha is a separate lookup)
+# Per-tool version catalogs (version -> architecture -> checksum)
 # ============================================================================================================
 
 # ----- vault -----
-# https://releases.hashicorp.com/vault/  (version -> sha256 of the linux_amd64 zip)
+# https://releases.hashicorp.com/vault/  (version -> arch -> sha256 of the linux_<arch> zip)
 vault_default_version: "2.1.1"
 vault_versions:
-  "1.15.4": "f42f550713e87cceef2f29a4e2b754491697475e3d26c0c5616314e40edd8e1b"
-  "2.1.1": "8aa90f9cea46f541fc7baa3d0ec692fc06afde9a248cc1f2dcac46a567c6f56b"
+  "1.15.4":
+    amd64: "f42f550713e87cceef2f29a4e2b754491697475e3d26c0c5616314e40edd8e1b"
+    arm64: "79aee168078eb8c0dbb31c283e1136a7575f59fe36fccbb1f1ef6a16e0b67fdb"
+  "2.1.1":
+    amd64: "8aa90f9cea46f541fc7baa3d0ec692fc06afde9a248cc1f2dcac46a567c6f56b"
+    arm64: "c2c74e111ffbc83b3d29c6f0c0215a5e53d738c9fad045f7797bcdcde3156067"
 
 # vagrant / github-cli install the latest from their apt repos; no version pin.

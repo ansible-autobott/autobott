@@ -28,6 +28,12 @@
     jenv_bin: "/home/{{ linux_desktop_config.user }}/.jenv/bin/jenv"
 
 # ============================== Install jenv ============================== #
+# `jenv add` / `jenv global` run as the desktop user (become_user), which needs setfacl.
+- name: Ensure acl is installed
+  ansible.builtin.apt:
+    name: acl
+    state: present
+
 - name: Ensure ~/.jenv exists
   ansible.builtin.file:
     path: "{{ jenv_home }}"

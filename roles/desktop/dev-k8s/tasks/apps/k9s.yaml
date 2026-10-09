@@ -1,7 +1,7 @@
 ---
 # ============================================================================================================
 # k9s
-# https://github.com/derailed/k9s/releases  (version -> sha256 of the Linux_amd64 tarball)
+# https://github.com/derailed/k9s/releases  (version -> arch -> sha256 of the Linux_<arch> tarball)
 # ============================================================================================================
 - name: Resolve the selected k9s version
   ansible.builtin.set_fact:
@@ -11,9 +11,10 @@
   ansible.builtin.assert:
     that:
       - k9s_version in k9s_versions
+      - dev_k8s_arch in k9s_versions[k9s_version]
     fail_msg: >-
-      Unknown k9s version '{{ k9s_version }}'.
-      Available: {{ k9s_versions.keys() | list | join(', ') }}
+      Unknown k9s version '{{ k9s_version }}' for {{ dev_k8s_arch }}.
+      Available: {{ k9s_versions | dict2items | selectattr('value', 'contains', dev_k8s_arch) | map(attribute='key') | join(', ') }}
 
 - name: Get current k9s version
   ansible.builtin.shell: "set -o pipefail && k9s version --short | grep Version | awk -F ' ' '{print $2}'"
@@ -36,9 +37,9 @@
 
     - name: Download k9s
       ansible.builtin.get_url:
-        url: "https://github.com/derailed/k9s/releases/download/{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+        url: "https://github.com/derailed/k9s/releases/download/{{ k9s_version }}/k9s_Linux_{{ dev_k8s_arch }}.tar.gz"
         dest: "/tmp/k9s/k9s.tar.gz"
-        checksum: "sha256:{{ k9s_versions[k9s_version] }}"
+        checksum: "sha256:{{ k9s_versions[k9s_version][dev_k8s_arch] }}"
         owner: root
         group: root
         mode: "0644"

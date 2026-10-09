@@ -11,9 +11,10 @@
   ansible.builtin.assert:
     that:
       - nfpm_version in nfpm_versions
+      - dev_go_arch in nfpm_versions[nfpm_version]
     fail_msg: >-
-      Unknown nfpm version '{{ nfpm_version }}'.
-      Available: {{ nfpm_versions.keys() | list | join(', ') }}
+      Unknown nfpm version '{{ nfpm_version }}' for {{ dev_go_arch }}.
+      Available: {{ nfpm_versions | dict2items | selectattr('value', 'contains', dev_go_arch) | map(attribute='key') | join(', ') }}
 
 - name: Get the installed nfpm version
   ansible.builtin.command: "dpkg-query -W -f=${Version} nfpm"
@@ -35,9 +36,9 @@
 
     - name: Download nfpm
       ansible.builtin.get_url:
-        url: "https://github.com/goreleaser/nfpm/releases/download/v{{ nfpm_version }}/nfpm_{{ nfpm_version }}_amd64.deb"
+        url: "https://github.com/goreleaser/nfpm/releases/download/v{{ nfpm_version }}/nfpm_{{ nfpm_version }}_{{ dev_go_arch }}.deb"
         dest: /tmp/nfpm-dl/nfpm.deb
-        checksum: "sha256:{{ nfpm_versions[nfpm_version] }}"
+        checksum: "sha256:{{ nfpm_versions[nfpm_version][dev_go_arch] }}"
         owner: root
         group: root
         mode: "0644"

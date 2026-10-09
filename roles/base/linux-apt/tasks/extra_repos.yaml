@@ -15,13 +15,9 @@
       Available: {{ linux_apt_extra_repos_catalog.keys() | list | join(', ') }}
     quiet: true
 
-- name: "Ensure python3-debian is present (required by deb822_repository)"
-  ansible.builtin.apt:
-    name: python3-debian
-    state: present
-    update_cache: true
-    cache_valid_time: 3600
-
+# Keys go in before the first cache update below: when a repository rotates its
+# signing key and it is already configured on the host, `apt update` fails until
+# the new key is in place.
 - name: "Ensure the APT keyrings directory exists"
   ansible.builtin.file:
     path: /etc/apt/keyrings
@@ -38,6 +34,14 @@
     group: root
     mode: "0644"
   loop: "{{ linux_apt_extra_repos_selected }}"
+  register: linux_apt_extra_repos_keys_result
+
+- name: "Ensure python3-debian is present (required by deb822_repository)"
+  ansible.builtin.apt:
+    name: python3-debian
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
 
 - name: "Configure the extra repositories"
   ansible.builtin.deb822_repository:
@@ -53,8 +57,9 @@
   register: linux_apt_extra_repos_result
 
 # Inline (not a handler): the caller installs packages from these repositories
-# right after this file, so the cache has to be fresh now.
+# right after this file, so the cache has to be fresh now. A changed key counts
+# too: until apt re-fetches with it, the repository's index stays missing.
 - name: "Update APT cache after adding extra repositories" # noqa: no-handler
   ansible.builtin.apt:
     update_cache: true
-  when: linux_apt_extra_repos_result is changed
+  when: linux_apt_extra_repos_result is changed or linux_apt_extra_repos_keys_result is changed

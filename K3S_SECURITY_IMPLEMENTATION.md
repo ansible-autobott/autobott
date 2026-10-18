@@ -1,6 +1,7 @@
 # k3s Security Model — Working Doc
 
-> **Status:** planning, not implemented. Updated 2026-09-27 (replaces the 2026-08-31 CA-based plan).
+> **Status:** sections 1 and 3 implemented and checked on the vagrant k3s box (2026-10-18, see "Checks on
+> vagrant"); sections 2 and 4 open. Updated 2026-09-27 (replaces the 2026-08-31 CA-based plan).
 > Delete or fold into `roles/k3s/About.md` + `../docs` once implemented.
 > **Scope:** access to the single-node k3s cluster on `neptuno.rivervps.com`.
 
@@ -22,11 +23,11 @@ attackers off the box and makes sure a leaked *credential* is not automatically 
 
 ## Build order
 
-0. Rebase `k3s` on `main` (25 commits behind; `main` has `desktop/dev-k8s`, this branch still has
-   `desktop/dev-apps/kubectl`).
-1. Admin key root-only (section 1).
-2. API not public (section 2).
-3. Ansible automation (section 3).
+0. Rebase `k3s` on `main`. 2026-10-18: `main` was merged in already (`desktop/dev-k8s` is here); 2 commits
+   behind (#69, #70 — #70 touches `desktop/dev-k8s`), so rebase before section 4.
+1. Admin key root-only (section 1). **Done.**
+2. API not public (section 2). Firewall part done by the k3s role; human access path open.
+3. Ansible automation (section 3). **Done.**
 4. Human login (section 4).
 
 ---
@@ -73,6 +74,18 @@ the internet today.
     `192.168.20.1`) to `k3s.tls_san`; the firewall role only takes port lists → needs a new
     interface-scoped allow (`wg0` → `6443`).
 - This network step counts as the **first layer** for human login.
+
+**Found while implementing (2026-10-18)**
+- The k3s role already imports the firewall role itself (`run_role_firewall: true`), so k3s hosts are always
+  firewalled; `6443`/`10250` are closed from outside without a neptuno setting. The commented `tls_san`
+  suggestion is gone from neptuno's `k3s.yaml`.
+- **The SSH port forward does not work yet:** `linux-basic`'s `sshd_config` sets `AllowTcpForwarding no`
+  globally. The tunnel needs a scoped exception, e.g. `Match User odo` → `AllowTcpForwarding local` +
+  `PermitOpen 127.0.0.1:6443` (forwarding allowed only to the API port).
+- WireGuard needs no new firewall feature: drop-in rules already take `interface`, so `wg0` → `6443/tcp` is one
+  more entry in the k3s drop-in.
+- Because the firewall is always on with k3s, its outbound default-reject (only 53/80/443 open) also applies to
+  neptuno: nullmailer (`587/tcp`) and NTP (`123/udp`) are blocked unless neptuno's `firewall` config allows them.
 
 ---
 
@@ -161,6 +174,17 @@ the internet today.
 
 **Limit:** the Ansible user can still sudo to root, so this protects against buggy roles and tools
 running as root — not against a compromised Ansible controller.
+
+**As implemented (2026-10-18)** — `roles/k3s/About.md` ("App deployment") is now the reference. Differences
+from the sketch above:
+- App roles call `namespace.yaml` with `import_role`, not `include_role`: the imported tasks inherit the app
+  block's `when` and tags, so `-t <app>` runs them too.
+- `namespace.yaml` refuses `privileged`, system namespaces (`default`, `kube-*`, `autobott-system`,
+  `autobott-users`) and hosts without k3s, and sets `automountServiceAccountToken: false` on the namespace's
+  `default` ServiceAccount (from "Other items"; server-side apply, because Kubernetes creates that account at
+  the same moment). Level per app: `k3s_namespace_pod_security` (default `baseline`).
+- `autobott-system` enforces Pod Security `restricted` (nothing should run there).
+- The role fails early on Debian 12 and older (python3-kubernetes too old).
 
 ---
 
@@ -277,9 +301,12 @@ running as root — not against a compromised Ansible controller.
 3. **Proxy certificates** (request-header CA, used by metrics-server): let a trusted proxy act for any user.
 4. **The k3s join token** (same port `6443`): lets a machine join; a machine joining as a server receives
    every CA key.
+5. **Bootstrap tokens** (`--enable-bootstrap-token-auth=true`, found on the vagrant box): Secrets of type
+   `bootstrap.kubernetes.io/token` in `kube-system`, created by `k3s token create` for joining agents. None exist
+   unless someone creates one (`k3s token list`).
 
 All master keys live in root-only files under `/var/lib/rancher/k3s/server/`. Requests without proof are
-rejected; there are no passwords, static token lists or OIDC. Confirm on the node with
+rejected (`--anonymous-auth=false`); there are no passwords, static token lists or OIDC. Confirm on the node with
 `journalctl -u k3s | grep 'Running kube-apiserver'`.
 
 ---
@@ -291,22 +318,35 @@ rejected; there are no passwords, static token lists or OIDC. Confirm on the nod
 - `/var/lib/rancher/k3s/server/` (CA keys, join token `server/token`): if Borg backs it up, protect the
   backup like root. With a single node, nothing should ever join — keep the join token secret.
 - App pods that don't talk to Kubernetes: set `automountServiceAccountToken: false` on each app
-  namespace's default ServiceAccount.
+  namespace's default ServiceAccount. **Done** in `namespace.yaml`.
 - Update `roles/k3s/About.md` + `../docs/content/docs/` once implemented; bump `autobot_version` at release.
 
 ---
 
 ## Checks on vagrant
 
-- Enable k3s on the **Debian 13** box — today `k3s.yaml` exists only for
-  `inventory/host_vars/ansible-autobott2-linux-debian-12/`, and Debian 12's Python `kubernetes` is too old.
-- Login methods: `journalctl -u k3s | grep 'Running kube-apiserver'` matches the list above.
-- With the firewall enabled, pods can still reach the API (UFW vs k3s pod traffic).
-- `become_user: kubeops` works with `acl` installed.
-- Deployer scope:
-  - `kubectl auth can-i --list -n whoami --as=system:serviceaccount:autobott-system:autobott-deployer`
+Results 2026-10-18 on `ansible-autobott2-linux-debian-13-k3s` (`make vagrant-up VER=13-k3s`), with a throwaway
+`whoami` app deployed through `namespace.yaml` + `kubeops` (two runs: the second changed nothing):
+
+- [x] k3s on the **Debian 13** box: the `debian-13-k3s` VM.
+- [x] Section 1: kubeconfig `root:root 0600` after the k3s restart; `/etc/profile.d/k3s.sh` and `k3s-admin` gone;
+  `kubeops` locked, `nologin`, no sudo.
+- [x] Login methods: the list above, plus bootstrap tokens (item 5); none exist.
+- [x] With the firewall enabled, pods can still reach the API (`https://kubernetes.default.svc` answers `401`).
+- [x] `become_user: kubeops` works with `acl` installed (modules ran as `kubeops`).
+- [x] Deployer token lives 1h (`exp - iat = 3600`); no token in the Ansible output.
+- [x] Deployer scope:
+  - `kubectl auth can-i --list -n whoami --as=system:serviceaccount:autobott-system:autobott-deployer`: the
+    namespace `admin` set (incl. `serviceaccounts/token` inside `whoami`)
   - `kubectl auth can-i create helmcharts.helm.cattle.io -n whoami --as=system:serviceaccount:autobott-system:autobott-deployer` → `no`
-- A 90-day pass is accepted (no maximum pass length set by k3s).
+  - `no` too for: tokens in `autobott-system`, anything in `kube-system`, `patch namespaces`,
+    `create clusterrolebindings`, pods in `autobott-sample`
+  - refused when tried with the token: create a namespace, relabel `whoami` to `privileged`, a `HelmChart`, a
+    `hostPath: /` pod, a privileged `hostPID` pod (Pod Security `baseline`), a RoleBinding to `cluster-admin`,
+    reading `kube-system` Secrets
+- [x] A 90-day pass is accepted (no maximum pass length set by k3s): `exp - iat` = 90 days.
+- [x] A pass tied to a Secret (`create token --bound-object-kind=Secret --bound-object-name=…`) is rejected
+  (`Unauthorized`) within ~10s of deleting that Secret (the API server caches token checks briefly).
 - Master pass scope:
   - `kubectl auth can-i create serviceaccounts/odo-dev --subresource=token -n autobott-users --as=system:serviceaccount:autobott-users:odo-minter` → `yes`
   - the same for `serviceaccounts/odo-admin` and `serviceaccounts/odo-minter` → `no`
@@ -321,9 +361,9 @@ rejected; there are no passwords, static token lists or OIDC. Confirm on the nod
 - Tunnel, WireGuard, or both?
 - Should `<user>-dev` also get read-only `view` across the cluster (cannot read Secrets)?
 - Master pass renewal: how Ansible knows one is due, and how the locked file gets from the server play to
-  the laptop (e.g. via the inventory → `dev-k8s`). Idea to test: tie each master pass to a throwaway
-  Secret (`kubectl create token --bound-object-kind=Secret --bound-object-name=…`) so deleting that
-  Secret kills just the old pass.
+  the laptop (e.g. via the inventory → `dev-k8s`). Tested 2026-10-18, works: tie each master pass to a
+  throwaway Secret (`kubectl create token --bound-object-kind=Secret --bound-object-name=…`) so deleting that
+  Secret kills just the old pass; the Secret's age also tells Ansible when a renewal is due.
 - Inventory layout for users, e.g.:
   ```yaml
   k3s:

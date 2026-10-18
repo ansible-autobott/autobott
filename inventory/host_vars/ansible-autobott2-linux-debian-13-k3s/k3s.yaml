@@ -1,0 +1,11 @@
+#============================================================================================================
+# k3s
+#============================================================================================================
+# Single-node k3s server: Calico CNI, Traefik ingress on ports 80/443 (k3s default, see roles/k3s/About.md).
+# Enabling k3s also turns on the firewall and registers the rules k3s needs.
+# The role defaults (version, cluster/service CIDRs, cluster DNS, Calico version) fit this box as is.
+run_role_k3s: true
+
+k3s:
+  # sample landing page (nginx + ConfigMap) behind a host-less Ingress, see roles/k3s/About.md
+  sample_content: true

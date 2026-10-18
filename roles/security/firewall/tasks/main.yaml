@@ -18,9 +18,9 @@
         state: present
         update_cache: true
 
-    #====================================================
+    # ====================================================
     # Drop-in rules registered by other roles
-    #====================================================
+    # ====================================================
 
     - name: Create firewall drop-in directory
       ansible.builtin.file:

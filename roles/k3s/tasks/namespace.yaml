@@ -1,0 +1,116 @@
+---
+# ============================================================================================================
+# K3s app namespace (shared task file for app roles)
+# ============================================================================================================
+# Root side of deploying an app, with the admin kubeconfig: creates the app's namespace, lets the deployer robot
+# (autobott-system/autobott-deployer) work inside it, and mints a 1h token for the robot. The app role then deploys
+# as the unprivileged kubeops user with that token. See About.md ("App deployment").
+#
+# Inputs:
+#   k3s_namespace               the app's namespace (required)
+#   k3s_namespace_pod_security  Pod Security level enforced on it: baseline (default) or restricted
+# Output:
+#   k3s_deployer_token          the token is k3s_deployer_token.stdout, kept in memory only
+#
+# Usage, in the app role's block. It runs as root: keep it out of the kubeops block.
+#
+#   - name: Bootstrap the k3s namespace and mint a deployer token
+#     ansible.builtin.import_role:
+#       name: k3s
+#       tasks_from: namespace.yaml
+#     vars:
+#       k3s_namespace: whoami
+#
+#   - name: Deploy as kubeops
+#     become_user: kubeops
+#     module_defaults:
+#       group/kubernetes.core.k8s:          # add the same under group/kubernetes.core.helm for charts
+#         host: https://127.0.0.1:6443
+#         ca_cert: /etc/rancher/k3s/server-ca.crt
+#         api_key: "{{ k3s_deployer_token.stdout }}"
+#     block:
+#       - name: App resources
+#         kubernetes.core.k8s:
+#           namespace: whoami
+#           template: whoami.yaml.j2
+#           wait: true
+
+- name: Fail if k3s is not enabled on this host
+  ansible.builtin.assert:
+    that:
+      - run_role_k3s | bool
+    fail_msg: "Deploying to the k3s namespace '{{ k3s_namespace | default('') }}' needs k3s on this host: set run_role_k3s: true."
+    quiet: true
+
+# The robot is namespace admin: in a system namespace that is the same as cluster admin
+- name: Fail if the namespace is missing or reserved
+  ansible.builtin.assert:
+    that:
+      - k3s_namespace | default('') | length > 0
+      - k3s_namespace is not match('kube-')
+      - k3s_namespace not in ['default', 'autobott-system', 'autobott-users']
+    fail_msg: >-
+      k3s_namespace must name the app's own namespace, not one of default, kube-*, autobott-system or
+      autobott-users (got '{{ k3s_namespace | default('') }}').
+    quiet: true
+
+# privileged would let the robot start pods that mount the host's / or join its network: root on the node
+- name: Fail if the Pod Security level is not baseline or restricted
+  ansible.builtin.assert:
+    that:
+      - k3s_namespace_pod_security in ['baseline', 'restricted']
+    fail_msg: "k3s_namespace_pod_security must be baseline or restricted, got '{{ k3s_namespace_pod_security }}'."
+    quiet: true
+
+- name: Bootstrap the k3s namespace {{ k3s_namespace }}
+  module_defaults:
+    group/kubernetes.core.k8s:
+      kubeconfig: /etc/rancher/k3s/k3s.yaml
+  block:
+    - name: Create the namespace and let the deployer robot work in it
+      kubernetes.core.k8s:
+        definition:
+          - apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: "{{ k3s_namespace }}"
+              labels:
+                pod-security.kubernetes.io/enforce: "{{ k3s_namespace_pod_security }}"
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: autobott-deployer
+              namespace: "{{ k3s_namespace }}"
+            roleRef:
+              apiGroup: rbac.authorization.k8s.io
+              kind: ClusterRole
+              name: admin
+            subjects:
+              - kind: ServiceAccount
+                name: autobott-deployer
+                namespace: autobott-system
+
+    # Pods that don't talk to Kubernetes don't need an API token. Server-side apply: Kubernetes creates the default
+    # ServiceAccount right after the namespace, and apply merges into it whichever comes first.
+    - name: Do not give the namespace's pods an API token by default
+      kubernetes.core.k8s:
+        apply: true
+        server_side_apply:
+          field_manager: autobott
+          force_conflicts: true
+        definition:
+          apiVersion: v1
+          kind: ServiceAccount
+          metadata:
+            name: default
+            namespace: "{{ k3s_namespace }}"
+          automountServiceAccountToken: false
+
+    # Each app role mints its own token, so a long playbook run never hits an expired one
+    - name: Mint a short-lived deployer token
+      ansible.builtin.command: >-
+        /usr/local/bin/k3s kubectl create token autobott-deployer
+        -n autobott-system --duration=1h
+      register: k3s_deployer_token
+      changed_when: false
+      no_log: true

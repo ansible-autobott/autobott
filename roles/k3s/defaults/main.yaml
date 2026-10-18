@@ -1,8 +1,9 @@
 ---
-#============================================================================================================
+# ============================================================================================================
 # K3s
-#============================================================================================================
-# Single-node k3s server: binary installation + server configuration (Calico CNI, Traefik HTTP-only).
+# ============================================================================================================
+# Single-node k3s server: binary installation + server configuration (Calico CNI, k3s default ingress:
+# Traefik on ports 80/443 via ServiceLB).
 # See About.md for the architecture.
 
 # Role execution control
@@ -33,17 +34,29 @@ k3s_defaults:
   calico:
     version: 3.29.3
 
-  # Users to add to the k3s-admin group (grants access to kubeconfig)
-  admins: []
-  #admins:
-  #  - jsmith
-  #  - bott
-
   # Extra arguments passed to k3s server
   # Example: ["--node-label=environment=production"]
   extra_args: []
+
+  # Host ports ServiceLB publishes for LoadBalancer Services: Traefik's web (80) and websecure (443).
+  # ServiceLB uses iptables redirects, not listening sockets, so a program already listening on one of these
+  # ports would silently lose its traffic: the role fails instead. Add the ports of any other LoadBalancer Service.
+  servicelb_ports:
+    - 80
+    - 443
+
+  # Deploy a sample landing page: nginx in the "autobott-sample" namespace serving a static page from a
+  # ConfigMap. Its Ingress has no host and the lowest priority, so it answers every request that no other
+  # Ingress matches (no domain to configure). Setting it back to false removes the namespace.
+  sample_content: false
+  # nginx-unprivileged image tag used by the sample page
+  sample_nginx_version: 1.30.5-alpine
 
 # Supported k3s versions and checksums (sha256 of the k3s binary)
 k3s_checksums:
   "1.32.3+k3s1": "b19216803650b567bf980888dec39035edaf664339c55bc4462f7a003edbef83"
   "1.35.1+k3s1": "e406ca6e47673d747ab4665c90a9285615fe082e2593343725ed043ae163abbf"
+
+# Pod Security level that tasks/namespace.yaml enforces on an app namespace: baseline or restricted. Override it per
+# app in the vars of the import. "privileged" is refused: it would let the deployer robot become root on the node.
+k3s_namespace_pod_security: baseline

@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
 ---
-write-kubeconfig-mode: "0640"
+write-kubeconfig-mode: "0600"
 flannel-backend: none
 disable-network-policy: true
 cluster-cidr: "{{ k3s_config.cluster_cidr }}"
@@ -12,5 +12,3 @@ tls-san:
   - "{{ san }}"
 {% endfor %}
 {% endif %}
-disable:
-  - servicelb

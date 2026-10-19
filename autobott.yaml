@@ -112,15 +112,23 @@
 
     # GUI desktop apps (selection via gui_apps_config)
     - desktop/gui-apps
+
+#============================================================================================================
+# Tools — CLI utilities and developer toolchains, any host (opt-in via <role>_config)
+#============================================================================================================
+
+- hosts: all
+  become: true
+  roles:
     # CLI utilities (selection via cli_apps_config)
-    - desktop/cli-apps
+    - tools/cli-apps
     # developer toolchains (selection via the matching dev_*_config)
-    - desktop/dev-node
-    - desktop/dev-go
-    - desktop/dev-java
-    - desktop/dev-k8s
-    - desktop/dev-ai
-    - desktop/dev-generic
+    - tools/dev-node
+    - tools/dev-go
+    - tools/dev-java
+    - tools/dev-k8s
+    - tools/dev-ai
+    - tools/dev-generic
 
 #============================================================================================================
 # post setup actions

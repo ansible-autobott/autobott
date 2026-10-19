@@ -7,7 +7,7 @@
     - run_role_dev_java | bool
   tags:
     - role_dev_java
-    - linux-desktop-all
+    - tools-all
   block:
     # A selection whose entries are all commented out parses as null: treat it
     # as "nothing selected" instead of rejecting it below.

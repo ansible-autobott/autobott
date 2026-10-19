@@ -7,7 +7,7 @@
     - run_role_cli_apps | bool
   tags:
     - role_cli_apps
-    - linux-desktop-all
+    - tools-all
   block:
     # A selection whose entries are all commented out parses as null: treat it
     # as "nothing selected" instead of rejecting it below.

@@ -1,0 +1,44 @@
+---
+# ============================================================================================================
+# Node — per-user setup, included from node.yaml once per enabled linux-basic user
+# (dev_node_user: {username, home, group}). Expects the nvm installer at
+# /tmp/nvm_<nvm_version>_install.sh whenever this user has no ~/.nvm yet.
+# ============================================================================================================
+- name: Install nvm for {{ dev_node_user.username }}
+  become: true
+  become_user: "{{ dev_node_user.username }}"
+  ansible.builtin.shell: >
+    bash /tmp/nvm_{{ nvm_version }}_install.sh
+  environment:
+    NVM_DIR: "{{ dev_node_user.home }}/.nvm"
+    # keep the installer out of ~/.bashrc (linux-basic templates it); nvm.bashrc in ~/.bashrc.d loads nvm
+    PROFILE: /dev/null
+  args:
+    creates: "{{ dev_node_user.home }}/.nvm/nvm.sh"
+
+- name: Make sure .bashrc.d exists for {{ dev_node_user.username }}
+  ansible.builtin.file:
+    path: "{{ dev_node_user.home }}/.bashrc.d"
+    state: directory
+    owner: "{{ dev_node_user.username }}"
+    group: "{{ dev_node_user.group }}"
+    mode: "0750"
+
+- name: Copy the nvm .bashrc.d template for {{ dev_node_user.username }}
+  ansible.builtin.template:
+    src: node/nvm.bashrc
+    dest: "{{ dev_node_user.home }}/.bashrc.d/nvm.bashrc"
+    mode: "0750"
+    owner: "{{ dev_node_user.username }}"
+    group: "{{ dev_node_user.group }}"
+
+- name: Install Node for {{ dev_node_user.username }}
+  become: true
+  become_user: "{{ dev_node_user.username }}"
+  ansible.builtin.shell: "source {{ dev_node_user.home }}/.nvm/nvm.sh && nvm install {{ '--lts' if node_version == 'lts' else node_version }}"
+  environment:
+    NVM_DIR: "{{ dev_node_user.home }}/.nvm"
+  args:
+    executable: /bin/bash
+  register: install_node
+  changed_when: "'is already installed' not in (install_node.stdout + install_node.stderr)"

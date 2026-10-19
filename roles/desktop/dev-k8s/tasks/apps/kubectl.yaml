@@ -3,7 +3,17 @@
 # kubectl (+ Azure kubelogin)
 # https://kubernetes.io/releases/            (version -> arch -> sha256, kubectl_versions)
 # https://github.com/Azure/kubelogin/releases (version -> arch -> sha256, kubelogin_versions)
+#
+# The binaries are system-wide. The shell snippet + ~/.kube are per user: every
+# enabled linux-basic user present on the host (linux_basic_enabled_users, resolved
+# by base/linux-basic; no such users -> the per-user steps are skipped).
 # ============================================================================================================
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
+
 - name: Resolve the selected kubectl / kubelogin versions
   ansible.builtin.set_fact:
     kubectl_version: "{{ (dev_k8s_config['kubectl'] | default({}, true)).version | default(kubectl_default_version, true) }}"
@@ -48,29 +58,39 @@
         group: root
         mode: "0755"
 
+# ============================== per-user shell config ============================== #
 - name: Make sure .bashrc.d exists
   ansible.builtin.file:
-    path: "/home/{{ linux_desktop_config.user }}/.bashrc.d"
+    path: "{{ item.home }}/.bashrc.d"
     state: directory
-    owner: "{{ linux_desktop_config.user }}"
-    group: "{{ linux_desktop_user_main_group }}"
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
     mode: "0750"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
 
 - name: Copy .bashrc.d template
   ansible.builtin.template:
     src: kubectl/kubectl.bashrc
-    dest: "/home/{{ linux_desktop_config.user }}/.bashrc.d/10_kubectl.bashrc"
+    dest: "{{ item.home }}/.bashrc.d/10_kubectl.bashrc"
     mode: "0750"
-    owner: "{{ linux_desktop_config.user }}"
-    group: "{{ linux_desktop_user_main_group }}"
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
 
 - name: Create .kube config dir
   ansible.builtin.file:
-    path: "/home/{{ linux_desktop_config.user }}/.kube"
+    path: "{{ item.home }}/.kube"
     state: directory
     mode: "0750"
-    owner: "{{ linux_desktop_config.user }}"
-    group: "{{ linux_desktop_user_main_group }}"
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
 
 # ============================== Azure kubelogin ============================== #
 - name: Get current kubelogin version

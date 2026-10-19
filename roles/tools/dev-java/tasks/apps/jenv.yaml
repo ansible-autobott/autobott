@@ -1,0 +1,79 @@
+---
+# ============================================================================================================
+# jenv — Java version manager (per user: under the home of every enabled
+# linux-basic user present on the host; no such users -> the per-user steps
+# are skipped)
+# https://github.com/jenv/jenv
+#
+# Installs jenv from a pinned GitHub release tarball (downloaded once), hooks it
+# into each user's shell via ~/.bashrc.d/jenv.bashrc and (optionally) enables the
+# export plugin (JAVA_HOME) — see jenv_user.yaml. JDKs are installed separately
+# via dev_java_config.java_versions; here we only discover the installed JDKs
+# under /usr/lib/jvm and register each with `jenv add` for every user, giving
+# working multi-version switching (jenv global / jenv local) out of the box.
+# ============================================================================================================
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
+
+- name: Resolve the selected jenv version
+  ansible.builtin.set_fact:
+    jenv_version: "{{ (dev_java_config['jenv'] | default({}, true)).version | default(jenv_default_version, true) }}"
+
+- name: Validate the selected jenv version is available
+  ansible.builtin.assert:
+    that:
+      - jenv_version in jenv_versions
+    fail_msg: >-
+      Unknown jenv version '{{ jenv_version }}'.
+      Available: {{ jenv_versions.keys() | list | join(', ') }}
+
+# ============================== Install jenv ============================== #
+# `jenv add` / `jenv global` run as each user (become_user), which needs setfacl.
+- name: Ensure acl is installed
+  ansible.builtin.apt:
+    name: acl
+    state: present
+
+- name: Check which users already have jenv
+  ansible.builtin.stat:
+    path: "{{ item.home }}/.jenv/bin/jenv"
+  register: jenv_installed
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Download jenv release tarball
+  ansible.builtin.get_url:
+    url: "https://github.com/jenv/jenv/archive/refs/tags/{{ jenv_version }}.tar.gz"
+    dest: "/tmp/jenv-{{ jenv_version }}.tar.gz"
+    checksum: "sha256:{{ jenv_versions[jenv_version] }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: jenv_installed.results | rejectattr('stat.exists') | list | length > 0
+
+# ============================== Installed JDKs ============================== #
+# JDKs themselves are installed via dev_java_config.java_versions; jenv only
+# registers whatever is present under /usr/lib/jvm.
+- name: Discover installed OpenJDK homes
+  ansible.builtin.find:
+    paths: /usr/lib/jvm
+    file_type: directory
+    patterns: "java-*-openjdk-*"
+    recurse: false
+  register: jenv_jvm_dirs
+
+- name: Set up jenv for each user
+  ansible.builtin.include_tasks: jenv_user.yaml
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    loop_var: dev_java_user
+    label: "{{ dev_java_user.username }}"
+
+- name: Remove the jenv tarball
+  ansible.builtin.file:
+    path: "/tmp/jenv-{{ jenv_version }}.tar.gz"
+    state: absent

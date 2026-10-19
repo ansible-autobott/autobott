@@ -1,0 +1,36 @@
+---
+# Enabled users
+# Resolves the regular users declared in linux_basic.users + linux_basic.users_extra
+# that are enabled and present on the host into linux_basic_enabled_users: a list of
+# {username, home, group}, with home and group defaulted exactly like users.yaml.
+# Imported by roles that set up per-user tools (nvm/Node, jenv, kubectl config), so it
+# must not rely on run_role_linux_basic or on the merged facts set in main.yaml: when
+# linux-basic did not run in this invocation, linux_basic is the raw inventory value
+# (users / users_extra may be missing or null). A user that is configured but not on
+# the host (e.g. linux-basic disabled there) is left out instead of failing later.
+
+- name: "Read the local user database"
+  ansible.builtin.getent:
+    database: passwd
+
+- name: "Start the list of enabled users"
+  ansible.builtin.set_fact:
+    linux_basic_enabled_users: []
+
+- name: "Collect the enabled users present on the host"
+  ansible.builtin.set_fact:
+    linux_basic_enabled_users: "{{ linux_basic_enabled_users + [linux_basic_enabled_user] }}"
+  vars:
+    linux_basic_enabled_user:
+      username: "{{ item.username }}"
+      home: "{{ item.home | default('/home/' ~ item.username) }}"
+      group: "{{ item.primary_group | default('users') }}"
+  loop: >-
+    {{ ((linux_basic | default({}, true)).users | default([], true))
+    + ((linux_basic | default({}, true)).users_extra | default([], true)) }}
+  loop_control:
+    label: "{{ item.username }}"
+  when:
+    - item.enabled | default(false) | bool
+    - item.username in ansible_facts.getent_passwd
+    - item.username not in (linux_basic_enabled_users | map(attribute='username') | list)

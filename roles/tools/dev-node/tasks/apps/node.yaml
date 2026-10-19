@@ -1,0 +1,90 @@
+---
+# ============================================================================================================
+# Node (via nvm — Node Version Manager)
+# Special-cased: this file is imported unconditionally by tasks/main.yaml so it
+# can uninstall nvm when 'node' is NOT selected in dev_node_config.
+#
+# nvm is per user: it goes into ~/.nvm of every enabled linux-basic user present
+# on the host (linux_basic_enabled_users, resolved by base/linux-basic; no such
+# users -> the per-user steps are skipped). nvm's canonical install.sh is
+# downloaded by version (sha-verified) once and run as each user (node_user.yaml).
+# Node itself is then installed via `nvm install <target>` — nvm fetches Node, so
+# the node version is a plain selector: "lts" (default), "node" (latest), or an
+# exact version like "22.11.0".
+# ============================================================================================================
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
+
+- name: Install Node Version Manager
+  when: "'node' in dev_node_config"
+  block:
+    - name: Resolve the selected nvm / node versions
+      ansible.builtin.set_fact:
+        nvm_version: "{{ (dev_node_config['node'] | default({}, true)).nvm_version | default(nvm_default_version, true) }}"
+        node_version: "{{ (dev_node_config['node'] | default({}, true)).version | default(node_default_version, true) }}"
+
+    - name: Validate the selected nvm version is available
+      ansible.builtin.assert:
+        that:
+          - nvm_version in nvm_versions
+        fail_msg: >-
+          Unknown nvm version '{{ nvm_version }}'.
+          Available: {{ nvm_versions.keys() | list | join(', ') }}
+
+    - name: Check which users already have nvm
+      ansible.builtin.stat:
+        path: "{{ item.home }}/.nvm/nvm.sh"
+      register: nvm_stat
+      loop: "{{ linux_basic_enabled_users }}"
+      loop_control:
+        label: "{{ item.username }}"
+
+    # The installer and `nvm install` run as each user (become_user), which needs setfacl.
+    - name: Ensure acl is installed
+      ansible.builtin.apt:
+        name: acl
+        state: present
+
+    - name: Download the nvm installer
+      ansible.builtin.get_url:
+        url: "https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh"
+        dest: "/tmp/nvm_{{ nvm_version }}_install.sh"
+        checksum: "sha256:{{ nvm_versions[nvm_version] }}"
+        owner: root
+        group: root
+        mode: "0755"
+      when: nvm_stat.results | rejectattr('stat.exists') | list | length > 0
+
+    - name: Set up nvm and Node for each user
+      ansible.builtin.include_tasks: node_user.yaml
+      loop: "{{ linux_basic_enabled_users }}"
+      loop_control:
+        loop_var: dev_node_user
+        label: "{{ dev_node_user.username }}"
+
+    - name: Remove the installer
+      ansible.builtin.file:
+        path: "/tmp/nvm_{{ nvm_version }}_install.sh"
+        state: absent
+
+- name: Uninstall Node Version Manager
+  when: "'node' not in dev_node_config"
+  block:
+    - name: Remove .bashrc.d nvm template
+      ansible.builtin.file:
+        path: "{{ item.home }}/.bashrc.d/nvm.bashrc"
+        state: absent
+      loop: "{{ linux_basic_enabled_users }}"
+      loop_control:
+        label: "{{ item.username }}"
+
+    - name: Remove .nvm directory
+      ansible.builtin.file:
+        path: "{{ item.home }}/.nvm"
+        state: absent
+      loop: "{{ linux_basic_enabled_users }}"
+      loop_control:
+        label: "{{ item.username }}"

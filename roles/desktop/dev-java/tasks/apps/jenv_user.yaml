@@ -1,0 +1,111 @@
+---
+# ============================================================================================================
+# jenv — per-user setup, included from jenv.yaml once per enabled linux-basic user
+# (dev_java_user: {username, home, group}). Expects the jenv tarball at
+# /tmp/jenv-<jenv_version>.tar.gz whenever this user has no jenv yet, and the
+# discovered JDK homes in jenv_jvm_dirs.
+# ============================================================================================================
+- name: Set jenv paths for {{ dev_java_user.username }}
+  ansible.builtin.set_fact:
+    jenv_home: "{{ dev_java_user.home }}/.jenv"
+    jenv_bin: "{{ dev_java_user.home }}/.jenv/bin/jenv"
+
+- name: Ensure ~/.jenv exists for {{ dev_java_user.username }}
+  ansible.builtin.file:
+    path: "{{ jenv_home }}"
+    state: directory
+    owner: "{{ dev_java_user.username }}"
+    group: "{{ dev_java_user.group }}"
+    mode: "0755"
+
+- name: Check whether jenv is installed for {{ dev_java_user.username }}
+  ansible.builtin.stat:
+    path: "{{ jenv_bin }}"
+  register: jenv_user_installed
+
+- name: Install jenv from the tarball for {{ dev_java_user.username }}
+  ansible.builtin.unarchive:
+    src: "/tmp/jenv-{{ jenv_version }}.tar.gz"
+    dest: "{{ jenv_home }}"
+    remote_src: true
+    extra_opts:
+      - --strip-components=1
+    owner: "{{ dev_java_user.username }}"
+    group: "{{ dev_java_user.group }}"
+  when: not jenv_user_installed.stat.exists
+
+# ============================== Shell hook ============================== #
+- name: Make sure .bashrc.d exists for {{ dev_java_user.username }}
+  ansible.builtin.file:
+    path: "{{ dev_java_user.home }}/.bashrc.d"
+    state: directory
+    owner: "{{ dev_java_user.username }}"
+    group: "{{ dev_java_user.group }}"
+    mode: "0750"
+
+- name: Copy the jenv .bashrc.d hook for {{ dev_java_user.username }}
+  ansible.builtin.template:
+    src: jenv/jenv.bashrc
+    dest: "{{ dev_java_user.home }}/.bashrc.d/jenv.bashrc"
+    owner: "{{ dev_java_user.username }}"
+    group: "{{ dev_java_user.group }}"
+    mode: "0750"
+
+# ============================== export plugin (JAVA_HOME) ============================== #
+# `jenv enable-plugin` is a shell-function command (libexec/jenv-sh-enable-plugin), only
+# reachable after `eval "$(jenv init -)"`, so do what it does: symlink the plugin from
+# available-plugins/ into plugins/ (a directory that only `jenv init` would create).
+- name: Enable the jenv export plugin for {{ dev_java_user.username }}
+  when: jenv_enable_export_plugin | bool
+  block:
+    - name: Ensure the jenv plugins directory exists for {{ dev_java_user.username }}
+      ansible.builtin.file:
+        path: "{{ jenv_home }}/plugins"
+        state: directory
+        owner: "{{ dev_java_user.username }}"
+        group: "{{ dev_java_user.group }}"
+        mode: "0755"
+
+    - name: Link the export plugin into the jenv plugins directory for {{ dev_java_user.username }}
+      ansible.builtin.file:
+        src: "{{ jenv_home }}/available-plugins/export"
+        dest: "{{ jenv_home }}/plugins/export"
+        state: link
+        follow: false
+        owner: "{{ dev_java_user.username }}"
+        group: "{{ dev_java_user.group }}"
+
+# ============================== Register installed JDKs ============================== #
+- name: Register installed JDKs with jenv for {{ dev_java_user.username }}
+  become: true
+  become_user: "{{ dev_java_user.username }}"
+  ansible.builtin.command: "{{ jenv_bin }} add {{ item.path }}"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  loop: "{{ jenv_jvm_dirs.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+  register: jenv_add
+  changed_when: "'added' in jenv_add.stdout"
+
+# ============================== Optional default version ============================== #
+- name: Get the current jenv global version for {{ dev_java_user.username }}
+  become: true
+  become_user: "{{ dev_java_user.username }}"
+  ansible.builtin.command: "{{ jenv_bin }} global"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  register: jenv_current_global
+  changed_when: false
+  when: jenv_global_version | length > 0
+
+- name: Set the jenv global version for {{ dev_java_user.username }}
+  become: true
+  become_user: "{{ dev_java_user.username }}"
+  ansible.builtin.command: "{{ jenv_bin }} global {{ jenv_global_version }}"
+  environment:
+    JENV_ROOT: "{{ jenv_home }}"
+  changed_when: true
+  when:
+    - jenv_global_version | length > 0
+    - jenv_current_global.stdout | default('') | trim != jenv_global_version

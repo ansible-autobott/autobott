@@ -109,6 +109,9 @@ linux_basic_defaults:
   #    uid: 2001
   #    gid: 2001
 
+  # Enabled users also receive the per-user setup of the tools roles (nvm/Node,
+  # jenv, kubectl's shell config) when those tools are selected for the host;
+  # see tasks/enabled_users.yaml.
   users: []
   # users:
   #  - username: jsmith

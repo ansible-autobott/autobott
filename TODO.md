@@ -1,6 +1,6 @@
-<!-- todo:guide — managed by todo; this block is rewritten on save. Docs: https://github.com/andresbott/todo
+<!-- todo:guide — managed by todo; this block is rewritten on save. Docs: https://github.com/candy-tools/todo
 This file is a todo list managed by "todo", a terminal TODO app:
-https://github.com/andresbott/todo
+https://github.com/candy-tools/todo
 
 todo watches this file and reloads it automatically when it changes on disk, so
 you — human or agent — can edit it directly in any editor. Keep to this format
@@ -9,6 +9,7 @@ so todo can parse what you write:
   # Heading           Headings ("#" to "######") are categories; they nest by
                       heading level.
   - [ ] Open task     A "- [ ]" line is an open task; "- [x]" marks it done.
+  - [/] In progress   "- [/]" flags a task in progress, "- [>]" defers it.
   - [x] Done task     Tasks must live under a category heading.
     - [ ] Subtask     Indent by two spaces to nest a subtask under a task.
     Description text  An indented, non-checkbox line is the task's description.
@@ -17,32 +18,30 @@ Notes for editors:
 - Text above the first heading (this block included) is preserved on save.
 - todo rewrites the file into the canonical form above on every change, so any
   other free-form markdown placed between items is not kept.
+
+Prefer the CLI over editing by hand: it writes this file in the exact format
+above. `todo add`, `todo done|progress|defer|reopen`, `todo edit`, `todo rm`
+and `todo list --json` cover the common actions — run `todo --help`.
 -->
 
 # TODO
 
 ## ansible-core 2.21 upgrade follow-ups
 
-Tracking work remaining after the ansible 11 → 14 (ansible-core 2.18 → 2.21) bump.
-
 - [ ] Finish end-to-end Vagrant validation on a **fresh** VM for Debian 13
-      (`make vagrant-destroy` + `make vagrant-up`, then `make vagrant-run`). The
-      last run reached `ok=788` before the next fix — not yet a clean full pass.
+  (`make vagrant-destroy` + `make vagrant-up`, then `make vagrant-run`). The
+  last run reached `ok=788` before the next fix — not yet a clean full pass.
 - [ ] Clear remaining ansible-core 2.19 templating fallout as it surfaces:
   - Native types: a whole-value `{{ x | int }}` now stays an `int`; use `| string`
     for strict modules (e.g. `community.general.xml`).
   - Strict undefined: undefined vars in `{% if %}`/conditionals now error
     (dead `run_role_node` guard already removed — watch for more leftovers).
 - [x] Add a CI lint gate — `.github/workflows/lint.yml` runs strict
-      `make lint`; all roles pass with no baseline.
+  `make lint`; all roles pass with no baseline.
 - [ ] (Optional) If releasing this upgrade, bump `autobot_version` in
-      `roles/base/enroll/defaults/main.yaml` before opening the PR.
+  `roles/base/enroll/defaults/main.yaml` before opening the PR.
 
 ## Borgmatic repo-init: key export/fetch logic bug
-
-Found while silencing the `item`-collision warning in
-`roles/base-services/borgmatic/tasks/init_repo.yaml` (the warning is fixed — a
-`loop_var: backup_item` was added; this underlying logic bug is **not** fixed).
 
 - [ ] Drop the redundant `with_subelements` on the **Export Borg keys (2.x)** and
       **Fetch exported Borg keys** tasks. `init_repo.yaml` already runs once per
@@ -57,14 +56,11 @@ Found while silencing the `item`-collision warning in
   - the **Borg 1.x** export task (no loop) uses `item.0.name`, where `item` is the
     profile dict → `item.0` is undefined; latently broken, skipped on borg 2.x.
 - [ ] Deferred because it changes real backup key-export behavior and the current
-      vagrant inventory can't exercise it (both sample destinations skip — one has no
-      `encryption`, the other `encryption: none`). Add an encrypted ssh destination to
-      the test inventory first, then fix + verify.
+  vagrant inventory can't exercise it (both sample destinations skip — one has no
+  `encryption`, the other `encryption: none`). Add an encrypted ssh destination to
+  the test inventory first, then fix + verify.
 
 ## linux-kde: KDE menu actions (`add_kde_menu_actions`) are still Plasma 5-only
-
-The role is Plasma 6 only now, but the opt-in Kim service menu (convert / rotate /
-flip images from Dolphin's context menu) was never ported and can't work on trixie.
 
 - [ ] Decide: port it to Plasma 6, or remove the feature.
 - [ ] If porting:
@@ -78,8 +74,14 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
   - verify on the vagrant box — enable `linux_kde.add_kde_menu_actions` in its
     inventory first (it's off there).
 - [ ] If removing: drop the menu-action block in `tasks/main.yaml`,
-      `files/menu_actions/`, the `add_kde_menu_actions` default, and the "Image
-      context-menu actions" section of the docs page.
+  `files/menu_actions/`, the `add_kde_menu_actions` default, and the "Image
+  context-menu actions" section of the docs page.
+
+## desktop
+
+- [ ] Ctrl shif c does not work in dolthing terminal
+- [ ] ssh agents needs to work better
+- [ ] disable snap on screen edge
 
 # k3s
 
@@ -96,11 +98,11 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
   - Local `k3s` is a rewritten copy of `origin/k3s` (same commits, new hashes): pushing needs
     `--force-with-lease`. Decide whether to also rewrite the remote history or accept the leak.
 - [x] [blocker 8] Revert a39294d (web stack switched off on the debian-13 VM) or split it into its own PR
-      The commit flips caddy, php-fpm, authelia, vhosts, homepage, fe26, radicale, immich, docmost,
-      mealie, phpmyadmin, mediawiki and aether to `false` on the main vagrant host. It is unrelated to
-      k3s, and the k3s VM does not enable them either, so after the merge no VM exercises the web stack:
-      `make vagrant-run` loses most of its coverage (the fresh-VM full pass in the ansible-core section
-      above is still open). `make vagrant-test` has no coverage to lose (see the validation item below).
+  The commit flips caddy, php-fpm, authelia, vhosts, homepage, fe26, radicale, immich, docmost,
+  mealie, phpmyadmin, mediawiki and aether to `false` on the main vagrant host. It is unrelated to
+  k3s, and the k3s VM does not enable them either, so after the merge no VM exercises the web stack:
+  `make vagrant-run` loses most of its coverage (the fresh-VM full pass in the ansible-core section
+  above is still open). `make vagrant-test` has no coverage to lose (see the validation item below).
 - [x] [important 7] A `k3s.version` bump does not restart k3s
       "Link k3s to /usr/local/bin" has no `notify`; only `config.yaml.j2` and `k3s.service.j2` notify
       `restart k3s`. The server runs from the extracted bundle in
@@ -123,6 +125,7 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
   - Decide the owner before merging: delete the copy here and make About.md the contract (robot
     `autobott-system/autobott-deployer`, user `kubeops`, `/etc/rancher/k3s/server-ca.crt`,
     `https://127.0.0.1:6443`, invariants 1-5), pointing to autobott-k8s for the app side.
+- [ ] mutually exlusive hosts: desktop, server and k8s
 
 ## Follow-ups (rated 3-6)
 
@@ -166,42 +169,64 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
     start: today the node boots without a CNI and Traefik installs twice on a fresh host (defaults
     first, then again when `traefik-config.yaml` appears).
 - [ ] [3] `- k3s` sits after the webservices in autobott.yaml
-      k3s is infrastructure, but it is the last role of the linux_servers play, and `namespace.yaml`
-      only asserts `run_role_k3s`, not that k3s and python3-kubernetes are installed. Any app role in
-      this repo placed in the natural webservices slot would run before k3s exists on a fresh host.
-      Move it up next to docker / firewall (no consumer here yet, so it is free now).
+  k3s is infrastructure, but it is the last role of the linux_servers play, and `namespace.yaml`
+  only asserts `run_role_k3s`, not that k3s and python3-kubernetes are installed. Any app role in
+  this repo placed in the natural webservices slot would run before k3s exists on a fresh host.
+  Move it up next to docker / firewall (no consumer here yet, so it is free now).
 - [ ] [3] Reserve `autobott-sample` in the namespace bootstrap
-      `tasks/main.yaml` deletes `namespace/autobott-sample` on every run while `sample_content` is
-      false (the default), but the reserved list in namespace.yaml does not include it: an app using
-      that name would be wiped each run. Add it to the list in whichever namespace.yaml survives.
+  `tasks/main.yaml` deletes `namespace/autobott-sample` on every run while `sample_content` is
+  false (the default), but the reserved list in namespace.yaml does not include it: an app using
+  that name would be wiped each run. Add it to the list in whichever namespace.yaml survives.
 - [ ] [5] Role location: `roles/k3s` is the only role outside a category
-      Everything else is `roles/<category>/<role>`. autobott-k8s already refers to "autobott's k3s
-      role" and its contract, so moving later costs more. Decide now (`base-services/k3s`, or a new
-      `k8s/` category).
+  Everything else is `roles/<category>/<role>`. autobott-k8s already refers to "autobott's k3s
+  role" and its contract, so moving later costs more. Decide now (`base-services/k3s`, or a new
+  `k8s/` category).
 - [ ] [4] Docs: no role page for k3s; drop-in and vagrant docs uncommitted in `../docs`
-      `../docs/content/docs/roles/` has no k3s page; the `firewall.md` (drop-ins) and `vagrant.md`
-      edits sit uncommitted on the docs repo's `main`. Add the page (what it installs, the UFW side
-      effect, 80/443 exclusivity with Caddy, break-glass access, host_vars example, `VER=13-k3s`) and
-      commit the docs.
+  `../docs/content/docs/roles/` has no k3s page; the `firewall.md` (drop-ins) and `vagrant.md`
+  edits sit uncommitted on the docs repo's `main`. Add the page (what it installs, the UFW side
+  effect, 80/443 exclusivity with Caddy, break-glass access, host_vars example, `VER=13-k3s`) and
+  commit the docs.
 - [ ] [4] Implicit firewall enablement
-      `run_role_k3s: true` overrides `run_role_firewall` through the import vars, so UFW with outbound
-      reject lands on hosts that opted out (it already bit nullmailer 587/tcp and NTP 123/udp). Either
-      assert `run_role_firewall` with a clear message, or make the side effect prominent in the role
-      page and the inventory sample.
+  `run_role_k3s: true` overrides `run_role_firewall` through the import vars, so UFW with outbound
+  reject lands on hosts that opted out (it already bit nullmailer 587/tcp and NTP 123/udp). Either
+  assert `run_role_firewall` with a clear message, or make the side effect prominent in the role
+  page and the inventory sample.
 - [ ] [4] Release: bump `autobot_version` before opening the PR
-      It is `v0.2.2`, the latest tag; a new role ships as a release (see AGENTS.md "Before Opening a PR").
+  It is `v0.2.2`, the latest tag; a new role ships as a release (see AGENTS.md "Before Opening a PR").
 - [ ] [4] No validation test for k3s
-      There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist
-      (never committed), and `roles/validation` is a commented-out stub, so the target fails before it
-      runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80, the sample page)
-      needs that harness first.
+  There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist
+  (never committed), and `roles/validation` is a commented-out stub, so the target fails before it
+  runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80, the sample page)
+  needs that harness first.
 - [ ] [3] Stray inventory file `inventory/host_vars/ansible-autobott2-linux-debian-12/k3s.yaml`
-      No such host in `inventory/vagrant.yaml`, the directory does not exist on `main`, and the role
-      refuses Debian 12 anyway. Delete it.
+  No such host in `inventory/vagrant.yaml`, the directory does not exist on `main`, and the role
+  refuses Debian 12 anyway. Delete it.
 - [ ] [3] Legacy cleanup tasks for an unreleased version
-      The `k3s-admin` group removal, `/etc/profile.d/k3s.sh` removal and the kubeconfig chown exist for
-      one host that ran a pre-release role. Drop them once that host has converged (note the date).
+  The `k3s-admin` group removal, `/etc/profile.d/k3s.sh` removal and the kubeconfig chown exist for
+  one host that ran a pre-release role. Drop them once that host has converged (note the date).
 - [ ] [3] `kubectl` is managed by both k3s and tools/dev-k8s
-      k3s symlinks `/usr/local/bin/kubectl`, dev-k8s downloads to the same path; only a comment in the
-      k3s host_vars prevents the two roles from flapping. Skip kubectl in dev-k8s when `run_role_k3s`
-      is true, or assert.
+  k3s symlinks `/usr/local/bin/kubectl`, dev-k8s downloads to the same path; only a comment in the
+  k3s host_vars prevents the two roles from flapping. Skip kubectl in dev-k8s when `run_role_k3s`
+  is true, or assert.
+- [ ] [4] Vagrant k3s VM: run Traefik on the host's ports (8083/8446), so `https_redirect` works there
+      The VM can't replicate a real host's HTTPS flow. vagrant forwards host 8083 → VM 80 and 8446 → VM 443,
+      and Traefik's chart always renders the redirect as `entryPoint.to=:<websecure exposedPort>` (`:443`,
+      checked in chart 38 on the VM), so `https_redirect` stays off there. Without it, plain HTTP to an app
+      behind autobott-k8s's Authelia gets Authelia's `400` ("insecure scheme 'http'") instead of an upgrade,
+      and `https://<app>.k3s.localhost:8083/` gets Traefik's `404` (TLS on the `web` entrypoint, which has no
+      TLS routes). Fix: make the VM's Traefik listen on the ports browsers use, so the chart's own redirect
+      points to 8446.
+  - `defaults/main.yaml`: Traefik port settings, e.g. `http_port: 80` and `https_port: 443`.
+  - `traefik-config.yaml.j2`: render them as `ports.web.exposedPort` / `ports.websecure.exposedPort` (still
+    `{}` when nothing is overridden). `servicelb_ports` must follow them: derive it, or set it in the VM's
+    inventory.
+  - Sample inventory, the VM's `k3s.yaml`: ports 8083 / 8446 and `https_redirect: true`.
+  - `vagrant/vagrantfile`: forward 8083 → 8083 and 8446 → 8446 (today 8083 → 80 and 8446 → 443).
+  - `About.md`: replace "keep it off where clients reach HTTPS on another port". In autobott-k8s only docs
+    and comments that say vagrant forwards to the VM's 80/443 change; its Authelia keeps
+    `authelia_url: https://auth.k3s.localhost:8446`.
+  - Check: `http://sonarr.k3s.localhost:8083/` redirects to `https://sonarr.k3s.localhost:8446/`, which
+    redirects to the Authelia portal.
+  - Alternatives weighed (2026-10-24): forward host 80/443 → VM 80/443 (no role change, but needs
+    `net.ipv4.ip_unprivileged_port_start=80` on the host), or a redirect-port setting rendered as Traefik
+    flags (`--entryPoints.web.http.redirections.entryPoint.to=:8446`), bypassing the chart's value.

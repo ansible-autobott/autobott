@@ -27,6 +27,44 @@
           which need python3-kubernetes >= 24.2, and {{ ansible_facts.distribution_release }} ships an older one.
         quiet: true
 
+    - name: Fail on a k3s version without a checksum
+      ansible.builtin.assert:
+        that:
+          - k3s_config.version in k3s_checksums
+        fail_msg: >-
+          k3s.version {{ k3s_config.version }} has no checksum in k3s_checksums: add the sha256 of its k3s binary
+          there (known versions: {{ k3s_checksums.keys() | join(', ') }}).
+        quiet: true
+
+    # Kubernetes upgrades one minor version at a time, and going back a minor version needs a restore of a datastore
+    # backup taken on it (docs.k3s.io/upgrades). Checked against the version the server runs, not the installed binary:
+    # after a run that failed before restarting k3s, the binary is already the new one. Empty on a fresh host or while
+    # k3s is down: nothing to compare.
+    - name: Read the version of the running k3s server
+      ansible.builtin.command: /usr/local/bin/k3s kubectl version --output=json --request-timeout=10s
+      register: k3s_server_version
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Set the version of the running k3s server
+      ansible.builtin.set_fact:
+        k3s_running_version: >-
+          {{ (k3s_server_version.stdout | from_json).serverVersion.gitVersion | regex_replace('^v', '')
+          if k3s_server_version.rc == 0 else '' }}
+
+    - name: Fail on a k3s version change that skips or goes back a minor version
+      when: k3s_running_version | length > 0
+      ansible.builtin.assert:
+        that:
+          - (k3s_config.version.split('.')[1] | int) - (k3s_running_version.split('.')[1] | int) in [0, 1]
+        fail_msg: >-
+          k3s {{ k3s_running_version }} runs here, and k3s.version {{ k3s_config.version }} would skip or go back a
+          minor version. Upgrade one minor version at a time: add a release of each minor version in between to
+          k3s_checksums and run the role once per step. Going back a minor version needs a restore of a datastore
+          backup taken on it (docs.k3s.io/upgrades/roll-back).
+        quiet: true
+
     # ServiceLB publishes ports with iptables redirects, not listening sockets: a program already listening on one
     # of them would not make k3s fail, it would silently lose its traffic. Fail before installing anything instead.
     # k3s itself never listens on these ports, so re-runs pass.
@@ -72,11 +110,18 @@
         mode: "0755"
         checksum: "sha256:{{ k3s_checksums[k3s_config.version] }}"
 
+    # The server runs from its own unpacked copy under /var/lib/rancher/k3s/data, so a new version only runs after a
+    # restart. Also reported as changed while the server still runs another version: that catches up on a run that
+    # failed before its restart, when the link was already switched.
     - name: Link k3s to /usr/local/bin
       ansible.builtin.file:
         src: "/opt/k3s/install/k3s-{{ k3s_config.version }}"
         dest: /usr/local/bin/k3s
         state: link
+      register: k3s_link
+      changed_when: k3s_link.changed or k3s_running_version not in ['', k3s_config.version]
+      notify:
+        - restart k3s
 
     # ====================================================
     # Cleanup old versions
@@ -164,6 +209,12 @@
       notify:
         - reload systemd
         - restart k3s
+
+    # Now rather than at the end of the play: the steps below need the server with the new version, config and unit.
+    # On a fresh host this restart is the first start, and the next task only enables k3s. It also runs the play's
+    # other pending handlers, e.g. the firewall's.
+    - name: Restart k3s now if its version, config or unit changed
+      ansible.builtin.meta: flush_handlers
 
     - name: Enable and start k3s server
       ansible.builtin.systemd:

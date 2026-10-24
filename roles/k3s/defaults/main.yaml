@@ -14,7 +14,9 @@ k3s: {}
 
 # Default configuration structure
 k3s_defaults:
-  # k3s version to install (must have a matching entry in k3s_checksums)
+  # k3s version to install (must have a matching entry in k3s_checksums). Changing it restarts k3s on the new version;
+  # pods keep running. Upgrade one minor version at a time (1.34 -> 1.35 -> 1.36): the role refuses to skip a minor
+  # version or to go back one.
   version: 1.35.1+k3s1
 
   # Extra TLS Subject Alternative Names for the API server certificate

@@ -88,6 +88,20 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   manifest file is removed, so setting the flag back to `false` deletes the file, its `AddOn` and the
   namespace.
 
+### Upgrades (`k3s.version`)
+
+- Changing `k3s.version` downloads that release's binary, points the `/usr/local/bin/k3s` link at it and restarts
+  k3s. The server runs from its own unpacked copy under `/var/lib/rancher/k3s/data/`, so without the restart the old
+  version would keep running until the next reboot. Pods keep running while k3s restarts; the API is down briefly.
+- The role compares `k3s.version` with the version the server runs (`kubectl version`), not with the link: if a run
+  fails after switching the link but before the restart, the next run still restarts k3s.
+- One minor version at a time: Kubernetes does not support skipping a minor version, and going back a minor version
+  needs a restore of a datastore backup taken on it ([k3s docs](https://docs.k3s.io/upgrades/roll-back)). The role
+  fails before changing anything when `k3s.version` would do either: add a release of each minor version in between
+  to `k3s_checksums` and run the role once per step.
+- Version, config and unit changes restart k3s right after the unit task, not at the end of the play, so the
+  manifests and the robot account are applied to the server that runs the new setup.
+
 ### Access model
 
 Acting on the cluster takes the same two steps as admin work on the server: a key that gets you onto the box (SSH,

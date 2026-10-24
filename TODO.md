@@ -101,7 +101,7 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
       k3s, and the k3s VM does not enable them either, so after the merge no VM exercises the web stack:
       `make vagrant-run` loses most of its coverage (the fresh-VM full pass in the ansible-core section
       above is still open). `make vagrant-test` has no coverage to lose (see the validation item below).
-- [ ] [important 7] A `k3s.version` bump does not restart k3s
+- [x] [important 7] A `k3s.version` bump does not restart k3s
       "Link k3s to /usr/local/bin" has no `notify`; only `config.yaml.j2` and `k3s.service.j2` notify
       `restart k3s`. The server runs from the extracted bundle in
       `/var/lib/rancher/k3s/data/<hash>/bin/k3s` (checked on the VM), so after a bump the old version

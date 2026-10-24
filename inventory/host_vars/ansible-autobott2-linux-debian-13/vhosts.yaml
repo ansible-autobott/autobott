@@ -3,7 +3,7 @@
 #============================================================================================================
 
 # Role execution control
-run_role_vhosts: false
+run_role_vhosts: true
 
 vhosts_config: {}
 

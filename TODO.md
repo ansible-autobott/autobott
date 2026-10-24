@@ -116,15 +116,8 @@ and `todo list --json` cover the common actions — run `todo --help`.
     (one minor at a time, datastore migrations). Document it or assert the skew.
   - Assert `k3s_config.version in k3s_checksums` next to the Debian check: today an unknown version
     dies with an opaque Jinja error after the directories were created.
-- [ ] [important 7] The namespace bootstrap is duplicated across repos and has already diverged
-      `tasks/namespace.yaml`, `k3s_namespace_pod_security` and the "Usage in an app role" section of
-      About.md have no consumer in this repo. autobott-k8s ships its own `roles/k8s/tasks/namespace.yaml`
-      (parameterised cluster config, `state: absent`, volumes, SSO middleware check, `managed-by` label,
-      `restricted` default) and only relies on this role for the robot ServiceAccount, `kubeops` and the
-      CA copy. Two copies of the RBAC + Pod Security bootstrap will drift silently (they already do).
-  - Decide the owner before merging: delete the copy here and make About.md the contract (robot
-    `autobott-system/autobott-deployer`, user `kubeops`, `/etc/rancher/k3s/server-ca.crt`,
-    `https://127.0.0.1:6443`, invariants 1-5), pointing to autobott-k8s for the app side.
+- [x] [important 7] The namespace bootstrap is duplicated across repos and has already diverged
+  Resolved 2026-10-24: autobott-k8s owns the namespace bootstrap, the robot account, `kubeops` and its CA copy; this role only hands over the admin kubeconfig (About.md, "Handoff to deploy tools"). The copy here and the sample page are gone.
 - [ ] mutually exlusive hosts: desktop, server and k8s
 
 ## Follow-ups (rated 3-6)
@@ -139,25 +132,12 @@ and `todo list --json` cover the common actions — run `todo --help`.
     controller), so "NetworkPolicy support" is not a reason for Calico. State the real reason in
     About.md or go back to the k3s default.
 - [ ] [6] `k3s-killall.sh` / `k3s-reset.sh` never stop k3s
-      They loop over `/etc/systemd/system/k3s*.service` (the upstream install location), but the role
-      installs the unit at `/lib/systemd/system/k3s.service` (`FragmentPath=/usr/lib/systemd/system/k3s.service`
-      on the VM, nothing under `/etc`). killall then kills the shims and tears down networking under a
-      live server; reset deletes `server/db` and `server/tls` while k3s is running and its
-      `systemctl start` is a no-op.
+  They loop over `/etc/systemd/system/k3s*.service` (the upstream install location), but the role installs the unit at `/lib/systemd/system/k3s.service` (`FragmentPath=/usr/lib/systemd/system/k3s.service` on the VM, nothing under `/etc`). killall then kills the shims and tears down networking under a live server; reset deletes `server/db` and `server/tls` while k3s is running and its `systemctl start` is a no-op.
   - Install the unit under `/etc/systemd/system` like upstream, or `systemctl stop k3s` in the scripts.
-  - After a reset the cluster has a new CA and no robot account, but `/etc/rancher/k3s/server-ca.crt`
-    and the script header say nothing: kubeops deploys fail TLS verification and token minting fails
-    until the k3s role is re-run. Re-publish the CA from the script or print that reminder at its end.
+  - After a reset the cluster has a new CA and is empty: end the script with a reminder to run autobott-k8s again (it reads the new CA and creates its robot account again).
 - [ ] [5] A namespace admin can publish host ports past UFW
-      ClusterRole `admin` lets the robot create NodePort / LoadBalancer Services (checked: `create
-      services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node
-      IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW,
-      so an app role can open any port to the internet, outside `servicelb_ports` and the firewall.
-      Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
-  - Cheapest fix, in whichever namespace.yaml survives: a ResourceQuota per app namespace with
-    `services.loadbalancers: "0"` and `services.nodeports: "0"` (`admin` cannot edit quotas), plus
-    `kube-apiserver-arg: [enable-admission-plugins=DenyServiceExternalIPs]` in `config.yaml.j2`.
-    Alternative: a ValidatingAdmissionPolicy denying those Service types outside `kube-system`.
+  ClusterRole `admin` lets the robot create NodePort / LoadBalancer Services (checked: `create services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW, so an app role can open any port to the internet, outside `servicelb_ports` and the firewall. Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
+  - Here: `kube-apiserver-arg: [enable-admission-plugins=DenyServiceExternalIPs]` in `config.yaml.j2`. The ResourceQuota per app namespace (`services.loadbalancers: "0"`, `services.nodeports: "0"`; `admin` cannot edit quotas) is autobott-k8s's part, tracked in its TODO.md. Alternative: a ValidatingAdmissionPolicy denying those Service types outside `kube-system`.
   - `service.spec.allocateLoadBalancerNodePorts: false` for Traefik through the HelmChartConfig; document.
 - [ ] [5] No readiness gate after the Calico / Traefik manifests
       The role only waits for the API (`kubectl get nodes`); Calico and Traefik are applied in the
@@ -169,14 +149,9 @@ and `todo list --json` cover the common actions — run `todo --help`.
     start: today the node boots without a CNI and Traefik installs twice on a fresh host (defaults
     first, then again when `traefik-config.yaml` appears).
 - [ ] [3] `- k3s` sits after the webservices in autobott.yaml
-  k3s is infrastructure, but it is the last role of the linux_servers play, and `namespace.yaml`
-  only asserts `run_role_k3s`, not that k3s and python3-kubernetes are installed. Any app role in
-  this repo placed in the natural webservices slot would run before k3s exists on a fresh host.
-  Move it up next to docker / firewall (no consumer here yet, so it is free now).
-- [ ] [3] Reserve `autobott-sample` in the namespace bootstrap
-  `tasks/main.yaml` deletes `namespace/autobott-sample` on every run while `sample_content` is
-  false (the default), but the reserved list in namespace.yaml does not include it: an app using
-  that name would be wiped each run. Add it to the list in whichever namespace.yaml survives.
+  k3s is infrastructure, but it is the last role of the linux_servers play. Move it up next to docker / firewall: nothing in this repo deploys to it, so it is free to move.
+- [x] [3] Reserve `autobott-sample` in the namespace bootstrap
+  Resolved 2026-10-24: the k3s sample page is gone (the role deletes its namespace), and autobott-k8s's namespace.yaml refuses any existing namespace it did not create.
 - [ ] [5] Role location: `roles/k3s` is the only role outside a category
   Everything else is `roles/<category>/<role>`. autobott-k8s already refers to "autobott's k3s
   role" and its contract, so moving later costs more. Decide now (`base-services/k3s`, or a new
@@ -194,16 +169,11 @@ and `todo list --json` cover the common actions — run `todo --help`.
 - [ ] [4] Release: bump `autobot_version` before opening the PR
   It is `v0.2.2`, the latest tag; a new role ships as a release (see AGENTS.md "Before Opening a PR").
 - [ ] [4] No validation test for k3s
-  There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist
-  (never committed), and `roles/validation` is a commented-out stub, so the target fails before it
-  runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80, the sample page)
-  needs that harness first.
+  There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist (never committed), and `roles/validation` is a commented-out stub, so the target fails before it runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80) needs that harness first.
 - [ ] [3] Stray inventory file `inventory/host_vars/ansible-autobott2-linux-debian-12/k3s.yaml`
-  No such host in `inventory/vagrant.yaml`, the directory does not exist on `main`, and the role
-  refuses Debian 12 anyway. Delete it.
+  No such host in `inventory/vagrant.yaml`, and the directory does not exist on `main`. Delete it.
 - [ ] [3] Legacy cleanup tasks for an unreleased version
-  The `k3s-admin` group removal, `/etc/profile.d/k3s.sh` removal and the kubeconfig chown exist for
-  one host that ran a pre-release role. Drop them once that host has converged (note the date).
+  The `k3s-admin` group removal, `/etc/profile.d/k3s.sh` removal and the kubeconfig chown exist for one host that ran a pre-release role, and so do the removals of the CA copy `/etc/rancher/k3s/server-ca.crt` and the `autobott-sample` page (added 2026-10-24, when autobott-k8s took over the deploy side). Drop them once that host has converged (note the date).
 - [ ] [3] `kubectl` is managed by both k3s and tools/dev-k8s
   k3s symlinks `/usr/local/bin/kubectl`, dev-k8s downloads to the same path; only a comment in the
   k3s host_vars prevents the two roles from flapping. Skip kubectl in dev-k8s when `run_role_k3s`

@@ -95,12 +95,12 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
     checks) into `roles/k3s/About.md` or `../docs`, without host names or user names; delete the file.
   - Local `k3s` is a rewritten copy of `origin/k3s` (same commits, new hashes): pushing needs
     `--force-with-lease`. Decide whether to also rewrite the remote history or accept the leak.
-- [ ] [blocker 8] Revert a39294d (web stack switched off on the debian-13 VM) or split it into its own PR
+- [x] [blocker 8] Revert a39294d (web stack switched off on the debian-13 VM) or split it into its own PR
       The commit flips caddy, php-fpm, authelia, vhosts, homepage, fe26, radicale, immich, docmost,
       mealie, phpmyadmin, mediawiki and aether to `false` on the main vagrant host. It is unrelated to
       k3s, and the k3s VM does not enable them either, so after the merge no VM exercises the web stack:
-      `make vagrant-run` / `vagrant-test` lose most of their coverage (the fresh-VM full pass in the
-      ansible-core section above is still open).
+      `make vagrant-run` loses most of its coverage (the fresh-VM full pass in the ansible-core section
+      above is still open). `make vagrant-test` has no coverage to lose (see the validation item below).
 - [ ] [important 7] A `k3s.version` bump does not restart k3s
       "Link k3s to /usr/local/bin" has no `notify`; only `config.yaml.j2` and `k3s.service.j2` notify
       `restart k3s`. The server runs from the extracted bundle in
@@ -191,8 +191,10 @@ flip images from Dolphin's context menu) was never ported and can't work on trix
 - [ ] [4] Release: bump `autobot_version` before opening the PR
       It is `v0.2.2`, the latest tag; a new role ships as a release (see AGENTS.md "Before Opening a PR").
 - [ ] [4] No validation test for k3s
-      `roles/validation` / `test.yaml` have nothing k3s-specific (node Ready, Traefik answering on :80,
-      the sample page), so `make vagrant-test VER=13-k3s` proves nothing about the role.
+      There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist
+      (never committed), and `roles/validation` is a commented-out stub, so the target fails before it
+      runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80, the sample page)
+      needs that harness first.
 - [ ] [3] Stray inventory file `inventory/host_vars/ansible-autobott2-linux-debian-12/k3s.yaml`
       No such host in `inventory/vagrant.yaml`, the directory does not exist on `main`, and the role
       refuses Debian 12 anyway. Delete it.

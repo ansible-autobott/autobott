@@ -3,8 +3,9 @@
 ## Overview
 
 Single-node k3s server that keeps the k3s defaults, except where this document says otherwise: Calico replaces
-Flannel as the CNI, the host firewall is always on, the admin kubeconfig is readable only by root, and Ansible
-deploys apps through a robot account that is admin only inside each app's namespace.
+Flannel as the CNI, the host firewall is always on, and the admin kubeconfig is readable only by root. The role
+installs and maintains the cluster; deploying apps is the job of a separate repo, autobott-k8s, which gets the admin
+kubeconfig and sets up its own access with it (see "Handoff to deploy tools").
 
 ## Traffic Flow
 
@@ -36,14 +37,14 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   URL on HTTPS (port 443), for the whole cluster. It is set in the `traefik` HelmChartConfig
   (`traefik-config.yaml` in the k3s manifests dir), which k3s merges into the values of its Traefik chart
   (`ports.web.redirections.entryPoint`, which needs Traefik chart 34+: k3s 1.32.3 ships 34.2, 1.35.1 ships 38.0).
-- Cluster-wide, not per app: apps need no redirect of their own. An app could not ship one anyway: it would need a
-  Traefik `Middleware`, which the deployer robot cannot create (Traefik's chart does not add its resources to the
-  `admin` ClusterRole, `rbac.aggregateTo: []`).
+- Cluster-wide, not per app: apps need no redirect of their own. An app deployed with namespace `admin` rights (as
+  autobott-k8s deploys them) could not ship one anyway: it would need a Traefik `Middleware`, which `admin` cannot
+  create (Traefik's chart does not add its resources to the `admin` ClusterRole, `rbac.aggregateTo: []`).
 - Off by default: until the sites have real certificates (Let's Encrypt), HTTPS serves Traefik's self-signed
   certificate, so the redirect would send every visitor to a browser warning. Browsers also cache a permanent
   redirect, so turning it off later does not reach visitors who already got it.
 - The redirect always points to port 443: keep it off where clients reach HTTPS on another port. The vagrant VM
-  forwards 443 to 8446, so `http://sample.localhost:8083/` would redirect to an address that does not answer.
+  forwards 443 to 8446, so `http://<app>.k3s.localhost:8083/` would redirect to an address that does not answer.
 - The file is always deployed, with empty values (`{}`) when the redirect is off: k3s does not delete resources
   when their manifest file is removed, so deleting the file would leave the redirect on. Earlier versions of this
   role deployed an empty `traefik-config.yaml`; the same file name replaces it, so two files never manage the same
@@ -52,8 +53,7 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
 ### Calico CNI
 
 - Replaces the default Flannel.
-- Provides NetworkPolicy support to restrict pod-to-pod traffic, e.g. only Traefik may reach an app's pods (see the
-  sample content).
+- Provides NetworkPolicy support to restrict pod-to-pod traffic, e.g. only Traefik may reach an app's pods.
 - Flannel backend is set to `none` and default network policy is disabled in k3s config to let Calico handle everything.
 
 ### Applications: ClusterIP Services behind an Ingress
@@ -93,21 +93,6 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   ports stop working until the host's `firewall` settings allow them, e.g. `allowed_outbound_tcp: [587]` for
   nullmailer (SMTP submission) and `allowed_outbound_udp: [123]` for NTP.
 
-### Sample content (landing page)
-
-- `k3s.sample_content: true` deploys a sample app that shows the stack working: nginx in the
-  `autobott-sample` namespace serving a static page from the ConfigMap `sample-content`, behind a
-  ClusterIP Service and an Ingress.
-- The Ingress has no host and Traefik router priority `1`, so it answers every request that no other
-  Ingress matches — it is the landing page for the main domain until something else claims it, and no
-  domain needs to be configured.
-- It follows the rules above: ClusterIP only, a NetworkPolicy that lets only Traefik reach the pod, Pod
-  Security `restricted` on the namespace, non-root nginx (`nginxinc/nginx-unprivileged`) with a read-only
-  root filesystem and no ServiceAccount token.
-- Deployed through the k3s manifests dir (`sample-content.yaml`). k3s does not delete resources when a
-  manifest file is removed, so setting the flag back to `false` deletes the file, its `AddOn` and the
-  namespace.
-
 ### Upgrades (`k3s.version`)
 
 - Changing `k3s.version` downloads that release's binary, points the `/usr/local/bin/k3s` link at it and restarts
@@ -120,7 +105,7 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   fails before changing anything when `k3s.version` would do either: add a release of each minor version in between
   to `k3s_checksums` and run the role once per step.
 - Version, config and unit changes restart k3s right after the unit task, not at the end of the play, so the
-  manifests and the robot account are applied to the server that runs the new setup.
+  manifests are applied to the server that runs the new setup.
 
 ### Access model
 
@@ -131,7 +116,7 @@ identity provider.
 | Who | Credential | Can do | Status |
 |-----|------------|--------|--------|
 | Admin (break-glass) | `ssh` + `sudo kubectl` on the node | everything | implemented |
-| Ansible app roles | 1h token of the deployer robot, used as `kubeops` | `admin` inside each app's namespace | implemented |
+| Deploy tools (autobott-k8s) | the admin kubeconfig, as root on the node | everything; autobott-k8s sets up its own least-privilege deploy account with it | implemented |
 | People, daily work | 8h `<user>-dev` token, minted with a GPG-locked master pass | `edit` in their listed app namespaces | planned |
 | People, admin work | 1h `<user>-admin` token, minted over `ssh` + `sudo` | everything | planned |
 
@@ -152,80 +137,38 @@ and makes sure a leaked credential is not automatically full cluster control. Th
   `sudo -i`) export `KUBECONFIG` from `/root/.bashrc.d/10_k3s.bashrc`, which the root `.bashrc` of `base/enroll`
   loads (`autobott_enroll.root_bashrc`, on by default). There is deliberately no `/root/.kube/config`: Ansible
   never reads `.bashrc`, so a `kubernetes.core` task that runs as root without explicit credentials fails instead
-  of silently getting cluster admin (see the robot account below).
+  of silently getting cluster admin.
 
-### App deployment: the deployer robot account
+### Handoff to deploy tools (autobott-k8s)
 
-Ansible never deploys apps with the admin kubeconfig:
+This role installs and maintains the cluster. Deploying apps is the job of autobott-k8s (separate repo,
+`../autobott-k8s`), and how it logs in is its own business. All a deploy tool gets from this role:
 
-- **Root builds the rooms and hands out keys** (`tasks/namespace.yaml`, admin kubeconfig): creates the app's
-  namespace, binds the robot account `autobott-system/autobott-deployer` to the ClusterRole `admin` *in that
-  namespace only*, and mints a 1h token for it (`kubectl create token`), kept in memory only.
-- **The robot works inside the rooms it was given:** the app role switches to the unprivileged Linux user
-  `kubeops` (system user, no password, no SSH keys, no sudo, `nologin`) and deploys with the token. `kubeops`
-  verifies the API server with the public copy of the server CA, `/etc/rancher/k3s/server-ca.crt`.
-- The role creates the robot account itself: namespace `autobott-system` (Pod Security `restricted`) and the
-  ServiceAccount, synchronously with `kubernetes.core.k8s`. Not through the manifests dir: k3s applies that in the
-  background, so the first app role could run before the account exists.
-- Packages: `python3-kubernetes` for the `kubernetes.core` modules (Debian 13+: bookworm's 22.6 is older than the
-  required 24.2, so the role fails early there) and `acl`, which Ansible needs to switch from its login user to
-  another unprivileged user.
-
-Usage in an app role (the `namespace.yaml` header has the inputs):
-
-```yaml
-- name: Bootstrap the k3s namespace and mint a deployer token
-  ansible.builtin.import_role:
-    name: k3s
-    tasks_from: namespace.yaml
-  vars:
-    k3s_namespace: whoami
-
-- name: Deploy as kubeops
-  become_user: kubeops
-  module_defaults:
-    group/kubernetes.core.k8s:          # add the same under group/kubernetes.core.helm for charts
-      host: https://127.0.0.1:6443
-      ca_cert: /etc/rancher/k3s/server-ca.crt
-      api_key: "{{ k3s_deployer_token.stdout }}"
-  block:
-    - name: App resources
-      kubernetes.core.k8s:
-        namespace: whoami
-        template: whoami.yaml.j2
-        wait: true
-```
-
-What keeps the robot from being root on the node (namespace admin alone would be):
-
-1. Only per-namespace RoleBindings, never a cluster-wide one. It cannot create or relabel namespaces, so it cannot
-   switch one to `privileged`.
-2. App namespaces enforce Pod Security `baseline` (or `restricted`): no privileged pods, `hostPath` volumes, host
-   network/PID. `namespace.yaml` refuses `privileged`, and refuses system namespaces (`default`, `kube-*`,
-   `autobott-system`, `autobott-users`), where namespace admin would mean cluster admin.
-3. It cannot create k3s `HelmChart` resources (k3s's helm-controller installs them with full admin): the `admin`
-   ClusterRole does not include `helm.cattle.io`. Charts go through the `kubernetes.core.helm` modules as
-   `kubeops` instead.
-4. Host data (e.g. media on ZFS) goes through PersistentVolumes created by root; the app only claims them.
-5. Pods in app namespaces get no API token unless they ask for one: `namespace.yaml` sets
-   `automountServiceAccountToken: false` on the namespace's `default` ServiceAccount.
-
-Why it is built this way:
-
-- The token goes in `module_defaults`, not `environment:`: Ansible puts environment variables on the
-  `sudo … sh -c` command line, readable by any local user with `ps`. `kubernetes.core` marks `api_key` as
-  `no_log`, and the mint task is `no_log`.
-- No kubeconfig file for `kubeops`, so no live token on disk.
-- A fresh token per app role, so a long playbook run never hits an expired one.
-- Revoke: delete the ServiceAccount (all its tokens stop working); otherwise they expire after 1h.
-- **Limit:** the Ansible user can still sudo to root, so this protects against buggy roles and tools running as
-  root, not against a compromised Ansible controller.
+- **The admin kubeconfig** `/etc/rancher/k3s/k3s.yaml`, root-only, with the API address (`https://127.0.0.1:6443`)
+  and the API server's CA in it. autobott-k8s uses it as root to set up its own access (a deploy user, a robot
+  account that is admin only inside each app's namespace, a copy of the CA) and to create app namespaces, never to
+  deploy apps: see its `roles/k8s/About.md`.
+- **kubectl** at `/usr/local/bin/kubectl` (the k3s symlink).
+- **The API only from the node:** the firewall keeps `6443` closed (see "Firewall" above), so deploy tools run on
+  the node.
+- **Ingress:** Traefik with its CRDs, IngressClass `traefik`, on ports 80/443 through ServiceLB, with the optional
+  cluster-wide HTTPS redirect.
+- **NetworkPolicy**, enforced by Calico, and **Pod Security admission** (built into Kubernetes) for namespaces that
+  set a level.
+- **No `HelmChart` for namespace admins:** k3s's helm-controller installs `HelmChart` resources with full admin, and
+  the `admin` ClusterRole does not include `helm.cattle.io`, so a namespace admin cannot use it. autobott-k8s
+  checks this before it hands out a token.
+- **After `k3s-reset.sh`** the cluster has a new CA and is empty: run the deploy tool again (autobott-k8s reads the
+  new CA and creates its account again).
+- Earlier versions of this role also set up the deploy side (the robot account, `kubeops`, a CA copy at
+  `/etc/rancher/k3s/server-ca.crt`) and a sample page (namespace `autobott-sample`). autobott-k8s took over the
+  account and the user; the role deletes the CA copy and the sample page.
 
 ### What the API server accepts
 
 1. **Certificates signed by k3s's client CA:** the root-only admin kubeconfig and k3s's own components.
-2. **ServiceAccount tokens:** the deployer robot's (1h), and the token Kubernetes gives each pod that mounts one
-   (off by default in app namespaces).
+2. **ServiceAccount tokens:** e.g. the 1h tokens of autobott-k8s's deployer robot, and the token Kubernetes gives each
+   pod that mounts one.
 3. **Proxy certificates** (request-header CA, used for metrics-server): a trusted proxy can act as any user.
 4. **The k3s join token**, on the same port (`6443`): lets a machine join the cluster, and a machine that joins as
    a server receives every CA key. On a single node nothing should ever join.
@@ -247,37 +190,28 @@ like root.
 | Calico NetworkPolicies | Pod-to-pod isolation, e.g. only Traefik reaches app pods |
 | ClusterIP services | No ports bound on the host for application pods |
 | Admin kubeconfig 0600 (root) | Full cluster admin takes SSH key + sudo, like root |
-| Deployer robot + Pod Security | Ansible's app work is limited to each app's namespace, no host access |
+| Pod Security admission | Namespaces that enforce `baseline` or `restricted` get no privileged pods or host access (autobott-k8s's app namespaces do) |
 
 ## Checks on the vagrant VM
 
-Last run 2026-10-18 on `make vagrant-up VER=13-k3s`, with a throwaway app deployed through `namespace.yaml` as
-`kubeops` (a second playbook run changed nothing):
+Last run 2026-10-18 on `make vagrant-up VER=13-k3s` (a second playbook run changed nothing). The checks of the
+deployer robot moved to autobott-k8s's `roles/k8s/About.md`, with the robot.
 
-- `/etc/rancher/k3s/k3s.yaml` is `root:root 0600` after a k3s restart; `kubeops` is locked, `nologin`, no sudo.
-- The deployer token lives 1h (`exp - iat = 3600`) and never appears in the Ansible output.
+- `/etc/rancher/k3s/k3s.yaml` is `root:root 0600` after a k3s restart.
 - With the firewall on, pods still reach the API: `https://kubernetes.default.svc` answers `401`.
-- `kubectl auth can-i … --as=system:serviceaccount:autobott-system:autobott-deployer`:
-  - `--list -n <app>`: the namespace `admin` set, including `serviceaccounts/token` inside the namespace;
-  - `no` for `create helmcharts.helm.cattle.io -n <app>`, tokens in `autobott-system`, anything in `kube-system`,
-    `patch namespaces`, `create clusterrolebindings` and pods in `autobott-sample`.
-- Refused when tried with a real deployer token: creating a namespace, relabelling the app's namespace to
-  `privileged`, a `HelmChart`, a pod mounting `hostPath: /`, a privileged `hostPID` pod, a RoleBinding to
-  `cluster-admin`, reading `kube-system` Secrets.
+- A ServiceAccount bound to `admin` in a namespace gets `no` for `kubectl auth can-i create helmcharts.helm.cattle.io`
+  there.
 - No bootstrap tokens exist (`k3s token list`).
 
 ## Configuration Reference
 
 | File | Purpose |
 |------|---------|
-| `defaults/main.yaml` | Role variables: CIDRs, DNS, Calico version, app namespace Pod Security level |
-| `tasks/namespace.yaml` | Shared by app roles: app namespace, robot access to it, 1h deployer token |
+| `defaults/main.yaml` | Role variables: version, CIDRs, DNS, Calico version, ServiceLB ports, HTTPS redirect |
 | `templates/config.yaml.j2` | k3s server config |
 | `templates/k3s.service.j2` | systemd unit |
 | `files/calico-*.yaml` | Calico CNI manifest |
 | `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): HTTP → HTTPS redirect (`https_redirect`) |
-| `templates/sample-content.yaml.j2` | Sample landing page manifest (`sample_content`) |
-| `templates/sample-index.html.j2` | Sample landing page HTML (goes into the ConfigMap) |
 
 ## Planned (not implemented): API access for people
 
@@ -308,8 +242,9 @@ The network step is the first of the two layers (tunnel, WireGuard or both is st
   `ssh` + `sudo`, so the server checks the sudo password. It reads the password locally and passes it to
   `sudo -S`: prompting through `ssh -t` mixes the prompt text into the captured token.
 - **Server side (this role):** namespace `autobott-users` with the ServiceAccounts `<user>-minter`, `<user>-dev`
-  and `<user>-admin`. `<user>-dev` gets a RoleBinding to `edit` in each listed app namespace (added by the
-  namespace bootstrap), `<user>-admin` a ClusterRoleBinding to `cluster-admin`. The master pass can do one thing;
+  and `<user>-admin`. `<user>-dev` gets a RoleBinding to `edit` in each listed app namespace (added by
+  autobott-k8s, which owns the app namespaces: who works where is its part), `<user>-admin` a ClusterRoleBinding to
+  `cluster-admin`. The master pass can do one thing;
   naming only `<user>-dev` also stops it from minting tokens for itself or for `<user>-admin`:
 
   ```yaml
@@ -356,7 +291,8 @@ Open questions:
 - Should `<user>-dev` also get read-only `view` across the cluster (`view` cannot read Secrets)?
 - Master pass renewal: how Ansible knows one is due (the bound Secret's age) and how the encrypted file reaches the
   workstation (e.g. through the inventory into `tools/dev-k8s`).
-- Inventory layout for users, e.g. a `k3s.users` list with `name`, `gpg_public_key` and `dev_namespaces`.
+- Inventory layout for users, e.g. a `k3s.users` list with `name` and `gpg_public_key` here, and each user's app
+  namespaces in autobott-k8s's settings.
 - Where `tools/dev-k8s` installs the shell functions.
 
 Not chosen:

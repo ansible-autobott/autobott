@@ -252,6 +252,22 @@
         mode: "0600"
 
     # ====================================================
+    # Traefik (ingress)
+    # ====================================================
+    # HelmChartConfig with the role's overrides of the Traefik chart (HTTP -> HTTPS redirect). Always deployed, with
+    # empty values when there is nothing to override: k3s does not delete resources when their manifest file is
+    # removed, so deleting the file would leave a redirect on. It replaces the empty traefik-config.yaml deployed
+    # by earlier versions of this role (same file name), so two files never manage the same object.
+
+    - name: Deploy Traefik configuration
+      ansible.builtin.template:
+        src: traefik-config.yaml.j2
+        dest: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    # ====================================================
     # Access control
     # ====================================================
     # The admin kubeconfig is root-only: ssh + sudo kubectl is the break-glass path. Ansible works inside app
@@ -276,6 +292,26 @@
       ansible.builtin.group:
         name: k3s-admin
         state: absent
+
+    # Interactive root shells (sudo su, sudo -i) get KUBECONFIG from /root/.bashrc.d (loaded by the root .bashrc
+    # of base/enroll), so k9s, helm and other clients find the admin kubeconfig like k3s's kubectl does. Not a
+    # /root/.kube/config: Ansible never reads .bashrc, so a kubernetes.core task running as root without explicit
+    # credentials still fails instead of silently getting cluster admin.
+    - name: Create root shell configuration directory
+      ansible.builtin.file:
+        path: /root/.bashrc.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Export KUBECONFIG in interactive root shells
+      ansible.builtin.copy:
+        content: "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n"
+        dest: /root/.bashrc.d/10_k3s.bashrc
+        owner: root
+        group: root
+        mode: "0600"
 
     # - python3-kubernetes: the kubernetes.core modules used here and by app roles
     # - acl: lets Ansible switch from its login user to the unprivileged kubeops user

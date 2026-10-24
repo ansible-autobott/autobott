@@ -47,6 +47,11 @@ k3s_defaults:
     - 80
     - 443
 
+  # Redirect every HTTP request (port 80) to HTTPS (port 443) with a permanent redirect, cluster-wide in Traefik:
+  # apps need no redirect of their own. Turn it on once the sites have real certificates: until then HTTPS serves
+  # Traefik's self-signed one, and browsers keep a permanent redirect cached even after it is turned off.
+  https_redirect: false
+
   # Deploy a sample landing page: nginx in the "autobott-sample" namespace serving a static page from a
   # ConfigMap. Its Ingress has no host and the lowest priority, so it answers every request that no other
   # Ingress matches (no domain to configure). Setting it back to false removes the namespace.

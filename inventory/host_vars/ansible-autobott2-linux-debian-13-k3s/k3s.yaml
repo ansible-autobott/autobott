@@ -9,3 +9,6 @@ run_role_k3s: true
 k3s:
   # sample landing page (nginx + ConfigMap) behind a host-less Ingress, see roles/k3s/About.md
   sample_content: true
+  # keep the HTTP -> HTTPS redirect off: it always points to port 443, but vagrant forwards HTTPS to 8446, so
+  # http://sample.localhost:8083/ would redirect to an address that does not answer
+  https_redirect: false

@@ -16,8 +16,9 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
 
 ### Ingress: the k3s defaults (Traefik + ServiceLB)
 
-- **Traefik** is the ingress controller k3s installs from its bundled Helm chart; this role does not override it.
-  Its `LoadBalancer` Service has two entrypoints: `web` on port 80 (HTTP) and `websecure` on port 443 (HTTPS).
+- **Traefik** is the ingress controller k3s installs from its bundled Helm chart; the only setting this role can
+  override is the optional HTTP → HTTPS redirect (below). Its `LoadBalancer` Service has two entrypoints: `web`
+  on port 80 (HTTP) and `websecure` on port 443 (HTTPS).
 - **HTTPS** uses Traefik's self-signed default certificate unless an Ingress references a TLS secret. There is no
   HTTP → HTTPS redirect by default.
 - **ServiceLB** (formerly Klipper LB) is the load balancer built into k3s. For every `LoadBalancer` Service it
@@ -28,6 +29,25 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   host's listening TCP ports and fails if a program uses one of `k3s.servicelb_ports` (80/443 by default; add the
   ports of any other `LoadBalancer` Service). It checks the host, not other roles' settings, so it catches any
   program. k3s itself never listens on these ports, so re-runs pass.
+
+### HTTP → HTTPS redirect (`https_redirect`)
+
+- `k3s.https_redirect: true` makes Traefik answer every request on port 80 with a permanent redirect to the same
+  URL on HTTPS (port 443), for the whole cluster. It is set in the `traefik` HelmChartConfig
+  (`traefik-config.yaml` in the k3s manifests dir), which k3s merges into the values of its Traefik chart
+  (`ports.web.redirections.entryPoint`, which needs Traefik chart 34+: k3s 1.32.3 ships 34.2, 1.35.1 ships 38.0).
+- Cluster-wide, not per app: apps need no redirect of their own. An app could not ship one anyway: it would need a
+  Traefik `Middleware`, which the deployer robot cannot create (Traefik's chart does not add its resources to the
+  `admin` ClusterRole, `rbac.aggregateTo: []`).
+- Off by default: until the sites have real certificates (Let's Encrypt), HTTPS serves Traefik's self-signed
+  certificate, so the redirect would send every visitor to a browser warning. Browsers also cache a permanent
+  redirect, so turning it off later does not reach visitors who already got it.
+- The redirect always points to port 443: keep it off where clients reach HTTPS on another port. The vagrant VM
+  forwards 443 to 8446, so `http://sample.localhost:8083/` would redirect to an address that does not answer.
+- The file is always deployed, with empty values (`{}`) when the redirect is off: k3s does not delete resources
+  when their manifest file is removed, so deleting the file would leave the redirect on. Earlier versions of this
+  role deployed an empty `traefik-config.yaml`; the same file name replaces it, so two files never manage the same
+  object. Other Traefik chart overrides belong in this file too: a chart takes a single HelmChartConfig.
 
 ### Calico CNI
 
@@ -128,6 +148,11 @@ and makes sure a leaked credential is not automatically full cluster control. Th
 - Earlier versions of this role let a `k3s-admin` group read the file, which skipped sudo. The role now deletes
   that group and `/etc/profile.d/k3s.sh`, and resets the file to `root:root`: k3s keeps the owner and group of an
   existing kubeconfig when it rewrites it on start.
+- Other clients (k9s, helm) only look at `KUBECONFIG` or `~/.kube/config`. Interactive root shells (`sudo su`,
+  `sudo -i`) export `KUBECONFIG` from `/root/.bashrc.d/10_k3s.bashrc`, which the root `.bashrc` of `base/enroll`
+  loads (`autobott_enroll.root_bashrc`, on by default). There is deliberately no `/root/.kube/config`: Ansible
+  never reads `.bashrc`, so a `kubernetes.core` task that runs as root without explicit credentials fails instead
+  of silently getting cluster admin (see the robot account below).
 
 ### App deployment: the deployer robot account
 
@@ -250,6 +275,7 @@ Last run 2026-10-18 on `make vagrant-up VER=13-k3s`, with a throwaway app deploy
 | `templates/config.yaml.j2` | k3s server config |
 | `templates/k3s.service.j2` | systemd unit |
 | `files/calico-*.yaml` | Calico CNI manifest |
+| `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): HTTP → HTTPS redirect (`https_redirect`) |
 | `templates/sample-content.yaml.j2` | Sample landing page manifest (`sample_content`) |
 | `templates/sample-index.html.j2` | Sample landing page HTML (goes into the ConfigMap) |
 

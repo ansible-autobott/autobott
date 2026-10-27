@@ -1,13 +1,15 @@
 #============================================================================================================
 # k3s
 #============================================================================================================
-# Single-node k3s server: Calico CNI, Traefik ingress on ports 80/443 (k3s default, see roles/k3s/About.md).
+# Single-node k3s server: Calico CNI, Traefik ingress on ports 8083/8446 (below, see roles/k8s/k3s/About.md).
 # Enabling k3s also turns on the firewall and registers the rules k3s needs.
 # The role defaults (version, cluster/service CIDRs, cluster DNS, Calico version) fit this box as is.
 # The apps on it (sample page included) come from autobott-k8s, with its own host_vars overlay.
 run_role_k3s: true
 
 k3s:
-  # keep the HTTP -> HTTPS redirect off: it always points to port 443, but vagrant forwards HTTPS to 8446, so
-  # http://sample.k3s.localhost:8083/ would redirect to an address that does not answer
-  https_redirect: false
+  # Traefik on the ports vagrant forwards from your machine (same numbers on both sides), so the HTTPS redirect
+  # points to the port your browser uses: http://<app>.k3s.localhost:8083/ -> https://<app>.k3s.localhost:8446/
+  http_port: 8083
+  https_port: 8446
+  https_redirect: true

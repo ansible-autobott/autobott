@@ -14,3 +14,8 @@ rm -rf /var/lib/cni
 rm -rf /etc/cni/net.d
 
 systemctl start k3s
+
+{ set +x; } 2>/dev/null
+echo
+echo "The cluster is reset: it is empty and has a new CA. App data in the volumes' host folders is untouched."
+echo "Run autobott-k8s again: it reads the new CA, creates its deploy account again and redeploys the apps."

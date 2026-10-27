@@ -36,8 +36,6 @@ and `todo list --json` cover the common actions — run `todo --help`.
     for strict modules (e.g. `community.general.xml`).
   - Strict undefined: undefined vars in `{% if %}`/conditionals now error
     (dead `run_role_node` guard already removed — watch for more leftovers).
-- [x] Add a CI lint gate — `.github/workflows/lint.yml` runs strict
-  `make lint`; all roles pass with no baseline.
 - [ ] (Optional) If releasing this upgrade, bump `autobot_version` in
   `roles/base/enroll/defaults/main.yaml` before opening the PR.
 
@@ -82,46 +80,16 @@ and `todo list --json` cover the common actions — run `todo --help`.
 - [ ] Ctrl shif c does not work in dolthing terminal
 - [ ] ssh agents needs to work better
 - [ ] disable snap on screen edge
+- [ ] git prune branches
+- [ ] kmix vs audio controls for master volume shortcuts
 
 # k3s
 
 ## Merge blockers and important (rated 7+, deep review 2026-10-24)
 
-- [x] [blocker 8] Drop `K3S_SECURITY_IMPLEMENTATION.md` from the branch before merging
-      Working doc at the repo root. It names the production host, the admin
-      user, the host's security gaps (API/kubelet exposure, sshd forwarding settings) and a human-login
-      design that is not implemented. The repo is public and the file is already on `origin/k3s`
-      (commit 830ec6b), so it is public history today. The doc itself says "delete or fold into
-      About.md + docs once implemented".
-  - Fold the generic parts worth keeping (section 2/4 plan, "what the API server accepts", the vagrant
-    checks) into `roles/k3s/About.md` or `../docs`, without host names or user names; delete the file.
-  - Local `k3s` is a rewritten copy of `origin/k3s` (same commits, new hashes): pushing needs
-    `--force-with-lease`. Decide whether to also rewrite the remote history or accept the leak.
-- [x] [blocker 8] Revert a39294d (web stack switched off on the debian-13 VM) or split it into its own PR
-  The commit flips caddy, php-fpm, authelia, vhosts, homepage, fe26, radicale, immich, docmost,
-  mealie, phpmyadmin, mediawiki and aether to `false` on the main vagrant host. It is unrelated to
-  k3s, and the k3s VM does not enable them either, so after the merge no VM exercises the web stack:
-  `make vagrant-run` loses most of its coverage (the fresh-VM full pass in the ansible-core section
-  above is still open). `make vagrant-test` has no coverage to lose (see the validation item below).
-- [x] [important 7] A `k3s.version` bump does not restart k3s
-      "Link k3s to /usr/local/bin" has no `notify`; only `config.yaml.j2` and `k3s.service.j2` notify
-      `restart k3s`. The server runs from the extracted bundle in
-      `/var/lib/rancher/k3s/data/<hash>/bin/k3s` (checked on the VM), so after a bump the old version
-      keeps running until a reboot while Ansible reports the upgrade done (and the sample page footer
-      shows the new version).
-  - Notify `restart k3s` from the link task and `meta: flush_handlers` before "Wait for k3s to be ready".
-    The flush also makes config/unit changes reach k3s before the wait, manifest and robot steps
-    instead of at the end of the play, and removes the needless second restart on a first run.
-  - `k3s_checksums` offers 1.32.3 and 1.35.1: a three-minor jump, which Kubernetes/k3s do not support
-    (one minor at a time, datastore migrations). Document it or assert the skew.
-  - Assert `k3s_config.version in k3s_checksums` next to the Debian check: today an unknown version
-    dies with an opaque Jinja error after the directories were created.
-- [x] [important 7] The namespace bootstrap is duplicated across repos and has already diverged
-  Resolved 2026-10-24: autobott-k8s owns the namespace bootstrap, the robot account, `kubeops` and its CA copy; this role only hands over the admin kubeconfig (About.md, "Handoff to deploy tools"). The copy here and the sample page are gone.
-- [ ] mutually exlusive hosts: desktop, server and k8s
-
 ## Follow-ups (rated 3-6)
 
+- [ ] mutually exlusive hosts: desktop, server and k8s
 - [ ] [6] Calico: bump the pin and make `k3s.calico.version` real (or drop Calico)
       Calico 3.29 is tested against Kubernetes 1.29-1.32 only and is four minors behind 3.33 (tested
       against 1.35-1.37); the role installs Kubernetes 1.35.1. The knob is a no-op: `calico.yaml.j2`
@@ -131,10 +99,6 @@ and `todo list --json` cover the common actions — run `todo --help`.
   - Re-check the justification: stock k3s already enforces NetworkPolicy (embedded kube-router
     controller), so "NetworkPolicy support" is not a reason for Calico. State the real reason in
     About.md or go back to the k3s default.
-- [ ] [6] `k3s-killall.sh` / `k3s-reset.sh` never stop k3s
-  They loop over `/etc/systemd/system/k3s*.service` (the upstream install location), but the role installs the unit at `/lib/systemd/system/k3s.service` (`FragmentPath=/usr/lib/systemd/system/k3s.service` on the VM, nothing under `/etc`). killall then kills the shims and tears down networking under a live server; reset deletes `server/db` and `server/tls` while k3s is running and its `systemctl start` is a no-op.
-  - Install the unit under `/etc/systemd/system` like upstream, or `systemctl stop k3s` in the scripts.
-  - After a reset the cluster has a new CA and is empty: end the script with a reminder to run autobott-k8s again (it reads the new CA and creates its robot account again).
 - [ ] [5] A namespace admin can publish host ports past UFW
   ClusterRole `admin` lets the robot create NodePort / LoadBalancer Services (checked: `create services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW, so an app role can open any port to the internet, outside `servicelb_ports` and the firewall. Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
   - Here: `kube-apiserver-arg: [enable-admission-plugins=DenyServiceExternalIPs]` in `config.yaml.j2`. The ResourceQuota per app namespace (`services.loadbalancers: "0"`, `services.nodeports: "0"`; `admin` cannot edit quotas) is autobott-k8s's part, tracked in its TODO.md. Alternative: a ValidatingAdmissionPolicy denying those Service types outside `kube-system`.
@@ -148,55 +112,17 @@ and `todo list --json` cover the common actions — run `todo --help`.
   - Write the Calico files and the Traefik HelmChartConfig into the manifests dir before the first
     start: today the node boots without a CNI and Traefik installs twice on a fresh host (defaults
     first, then again when `traefik-config.yaml` appears).
-- [ ] [3] `- k3s` sits after the webservices in autobott.yaml
-  k3s is infrastructure, but it is the last role of the linux_servers play. Move it up next to docker / firewall: nothing in this repo deploys to it, so it is free to move.
-- [x] [3] Reserve `autobott-sample` in the namespace bootstrap
-  Resolved 2026-10-24: the k3s sample page is gone (the role deletes its namespace), and autobott-k8s's namespace.yaml refuses any existing namespace it did not create.
-- [ ] [5] Role location: `roles/k3s` is the only role outside a category
-  Everything else is `roles/<category>/<role>`. autobott-k8s already refers to "autobott's k3s
-  role" and its contract, so moving later costs more. Decide now (`base-services/k3s`, or a new
-  `k8s/` category).
 - [ ] [4] Docs: no role page for k3s; drop-in and vagrant docs uncommitted in `../docs`
   `../docs/content/docs/roles/` has no k3s page; the `firewall.md` (drop-ins) and `vagrant.md`
-  edits sit uncommitted on the docs repo's `main`. Add the page (what it installs, the UFW side
-  effect, 80/443 exclusivity with Caddy, break-glass access, host_vars example, `VER=13-k3s`) and
-  commit the docs.
+  edits sit uncommitted on the docs repo's `main`. Add the page in a new `k8s/` section, like the
+  role (what it installs, the UFW side effect, 80/443 exclusivity with Caddy, break-glass access,
+  host_vars example, `VER=13-k3s`) and commit the docs.
 - [ ] [4] Implicit firewall enablement
   `run_role_k3s: true` overrides `run_role_firewall` through the import vars, so UFW with outbound
   reject lands on hosts that opted out (it already bit nullmailer 587/tcp and NTP 123/udp). Either
   assert `run_role_firewall` with a clear message, or make the side effect prominent in the role
   page and the inventory sample.
-- [ ] [4] Release: bump `autobot_version` before opening the PR
-  It is `v0.2.2`, the latest tag; a new role ships as a release (see AGENTS.md "Before Opening a PR").
-- [ ] [4] No validation test for k3s
-  There is no validation harness at all: `make vagrant-test` runs `test.yaml`, which does not exist (never committed), and `roles/validation` is a commented-out stub, so the target fails before it runs anything, on every VM. A k3s check (node Ready, Traefik answering on :80) needs that harness first.
-- [ ] [3] Stray inventory file `inventory/host_vars/ansible-autobott2-linux-debian-12/k3s.yaml`
-  No such host in `inventory/vagrant.yaml`, and the directory does not exist on `main`. Delete it.
-- [ ] [3] Legacy cleanup tasks for an unreleased version
-  The `k3s-admin` group removal, `/etc/profile.d/k3s.sh` removal and the kubeconfig chown exist for one host that ran a pre-release role, and so do the removals of the CA copy `/etc/rancher/k3s/server-ca.crt` and the `autobott-sample` page (added 2026-10-24, when autobott-k8s took over the deploy side). Drop them once that host has converged (note the date).
 - [ ] [3] `kubectl` is managed by both k3s and tools/dev-k8s
   k3s symlinks `/usr/local/bin/kubectl`, dev-k8s downloads to the same path; only a comment in the
   k3s host_vars prevents the two roles from flapping. Skip kubectl in dev-k8s when `run_role_k3s`
   is true, or assert.
-- [ ] [4] Vagrant k3s VM: run Traefik on the host's ports (8083/8446), so `https_redirect` works there
-      The VM can't replicate a real host's HTTPS flow. vagrant forwards host 8083 → VM 80 and 8446 → VM 443,
-      and Traefik's chart always renders the redirect as `entryPoint.to=:<websecure exposedPort>` (`:443`,
-      checked in chart 38 on the VM), so `https_redirect` stays off there. Without it, plain HTTP to an app
-      behind autobott-k8s's Authelia gets Authelia's `400` ("insecure scheme 'http'") instead of an upgrade,
-      and `https://<app>.k3s.localhost:8083/` gets Traefik's `404` (TLS on the `web` entrypoint, which has no
-      TLS routes). Fix: make the VM's Traefik listen on the ports browsers use, so the chart's own redirect
-      points to 8446.
-  - `defaults/main.yaml`: Traefik port settings, e.g. `http_port: 80` and `https_port: 443`.
-  - `traefik-config.yaml.j2`: render them as `ports.web.exposedPort` / `ports.websecure.exposedPort` (still
-    `{}` when nothing is overridden). `servicelb_ports` must follow them: derive it, or set it in the VM's
-    inventory.
-  - Sample inventory, the VM's `k3s.yaml`: ports 8083 / 8446 and `https_redirect: true`.
-  - `vagrant/vagrantfile`: forward 8083 → 8083 and 8446 → 8446 (today 8083 → 80 and 8446 → 443).
-  - `About.md`: replace "keep it off where clients reach HTTPS on another port". In autobott-k8s only docs
-    and comments that say vagrant forwards to the VM's 80/443 change; its Authelia keeps
-    `authelia_url: https://auth.k3s.localhost:8446`.
-  - Check: `http://sonarr.k3s.localhost:8083/` redirects to `https://sonarr.k3s.localhost:8446/`, which
-    redirects to the Authelia portal.
-  - Alternatives weighed (2026-10-24): forward host 80/443 → VM 80/443 (no role change, but needs
-    `net.ipv4.ip_unprivileged_port_start=80` on the host), or a redirect-port setting rendered as Traefik
-    flags (`--entryPoints.web.http.redirections.entryPoint.to=:8446`), bypassing the chart's value.

@@ -10,16 +10,16 @@ kubeconfig and sets up its own access with it (see "Handoff to deploy tools").
 ## Traffic Flow
 
 ```
-Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Pods
+Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik → ClusterIP Services → Pods
 ```
 
 ## Architecture Decisions
 
 ### Ingress: the k3s defaults (Traefik + ServiceLB)
 
-- **Traefik** is the ingress controller k3s installs from its bundled Helm chart; the only setting this role can
-  override is the optional HTTP → HTTPS redirect (below). Its `LoadBalancer` Service has two entrypoints: `web`
-  on port 80 (HTTP) and `websecure` on port 443 (HTTPS).
+- **Traefik** is the ingress controller k3s installs from its bundled Helm chart; this role only overrides its two
+  ports and the optional HTTP → HTTPS redirect (below). Its `LoadBalancer` Service has two entrypoints: `web` for
+  HTTP on `k3s.http_port` (80) and `websecure` for HTTPS on `k3s.https_port` (443).
 - **HTTPS** uses Traefik's self-signed default certificate unless an Ingress references a TLS secret. There is no
   HTTP → HTTPS redirect by default.
 - **ServiceLB** (formerly Klipper LB) is the load balancer built into k3s. For every `LoadBalancer` Service it
@@ -27,14 +27,25 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   external IP. Traefik is one such Service; any other `LoadBalancer` Service is published on the node the same way.
 - hostPorts are iptables redirects, not listening sockets: a host process already listening on the same port does
   not make k3s fail, the redirect silently takes its traffic. So before installing anything, the role lists the
-  host's listening TCP ports and fails if a program uses one of `k3s.servicelb_ports` (80/443 by default; add the
-  ports of any other `LoadBalancer` Service). It checks the host, not other roles' settings, so it catches any
-  program. k3s itself never listens on these ports, so re-runs pass.
+  host's listening TCP ports and fails if a program uses Traefik's two ports or one of `k3s.servicelb_ports` (the
+  ports of any other `LoadBalancer` Service, none by default). It checks the host, not other roles' settings, so it
+  catches any program. k3s itself never listens on these ports, so re-runs pass.
+
+### Traefik's ports (`http_port`, `https_port`)
+
+- `k3s.http_port` and `k3s.https_port` (80 and 443) are the ports of Traefik's Service, which ServiceLB publishes on
+  the node: the chart's `ports.web.exposedPort` and `ports.websecure.exposedPort`. Inside its pod Traefik listens on
+  8000 and 8443 whatever they are.
+- Keep them the ports clients use: the HTTPS redirect sends browsers to `https_port` (below). Behind a port forward,
+  forward the same port numbers to the node.
+- The vagrant VM runs Traefik on 8083/8446, and vagrant forwards the same ports from your machine. With Traefik on
+  80/443 behind forwards from 8083/8446, the redirect would send browsers to port 443 of your machine, where nothing
+  answers.
 
 ### HTTP → HTTPS redirect (`https_redirect`)
 
-- `k3s.https_redirect: true` makes Traefik answer every request on port 80 with a permanent redirect to the same
-  URL on HTTPS (port 443), for the whole cluster. It is set in the `traefik` HelmChartConfig
+- `k3s.https_redirect: true` makes Traefik answer every request on `http_port` with a permanent redirect to the
+  same URL on HTTPS (`https_port`), for the whole cluster. It is set in the `traefik` HelmChartConfig
   (`traefik-config.yaml` in the k3s manifests dir), which k3s merges into the values of its Traefik chart
   (`ports.web.redirections.entryPoint`, which needs Traefik chart 34+: k3s 1.32.3 ships 34.2, 1.35.1 ships 38.0).
 - Cluster-wide, not per app: apps need no redirect of their own. An app deployed with namespace `admin` rights (as
@@ -43,12 +54,14 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
 - Off by default: until the sites have real certificates (Let's Encrypt), HTTPS serves Traefik's self-signed
   certificate, so the redirect would send every visitor to a browser warning. Browsers also cache a permanent
   redirect, so turning it off later does not reach visitors who already got it.
-- The redirect always points to port 443: keep it off where clients reach HTTPS on another port. The vagrant VM
-  forwards 443 to 8446, so `http://<app>.k3s.localhost:8083/` would redirect to an address that does not answer.
-- The file is always deployed, with empty values (`{}`) when the redirect is off: k3s does not delete resources
-  when their manifest file is removed, so deleting the file would leave the redirect on. Earlier versions of this
-  role deployed an empty `traefik-config.yaml`; the same file name replaces it, so two files never manage the same
-  object. Other Traefik chart overrides belong in this file too: a chart takes a single HelmChartConfig.
+- The redirect points to `https_port`: Traefik's chart builds its target from the `websecure` port of the Service
+  (`entryPoint.to=:<exposedPort>`), not from the port the client used. So behind a port forward, keep the port
+  numbers the same (see "Traefik's ports" above).
+- The file is always deployed, with empty values (`{}`) when nothing is overridden (ports 80/443, no redirect): k3s
+  does not delete resources when their manifest file is removed, so deleting the file would leave the last overrides
+  on. Earlier versions of this role deployed an empty `traefik-config.yaml`; the same file name replaces it, so two
+  files never manage the same object. Other Traefik chart overrides belong in this file too: a chart takes a single
+  HelmChartConfig.
 
 ### Calico CNI
 
@@ -69,11 +82,12 @@ Client → node :80 / :443 (ServiceLB) → Traefik → ClusterIP Services → Po
   reachable from outside: the firewall rejects all inbound traffic except the allowed ports.
 - Keep it that way: do not add the host's public name to `k3s.tls_san` or open `6443`. People are meant to reach
   the API through an SSH tunnel or WireGuard (planned, see the end of this document).
-- **Not filtered:** ports that k3s publishes with iptables redirects (ServiceLB's 80/443, NodePorts) are reachable
-  from outside whatever the firewall allows. kube-proxy rewrites them to a pod address on arrival (`KUBE-SERVICES`
-  in `nat PREROUTING`) and accepts them in `KUBE-FORWARD`, which runs before UFW's forward chains; they never reach
-  UFW's inbound allowlist. Restricting them takes Kubernetes-side tools, not UFW: `loadBalancerSourceRanges` on a
-  `LoadBalancer` Service, or Calico host endpoint policies (`preDNAT`) for NodePorts.
+- **Not filtered:** ports that k3s publishes with iptables redirects (ServiceLB's: Traefik's 80/443 and
+  `servicelb_ports`; NodePorts) are reachable from outside whatever the firewall allows. kube-proxy rewrites them to
+  a pod address on arrival (`KUBE-SERVICES` in `nat PREROUTING`) and accepts them in `KUBE-FORWARD`, which runs
+  before UFW's forward chains; they never reach UFW's inbound allowlist. Restricting them takes Kubernetes-side
+  tools, not UFW: `loadBalancerSourceRanges` on a `LoadBalancer` Service, or Calico host endpoint policies
+  (`preDNAT`) for NodePorts.
 - k3s registers its rules as a drop-in file (`/etc/ufw/autobott.d/k3s.json`). The firewall role applies every
   drop-in, so the rules survive the UFW reset it does whenever its own config changes.
 - Rules (found by running without them and reading the UFW block log):
@@ -130,9 +144,6 @@ and makes sure a leaked credential is not automatically full cluster control. Th
   single node, cluster admin is the same as root (a pod can mount `/`), so it takes the same two steps as root:
   SSH key + sudo password. `ssh` + `sudo kubectl` on the node is the break-glass path; root's `kubectl` finds the
   file without `KUBECONFIG`.
-- Earlier versions of this role let a `k3s-admin` group read the file, which skipped sudo. The role now deletes
-  that group and `/etc/profile.d/k3s.sh`, and resets the file to `root:root`: k3s keeps the owner and group of an
-  existing kubeconfig when it rewrites it on start.
 - Other clients (k9s, helm) only look at `KUBECONFIG` or `~/.kube/config`. Interactive root shells (`sudo su`,
   `sudo -i`) export `KUBECONFIG` from `/root/.bashrc.d/10_k3s.bashrc`, which the root `.bashrc` of `base/enroll`
   loads (`autobott_enroll.root_bashrc`, on by default). There is deliberately no `/root/.kube/config`: Ansible
@@ -147,12 +158,12 @@ This role installs and maintains the cluster. Deploying apps is the job of autob
 - **The admin kubeconfig** `/etc/rancher/k3s/k3s.yaml`, root-only, with the API address (`https://127.0.0.1:6443`)
   and the API server's CA in it. autobott-k8s uses it as root to set up its own access (a deploy user, a robot
   account that is admin only inside each app's namespace, a copy of the CA) and to create app namespaces, never to
-  deploy apps: see its `roles/k8s/About.md`.
+  deploy apps: see `../autobott-k8s/roles/k8s/About.md`.
 - **kubectl** at `/usr/local/bin/kubectl` (the k3s symlink).
 - **The API only from the node:** the firewall keeps `6443` closed (see "Firewall" above), so deploy tools run on
   the node.
-- **Ingress:** Traefik with its CRDs, IngressClass `traefik`, on ports 80/443 through ServiceLB, with the optional
-  cluster-wide HTTPS redirect.
+- **Ingress:** Traefik with its CRDs, IngressClass `traefik`, on `k3s.http_port` / `https_port` (80/443) through
+  ServiceLB, with the optional cluster-wide HTTPS redirect.
 - **NetworkPolicy**, enforced by Calico, and **Pod Security admission** (built into Kubernetes) for namespaces that
   set a level.
 - **No `HelmChart` for namespace admins:** k3s's helm-controller installs `HelmChart` resources with full admin, and
@@ -160,9 +171,6 @@ This role installs and maintains the cluster. Deploying apps is the job of autob
   checks this before it hands out a token.
 - **After `k3s-reset.sh`** the cluster has a new CA and is empty: run the deploy tool again (autobott-k8s reads the
   new CA and creates its account again).
-- Earlier versions of this role also set up the deploy side (the robot account, `kubeops`, a CA copy at
-  `/etc/rancher/k3s/server-ca.crt`) and a sample page (namespace `autobott-sample`). autobott-k8s took over the
-  account and the user; the role deletes the CA copy and the sample page.
 
 ### What the API server accepts
 
@@ -195,23 +203,26 @@ like root.
 ## Checks on the vagrant VM
 
 Last run 2026-10-18 on `make vagrant-up VER=13-k3s` (a second playbook run changed nothing). The checks of the
-deployer robot moved to autobott-k8s's `roles/k8s/About.md`, with the robot.
+deployer robot moved to `../autobott-k8s/roles/k8s/About.md`, with the robot.
 
 - `/etc/rancher/k3s/k3s.yaml` is `root:root 0600` after a k3s restart.
 - With the firewall on, pods still reach the API: `https://kubernetes.default.svc` answers `401`.
 - A ServiceAccount bound to `admin` in a namespace gets `no` for `kubectl auth can-i create helmcharts.helm.cattle.io`
   there.
 - No bootstrap tokens exist (`k3s token list`).
+- Traefik on 8083/8446 with the redirect on (2026-10-25): from your machine, `http://sonarr.k3s.localhost:8083/`
+  answers `301` to `https://sonarr.k3s.localhost:8446/` (a `POST` gets `308`; path and query stay), which sends a
+  browser that isn't logged in to autobott-k8s's Authelia portal. A second run changed nothing.
 
 ## Configuration Reference
 
 | File | Purpose |
 |------|---------|
-| `defaults/main.yaml` | Role variables: version, CIDRs, DNS, Calico version, ServiceLB ports, HTTPS redirect |
+| `defaults/main.yaml` | Role variables: version, CIDRs, DNS, Calico version, Traefik's ports, other ServiceLB ports, HTTPS redirect |
 | `templates/config.yaml.j2` | k3s server config |
 | `templates/k3s.service.j2` | systemd unit |
 | `files/calico-*.yaml` | Calico CNI manifest |
-| `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): HTTP → HTTPS redirect (`https_redirect`) |
+| `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): ports (`http_port`, `https_port`), HTTP → HTTPS redirect (`https_redirect`) |
 
 ## Planned (not implemented): API access for people
 

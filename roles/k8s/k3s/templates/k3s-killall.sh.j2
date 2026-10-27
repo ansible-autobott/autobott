@@ -10,13 +10,8 @@ done
 
 set -x
 
-for service in /etc/systemd/system/k3s*.service; do
-    [ -s "$service" ] && systemctl stop "$(basename $service)"
-done
-
-for service in /etc/init.d/k3s*; do
-    [ -x "$service" ] && "$service" stop
-done
+# Stop the unit by name: the role installs it in /lib/systemd/system, not in /etc/systemd/system like upstream
+systemctl stop k3s
 
 pschildren() {
     ps -e -o ppid= -o pid= | \

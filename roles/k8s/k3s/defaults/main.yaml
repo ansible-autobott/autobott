@@ -40,14 +40,18 @@ k3s_defaults:
   # Example: ["--node-label=environment=production"]
   extra_args: []
 
-  # Host ports ServiceLB publishes for LoadBalancer Services: Traefik's web (80) and websecure (443).
-  # ServiceLB uses iptables redirects, not listening sockets, so a program already listening on one of these
-  # ports would silently lose its traffic: the role fails instead. Add the ports of any other LoadBalancer Service.
-  servicelb_ports:
-    - 80
-    - 443
+  # Host ports of Traefik's HTTP (web) and HTTPS (websecure) entrypoints, which ServiceLB publishes on the node.
+  # Keep them the ports clients use: the HTTPS redirect below sends browsers to https_port. Behind a port forward,
+  # forward the same port numbers (the vagrant VM runs Traefik on 8083/8446).
+  http_port: 80
+  https_port: 443
 
-  # Redirect every HTTP request (port 80) to HTTPS (port 443) with a permanent redirect, cluster-wide in Traefik:
+  # Host ports of other LoadBalancer Services, published by ServiceLB like Traefik's two ports above.
+  # ServiceLB uses iptables redirects, not listening sockets, so a program already listening on one of these
+  # ports (Traefik's included) would silently lose its traffic: the role fails instead.
+  servicelb_ports: []
+
+  # Redirect every HTTP request (http_port) to HTTPS (https_port) with a permanent redirect, cluster-wide in Traefik:
   # apps need no redirect of their own. Turn it on once the sites have real certificates: until then HTTPS serves
   # Traefik's self-signed one, and browsers keep a permanent redirect cached even after it is turned off.
   https_redirect: false

@@ -94,6 +94,7 @@ roles/
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
   desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-ai, dev-generic
   games/         # minecraft
+  k8s/           # k3s
   validation/    # test roles
 ```
 

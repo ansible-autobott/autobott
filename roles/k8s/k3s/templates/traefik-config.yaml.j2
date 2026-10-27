@@ -1,6 +1,6 @@
 # {{ ansible_managed }}
 # Overrides of the values of the Traefik chart that k3s installs. Empty values ({}) when nothing is overridden:
-# k3s does not delete resources when their manifest file is removed. See roles/k3s/About.md.
+# k3s does not delete resources when their manifest file is removed. See roles/k8s/k3s/About.md.
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChartConfig
@@ -9,14 +9,19 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |-
-{% if k3s_config.https_redirect | bool %}
+{% if k3s_config.http_port != 80 or k3s_config.https_port != 443 or k3s_config.https_redirect | bool %}
     ports:
       web:
+        exposedPort: {{ k3s_config.http_port }}
+{% if k3s_config.https_redirect | bool %}
         redirections:
           entryPoint:
             to: websecure
             scheme: https
             permanent: true
+{% endif %}
+      websecure:
+        exposedPort: {{ k3s_config.https_port }}
 {% else %}
     {}
 {% endif %}

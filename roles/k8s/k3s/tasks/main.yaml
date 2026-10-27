@@ -62,12 +62,14 @@
       community.general.listen_ports_facts:
 
     - name: Fail if another program listens on a port ServiceLB publishes
+      vars:
+        k3s_published_ports: "{{ [k3s_config.http_port, k3s_config.https_port] + k3s_config.servicelb_ports }}"
       ansible.builtin.fail:
         msg: >-
           {{ item.name }} (pid {{ item.pid }}) already listens on port {{ item.port }}, which ServiceLB publishes for
-          k3s (k3s.servicelb_ports). Its iptables redirect would silently take that traffic: stop or move
-          {{ item.name }}, or don't run k3s on this host.
-      loop: "{{ ansible_facts.tcp_listen | selectattr('port', 'in', k3s_config.servicelb_ports) | unique(attribute='port') }}"
+          k3s (k3s.http_port, k3s.https_port, k3s.servicelb_ports). Its iptables redirect would silently take that
+          traffic: stop or move {{ item.name }}, or don't run k3s on this host.
+      loop: "{{ ansible_facts.tcp_listen | selectattr('port', 'in', k3s_published_ports) | unique(attribute='port') }}"
       loop_control:
         label: "{{ item.port }}"
 
@@ -244,10 +246,10 @@
     # ====================================================
     # Traefik (ingress)
     # ====================================================
-    # HelmChartConfig with the role's overrides of the Traefik chart (HTTP -> HTTPS redirect). Always deployed, with
-    # empty values when there is nothing to override: k3s does not delete resources when their manifest file is
-    # removed, so deleting the file would leave a redirect on. It replaces the empty traefik-config.yaml deployed
-    # by earlier versions of this role (same file name), so two files never manage the same object.
+    # HelmChartConfig with the role's overrides of the Traefik chart (ports, HTTP -> HTTPS redirect). Always deployed,
+    # with empty values when there is nothing to override: k3s does not delete resources when their manifest file is
+    # removed, so deleting the file would leave the last overrides on. It replaces the empty traefik-config.yaml
+    # deployed by earlier versions of this role (same file name), so two files never manage the same object.
 
     - name: Deploy Traefik configuration
       ansible.builtin.template:
@@ -260,47 +262,9 @@
     # ====================================================
     # Access control
     # ====================================================
-    # The admin kubeconfig is root-only: ssh + sudo kubectl is the break-glass path. It is also all that deploy tools
-    # get from this role: autobott-k8s sets up its own deploy user and robot account with it. See About.md.
-
-    # k3s keeps the owner and group of an existing kubeconfig when it rewrites it on start: without this, the
-    # k3s-admin group set by earlier versions of this role would stay.
-    - name: Make the admin kubeconfig root-only
-      ansible.builtin.file:
-        path: /etc/rancher/k3s/k3s.yaml
-        owner: root
-        group: root
-        mode: "0600"
-
-    - name: Remove legacy KUBECONFIG profile script (the kubeconfig is root-only now)
-      ansible.builtin.file:
-        path: /etc/profile.d/k3s.sh
-        state: absent
-
-    - name: Remove legacy k3s-admin group (its members could read the admin kubeconfig)
-      ansible.builtin.group:
-        name: k3s-admin
-        state: absent
-
-    # Earlier versions of this role also published the CA for autobott-k8s's deploy user and deployed a sample page.
-    # autobott-k8s now keeps its own CA copy and has its own sample app, so remove what is left of both.
-    - name: Remove the legacy public CA copy (autobott-k8s keeps its own)
-      ansible.builtin.file:
-        path: /etc/rancher/k3s/server-ca.crt
-        state: absent
-
-    - name: Remove the legacy sample content manifest
-      ansible.builtin.file:
-        path: /var/lib/rancher/k3s/server/manifests/sample-content.yaml
-        state: absent
-
-    # k3s does not delete resources when their manifest file is removed
-    - name: Remove the legacy sample content from the cluster
-      ansible.builtin.command: >-
-        /usr/local/bin/k3s kubectl delete --ignore-not-found -n kube-system
-        addons.k3s.cattle.io/sample-content namespace/autobott-sample
-      register: k3s_sample_removed
-      changed_when: k3s_sample_removed.stdout | length > 0
+    # The admin kubeconfig is root-only (write-kubeconfig-mode in config.yaml): ssh + sudo kubectl is the break-glass
+    # path. It is also all that deploy tools get from this role: autobott-k8s sets up its own deploy user and robot
+    # account with it. See About.md.
 
     # Interactive root shells (sudo su, sudo -i) get KUBECONFIG from /root/.bashrc.d (loaded by the root .bashrc
     # of base/enroll), so k9s, helm and other clients find the admin kubeconfig like k3s's kubectl does. Not a

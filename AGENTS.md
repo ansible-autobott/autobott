@@ -94,6 +94,7 @@ roles/
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
   desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-ai, dev-generic
   games/         # minecraft
+  k8s/           # k3s
   validation/    # test roles
 ```
 
@@ -127,6 +128,8 @@ roles/<category>/<role-name>/
   templates/           # Jinja2 templates (.j2)
   meta/main.yaml       # Role metadata (if needed)
 ```
+
+Some roles include an `About.md` file with detailed architecture decisions and technical context. Always check for this file when working on a role.
 
 Key rules:
 - Every role has a boolean `run_role_<name>: true` in defaults — this is how per-host opt-out works

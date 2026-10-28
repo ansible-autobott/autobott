@@ -55,6 +55,36 @@ Vagrant.configure("2") do |config|
         end
     end
 
+    # ansible-autobott-linux-debian-13-k3s: debian-13 plus the k3s role
+    # not started by a bare `vagrant up`; start it with: make vagrant-up VER=13-k3s
+    config.vm.define "#{VAGRANT_VM_NAME}-debian-13-k3s", autostart: false do |item|
+        item.vm.box = "#{VAGRANT_VM_BASE_13}"
+
+        # Traefik listens on the same ports in the VM (k3s.http_port / https_port in its host_vars), so its
+        # HTTP -> HTTPS redirect points to a port that answers on your machine
+        item.vm.network "forwarded_port", guest: 8083, host: 8083 # http, k3s ingress (Traefik)
+        item.vm.network "forwarded_port", guest: 8446, host: 8446 # https, k3s ingress (Traefik)
+
+        item.vm.provider "virtualbox" do |v|
+            v.name = "#{VAGRANT_VM_NAME}-debian-13-k3s"
+            v.linked_clone = true
+            v.customize ["modifyvm", :id, "--ioapic", "on"]
+            v.customize ["modifyvm", :id, "--vram", "100"]
+            v.memory = 12000
+            v.cpus = 4
+        end
+
+        item.vm.provision "ansible" do |ansible|
+            ansible.verbose = "v"
+            ansible.playbook = "../autobott.yaml"
+            ansible.tags = ["enroll"]
+            ansible.extra_vars = ENROLL_EXTRA_VARS
+            ansible.groups = {
+              "autobott" => ["#{VAGRANT_VM_NAME}-debian-13-k3s"]
+            }
+        end
+    end
+
     # ansible-autobott-linux-debian-14 (forky) -- PLACEHOLDER, not yet available.
     # Debian 14 is not released yet and there is no base box. To enable:
     #   1. bake the base box:  cd vagrant/bake-base && ./bake-base-box.sh 14

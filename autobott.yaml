@@ -96,6 +96,10 @@
     # ===============  Other services  =============== #
     - games/minecraft
 
+    # ===============  K8s  =============== #
+    # Last on purpose: k3s fails if a program already listens on a port ServiceLB publishes (80/443 by default),
+    # and that check only sees the services of the roles above if they ran first.
+    - k8s/k3s
 
 #============================================================================================================
 # Linux Desktop

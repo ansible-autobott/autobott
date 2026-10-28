@@ -1,0 +1,10 @@
+---
+#============================================================================================================
+# Tools — Kubernetes (roles/tools/dev-k8s, runs on every host)
+#============================================================================================================
+# k9s only: k3s already ships kubectl (/usr/local/bin/kubectl is a symlink to k3s), so adding kubectl here
+# would make the two roles fight over that file.
+# The admin kubeconfig is root-only: run k9s from a root shell (sudo su), where the k3s role sets KUBECONFIG.
+run_role_dev_k8s: true
+dev_k8s_config:
+  k9s:

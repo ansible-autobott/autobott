@@ -258,7 +258,7 @@ fix-ssh-key-perm:
 	@echo "changing permissions of key: $(ROOT_DIR)/vagrant/autobott-key"
 	@chmod 600  $(ROOT_DIR)/vagrant/autobott-key
 
-vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap provisioning, vars: VER=<13> (default 13)
+vagrant-up: fix-ssh-key-perm ## start the vagrant environment and bootstrap provisioning, vars: VER=<13|13-k3s> (default 13)
 	@source ./venv/bin/activate && cd vagrant && vagrant up ansible-autobott2-linux-debian-$(VER)
 
 .PHONY: check-vagrant-running
@@ -270,7 +270,7 @@ check-vagrant-running: # fail early (with a clear message) if the target VM (VER
 		exit 1; \
 	fi
 
-vagrant-run: check-vagrant-running ## run playbook on vagrant, vars: TAG=<tag> (default all), VER=<13> (default 13)
+vagrant-run: check-vagrant-running ## run playbook on vagrant, vars: TAG=<tag> (default all), VER=<13|13-k3s> (default 13)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@mkdir -p logs
 	@. ./venv/bin/activate && \
@@ -293,7 +293,7 @@ vagrant-run: check-vagrant-running ## run playbook on vagrant, vars: TAG=<tag> (
 		$$TAG_VAL 2>&1 | tee >(sed 's/\x1b\[[0-9;]*m//g' | awk '/^TASK \[/{task=$$0; in_dep=0; next} /\[DEPRECATION WARNING\]/{print task; in_dep=1; print; next} in_dep && /^(ok:|changed:|skipping:|failed:|PLAY )/{in_dep=0} in_dep{print; next} /^changed:/{print task; print}' > "$$LOG_FILE"); \
 	wait
 
-vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>, VER=<13> (default 13)
+vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>, VER=<13|13-k3s> (default 13)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	if [ -n "$$TAG" ]; then \
@@ -310,7 +310,7 @@ vagrant-run-verbose: ## run playbook on vagrant in verbose mode, vars: TAG=<tag>
 		-l ansible-autobott2-linux-debian-$(VER) \
 		$$TAG_VAL
 
-vagrant-run-short: ## run short playbook on vagrant: only run tags that generally require updates or config changes, vars: VER=<13> (default 13)
+vagrant-run-short: ## run short playbook on vagrant: only run tags that generally require updates or config changes, vars: VER=<13|13-k3s> (default 13)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	ansible-playbook autobott.yaml \
@@ -320,7 +320,7 @@ vagrant-run-short: ## run short playbook on vagrant: only run tags that generall
 		-l ansible-autobott2-linux-debian-$(VER) \
 		-t linux-upgrade
 
-vagrant-test: ## run validation tests, vars: VER=<13> (default 13)
+vagrant-test: ## run validation tests, vars: VER=<13|13-k3s> (default 13)
 	@ssh-add ./vagrant/autobott-key # used in sftp connections
 	@. ./venv/bin/activate && \
 	ansible-playbook test.yaml \

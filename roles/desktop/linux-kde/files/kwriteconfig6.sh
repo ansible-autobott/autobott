@@ -130,5 +130,10 @@ kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'ResizeWobble' 'f
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Stiffness' '3'
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'WobblynessLevel' '3'
 
+# Multi-monitor: disable the edge barrier (Plasma 6.1+, Wayland) so the cursor
+# crosses to the next screen without first sticking at the edge/corner.
+kwriteconfig6 --file kwinrc --group EdgeBarrier --key 'EdgeBarrier' '0'
+kwriteconfig6 --file kwinrc --group EdgeBarrier --key 'CornerBarrier' 'false'
+
 # NOTE: the virtual desktop setup lives in kde-provision-once.sh - it is a
 # starting point the user is expected to change, so it is only seeded once.

@@ -79,7 +79,7 @@ and `todo list --json` cover the common actions — run `todo --help`.
 
 - [ ] Ctrl shif c does not work in dolthing terminal
 - [ ] ssh agents needs to work better
-- [ ] disable snap on screen edge
+- [x] disable snap on screen edge
 - [ ] git prune branches
 - [ ] kmix vs audio controls for master volume shortcuts
 

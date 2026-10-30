@@ -6,7 +6,8 @@
   become: true
   roles:
     # ===============  Preconditions  =============== #
-    # first, before enroll: fixes what would make the whole run fail (e.g. broken apt sources)
+    # first, before enroll: fails on roles that cannot run together (e.g. docker + k3s) and fixes what
+    # would make the whole run fail (e.g. broken apt sources)
     - base/preconditions
 
     # ===============  Base  =============== #

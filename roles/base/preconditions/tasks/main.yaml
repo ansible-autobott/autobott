@@ -15,6 +15,35 @@
         preconditions_config: "{{ preconditions_defaults | combine(preconditions, recursive=true) }}"
 
     # ====================================================
+    # Configuration checks
+    # ====================================================
+    # Before anything changes on the host: fail on settings that cannot work together. One task per check.
+    # Flags of roles in later plays (e.g. k3s) are only defined here when the inventory sets them: default(false)
+    # matches their role defaults.
+
+    - name: Fail when both docker and k3s are enabled
+      ansible.builtin.fail:
+        msg: >-
+          run_role_docker and run_role_k3s are both true, but Docker's iptables rules block k3s's ingress traffic.
+          Disable one of them (k3s ships its own containerd).
+      when:
+        - run_role_docker | default(false) | bool
+        - run_role_k3s | default(false) | bool
+
+    # run_role_docker false removes Docker
+    - name: Fail when a service that runs on Docker is enabled without docker
+      ansible.builtin.fail:
+        msg: >-
+          romm, homepage, docmost, mealie and immich run on Docker, but run_role_docker is false, which removes
+          Docker. Enable docker or disable these services.
+      when:
+        - not (run_role_docker | default(false) | bool)
+        - >-
+          run_role_romm | default(false) | bool or run_role_homepage | default(false) | bool
+          or run_role_docmost | default(false) | bool or run_role_mealie | default(false) | bool
+          or run_role_immich | default(false) | bool
+
+    # ====================================================
     # APT sources
     # ====================================================
     - name: Disable the APT sources that make apt-get update fail

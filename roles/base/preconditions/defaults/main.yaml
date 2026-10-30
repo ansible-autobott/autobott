@@ -3,7 +3,8 @@
 # Preconditions
 # ============================================================================================================
 # Runs first, before enroll, and on every run (tagged `always`, so tag-limited runs get it
-# too): puts the host in a state where the rest of the playbook can run at all.
+# too): fails early on a configuration that cannot work, and puts the host in a state where
+# the rest of the playbook can run at all.
 
 # Flag to disable the role
 run_role_preconditions: true

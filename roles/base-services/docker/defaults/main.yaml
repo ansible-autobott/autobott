@@ -2,6 +2,8 @@
 # ============================================================================================================
 # Docker
 # ============================================================================================================
+# true installs Docker. false (the default) removes it from the host, with all its containers, images and
+# volumes, and reverts this role (see the "Remove Docker" block in tasks/main.yaml).
 run_role_docker: false
 docker: []
 docker_defaults:

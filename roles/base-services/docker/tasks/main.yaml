@@ -105,3 +105,58 @@
       register: docker_info
       failed_when: docker_info.rc != 0
       changed_when: false
+
+# Docker removal: run_role_docker false (the default) reverts this role and deletes everything Docker holds
+# (containers, images, volumes). Changes nothing where Docker is not installed.
+- name: Remove Docker
+  tags:
+    - docker
+  when:
+    - not (run_role_docker | bool)
+  block:
+    # Containers go while dockerd runs (with live_restore they would outlive it), then dockerd stops for good, so it
+    # cannot recreate the iptables rules removed next
+    - name: Remove all Docker containers and stop Docker
+      ansible.builtin.shell: |
+        set -euo pipefail
+        command -v dockerd >/dev/null || exit 0
+        systemctl start docker.service
+        docker ps --all --quiet | xargs --no-run-if-empty docker rm --force
+        systemctl stop docker.socket docker.service containerd.service
+        echo "stopped Docker"
+      args:
+        executable: /bin/bash
+      register: docker_stopped
+      changed_when: docker_stopped.stdout | length > 0
+
+    - name: Remove the iptables rules and bridges Docker left behind
+      ansible.builtin.script:
+        cmd: docker-network-cleanup.sh
+      register: docker_network_cleanup
+      changed_when: docker_network_cleanup.stdout | trim | length > 0
+
+    # No autoremove: what Docker pulled in (e.g. git, iptables) may be in use by now
+    - name: Purge Docker packages
+      ansible.builtin.apt:
+        name: "{{ docker_packages + ['docker-ce-rootless-extras'] }}"
+        state: absent
+        purge: true
+
+    # Left behind by the purge
+    - name: Delete Docker data, configuration and apt source
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/lib/docker
+        - /var/lib/containerd
+        - /etc/docker
+        - /etc/apt/sources.list.d/docker.sources
+        - /etc/apt/sources.list.d/docker.list
+        - /etc/apt/keyrings/docker.asc
+
+    # Also drops the users docker.users added. linux-basic recreates it if a user lists it in its groups.
+    - name: Delete the docker group
+      ansible.builtin.group:
+        name: docker
+        state: absent

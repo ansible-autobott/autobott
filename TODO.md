@@ -81,7 +81,7 @@ and `todo list --json` cover the common actions — run `todo --help`.
 - [ ] ssh agents needs to work better
 - [x] disable snap on screen edge
 - [ ] git prune branches
-- [ ] kmix vs audio controls for master volume shortcuts
+- [x] kmix vs audio controls for master volume shortcuts
 
 # k3s
 

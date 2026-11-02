@@ -1,6 +1,7 @@
 {# Renders a user's ~/.ssh/config entries. Wrapped in an ansible-managed
    block by the calling blockinfile task, so no markers are emitted here.
-   A directive is written only when its key is defined AND non-empty. #}
+   A directive is written only when its key is defined AND non-empty.
+   identity_file may be a list: one IdentityFile line per key, in order. #}
 {% for entry in item.ssh_config | default([]) if (entry.host | default('') | length > 0) %}
 {% if entry.comment | default('') | length > 0 %}
 # {{ entry.comment }}
@@ -12,9 +13,10 @@ Host {{ entry.host }}
 {% if entry.user | default('') | length > 0 %}
     User {{ entry.user }}
 {% endif %}
-{% if entry.identity_file | default('') | length > 0 %}
-    IdentityFile {{ entry.identity_file }}
-{% endif %}
+{% set identity_files = entry.identity_file | default([], true) %}
+{% for identity_file in ([identity_files] if identity_files is string else identity_files) if identity_file %}
+    IdentityFile {{ identity_file }}
+{% endfor %}
 {% if entry.identities_only is defined and entry.identities_only != '' %}
     IdentitiesOnly {{ 'yes' if entry.identities_only | bool else 'no' }}
 {% endif %}

@@ -44,6 +44,18 @@ linux_basic_defaults:
     # special group that will allow passwd auth, default only ssh keys are allowed
     pw_auth_group_name: ""
 
+    # Use openssh-client's per-user systemd agent (ssh-agent.socket, listening on
+    # /run/user/<uid>/openssh_agent) as every user's fallback ssh agent, so ssh, git and
+    # ssh-add reach the same agent from any shell: desktop, SSH logins, tmux/herdr, cron.
+    # An agent already in SSH_AUTH_SOCK (e.g. a forwarded one) keeps winning. Needs the
+    # socket unit (Debian 13+, Ubuntu 25.10+) and is skipped elsewhere; false removes the setup.
+    system_agent: true
+    # Maximum lifetime of keys added to that agent, in sshd_config time format, e.g. "8h",
+    # "90m" or "1h30m"; "" keeps keys until the agent stops. `ssh-add -t` and a per-host
+    # AddKeysToAgent <time> still set their own. A change applies when a user's agent next
+    # starts (in practice after a reboot): running agents are not restarted, that would drop their keys.
+    agent_lifetime: ""
+
     # allow to define sftp jails using the regular openssh server
     sftp_jails: []
     # sftp_jails:
@@ -136,7 +148,7 @@ linux_basic_defaults:
   #        host: github.com                     # required: the Host pattern
   #        hostname: github.com
   #        user: git
-  #        identity_file: ~/.ssh/private_id_ed25519
+  #        identity_file: ~/.ssh/private_id_ed25519 # or a list: one IdentityFile line per key, tried in order
   #        identities_only: true
   #        add_keys_to_agent: true
   #        options: # optional escape hatch for any other ssh_config directive
@@ -150,6 +162,10 @@ linux_basic_defaults:
   #          email: "bott@example.com"
   #        init:
   #          defaultBranch: main
+  #        'url "git@github-work:WorkOrg/"': # a list value repeats the key, one line per item
+  #          insteadOf:
+  #            - https://github.com/WorkOrg/
+  #            - git@github.com:WorkOrg/
   #      aliases: # list: a string is resolved from git_alias_catalog; a {name: value} is a free-form alias
   #        - "prune-branches"                       # catalogue: the role supplies the command
   #        - co: checkout                           # free-form: you supply the command (escaped for you)

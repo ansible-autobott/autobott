@@ -1,7 +1,9 @@
 {# Renders a user's ~/.gitconfig from item.git_config. Wrapped in an
    ansible-managed block by the calling blockinfile task, so no markers here.
    sections: [section] key = value; a section is emitted only when it has at
-   least one non-empty value. aliases: a list whose items are either a string
+   least one non-empty value. A list value repeats the key, one line per item
+   (multi-valued keys such as url.<base>.insteadOf).
+   aliases: a list whose items are either a string
    (resolved from linux_basic.git_alias_catalog) or a {name: value} mapping
    (used as-is). Values are quoted/escaped only when needed; empty and
    undefined values are omitted. #}
@@ -11,10 +13,15 @@
 {% if needs %}"{{ s | replace('\\', '\\\\') | replace('"', '\\"') }}"{% else %}{{ s }}{% endif %}
 {%- endmacro %}
 {% for section, entries in (item.git_config.sections | default({})).items() %}
-{% set kept = entries | dict2items | rejectattr('value', 'equalto', none) | rejectattr('value', 'equalto', '') | list %}
-{% if kept | length > 0 %}
+{% set ns = namespace(kept=[]) %}
+{% for key, value in (entries | default({}, true)).items() %}
+{% for v in (value if (value is iterable and value is not string and value is not mapping) else [value]) if (v is not none and v != '') %}
+{% set ns.kept = ns.kept + [{'key': key, 'value': v}] %}
+{% endfor %}
+{% endfor %}
+{% if ns.kept | length > 0 %}
 [{{ section }}]
-{% for pair in kept %}
+{% for pair in ns.kept %}
     {{ pair.key }} = {{ gitval(pair.value) }}
 {% endfor %}
 

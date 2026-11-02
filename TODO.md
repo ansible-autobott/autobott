@@ -77,11 +77,12 @@ and `todo list --json` cover the common actions — run `todo --help`.
 
 ## desktop
 
-- [ ] Ctrl shif c does not work in dolthing terminal
+- [x] Ctrl shif c does not work in dolthing terminal
 - [ ] ssh agents needs to work better
 - [x] disable snap on screen edge
 - [ ] git prune branches
 - [x] kmix vs audio controls for master volume shortcuts
+- [ ] ark takes ages to open
 
 # k3s
 

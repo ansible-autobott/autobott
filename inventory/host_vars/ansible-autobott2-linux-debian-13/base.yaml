@@ -64,6 +64,8 @@ linux_basic:
     vm_overcommit_memory: 1              # redis bundled with immich
 
   ssh:
+    # system_agent is on by default; a lifetime exercises the ssh-agent.service drop-in
+    agent_lifetime: "8h"
     sftp_jails:
       - group_name: sftp
         allow_password: true
@@ -107,6 +109,20 @@ linux_basic:
           identity_file: ~/.ssh/id_ed25519
           identities_only: true
           add_keys_to_agent: true
+        - comment: "Work GitHub account; work repos are routed here by the url rewrite in git_config"
+          host: github-work
+          hostname: github.com
+          user: git
+          identity_file: ~/.ssh/work_id_ed25519
+          identities_only: true
+          add_keys_to_agent: true
+        - comment: "Home server that accepts either key"
+          host: homeserver
+          hostname: homeserver.lan
+          identity_file:
+            - ~/.ssh/id_ed25519
+            - ~/.ssh/backup_id_ed25519
+          identities_only: true
       git_config:
         sections:
           user:
@@ -114,6 +130,10 @@ linux_basic:
             email: "jsmith@example.com"
           init:
             defaultBranch: main
+          'url "git@github-work:WorkOrg/"': # both URL forms of the work org go through the work key
+            insteadOf:
+              - https://github.com/WorkOrg/
+              - git@github.com:WorkOrg/
         aliases:
           - "prune-branches"        # resolved from the role's git_alias_catalog
           - co: checkout            # free-form alias

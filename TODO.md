@@ -77,11 +77,8 @@ and `todo list --json` cover the common actions — run `todo --help`.
 
 ## desktop
 
-- [ ] Ctrl shif c does not work in dolthing terminal
 - [ ] ssh agents needs to work better
-- [ ] disable snap on screen edge
-- [ ] git prune branches
-- [ ] kmix vs audio controls for master volume shortcuts
+- [ ] ark takes ages to open
 
 # k3s
 
@@ -100,7 +97,7 @@ and `todo list --json` cover the common actions — run `todo --help`.
     controller), so "NetworkPolicy support" is not a reason for Calico. State the real reason in
     About.md or go back to the k3s default.
 - [ ] [5] A namespace admin can publish host ports past UFW
-  ClusterRole `admin` lets the robot create NodePort / LoadBalancer Services (checked: `create services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW, so an app role can open any port to the internet, outside `servicelb_ports` and the firewall. Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
+  ClusterRole `admin` lets autobott-k8s's `autobott` account create NodePort / LoadBalancer Services (checked: `create services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW, so an app role can open any port to the internet, outside `servicelb_ports` and the firewall. Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
   - Here: `kube-apiserver-arg: [enable-admission-plugins=DenyServiceExternalIPs]` in `config.yaml.j2`. The ResourceQuota per app namespace (`services.loadbalancers: "0"`, `services.nodeports: "0"`; `admin` cannot edit quotas) is autobott-k8s's part, tracked in its TODO.md. Alternative: a ValidatingAdmissionPolicy denying those Service types outside `kube-system`.
   - `service.spec.allocateLoadBalancerNodePorts: false` for Traefik through the HelmChartConfig; document.
 - [ ] [5] No readiness gate after the Calico / Traefik manifests

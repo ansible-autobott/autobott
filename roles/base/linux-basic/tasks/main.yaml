@@ -156,6 +156,10 @@
     - name: Include SSH configuration tasks
       ansible.builtin.include_tasks: ssh.yaml
 
+    # SSH agent (client side); after users.yaml, which creates the users' ~/.bashrc.d
+    - name: Include SSH agent tasks
+      ansible.builtin.include_tasks: ssh_agent.yaml
+
     # Timezone Configuration
     - name: Set system timezone
       community.general.timezone:

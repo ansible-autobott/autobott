@@ -1,0 +1,123 @@
+---
+# SSH agent (client side)
+# Makes openssh-client's per-user systemd agent (ssh-agent.socket, listening on
+# /run/user/<uid>/openssh_agent) every user's fallback agent, so ssh, git and ssh-add reach
+# the same agent from any shell: desktop terminals, SSH logins, tmux/herdr panes, cron.
+# An agent already in SSH_AUTH_SOCK (e.g. a forwarded one) keeps winning.
+#   - /etc/ssh/ssh_config.d/90-autobott-ssh-agent.conf: the fallback for ssh itself. ssh reads
+#     it after ~/.ssh/config and keeps the first value it obtains, so a user's own
+#     IdentityAgent always wins. Also covers shells that never source ~/.bashrc.
+#   - ~/.bashrc.d/05_ssh_agent.bashrc: exports the same choice as SSH_AUTH_SOCK, for ssh-add.
+#   - /etc/systemd/user/ssh-agent.service.d/autobott-lifetime.conf: optional key lifetime.
+
+- name: Configure the system SSH agent
+  tags:
+    - "linux-basic"
+  vars:
+    linux_basic_ssh_agent_lifetime: "{{ linux_basic.ssh.agent_lifetime | default('', true) | string }}"
+  block:
+    # ssh-agent refuses to start with a malformed -t, which would leave users without an agent
+    - name: Validate the SSH agent key lifetime
+      ansible.builtin.assert:
+        that: linux_basic_ssh_agent_lifetime is match('^([0-9]+[sSmMhHdDwW]?)+$')
+        fail_msg: >-
+          Invalid linux_basic.ssh.agent_lifetime '{{ linux_basic_ssh_agent_lifetime }}': use the
+          sshd_config time format, e.g. "3600", "90m", "8h" or "1h30m" ("" for no limit)
+        quiet: true
+      when: linux_basic_ssh_agent_lifetime | length > 0
+
+    - name: Check whether openssh-client ships the systemd ssh-agent socket
+      ansible.builtin.stat:
+        path: /usr/lib/systemd/user/ssh-agent.socket
+      register: linux_basic_ssh_agent_socket_unit
+
+    - name: Decide whether the system SSH agent is set up on this host
+      ansible.builtin.set_fact:
+        linux_basic_ssh_agent_enabled: "{{ (linux_basic.ssh.system_agent | bool) and linux_basic_ssh_agent_socket_unit.stat.exists }}"
+
+    - name: Report that openssh-client has no systemd ssh-agent socket
+      ansible.builtin.debug:
+        msg: >-
+          linux_basic.ssh.system_agent is on, but openssh-client on this host has no ssh-agent.socket
+          (Debian 13+ and Ubuntu 25.10+ ship it): skipping the system SSH agent setup
+      when:
+        - linux_basic.ssh.system_agent | bool
+        - not linux_basic_ssh_agent_socket_unit.stat.exists
+
+    - name: Set up the system SSH agent
+      when: linux_basic_ssh_agent_enabled | bool
+      block:
+        # The package enables it already; this keeps it so. A user's own disable/mask in
+        # ~/.config/systemd/user still wins.
+        - name: Enable the ssh-agent socket for all users
+          ansible.builtin.systemd:
+            name: ssh-agent.socket
+            scope: global
+            enabled: true
+
+        - name: Make the system agent the fallback agent of ssh
+          ansible.builtin.template:
+            src: ssh_agent/ssh_config.conf.j2
+            dest: /etc/ssh/ssh_config.d/90-autobott-ssh-agent.conf
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Create the drop-in directory of the user ssh-agent service
+          ansible.builtin.file:
+            path: /etc/systemd/user/ssh-agent.service.d
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+          when: linux_basic_ssh_agent_lifetime | length > 0
+
+        # Read when a user's agent starts; running agents keep their keys and old lifetime
+        - name: Set the SSH agent key lifetime
+          ansible.builtin.template:
+            src: ssh_agent/lifetime.conf.j2
+            dest: /etc/systemd/user/ssh-agent.service.d/autobott-lifetime.conf
+            owner: root
+            group: root
+            mode: "0644"
+          when: linux_basic_ssh_agent_lifetime | length > 0
+
+        - name: Remove the SSH agent key lifetime
+          ansible.builtin.file:
+            path: /etc/systemd/user/ssh-agent.service.d/autobott-lifetime.conf
+            state: absent
+          when: linux_basic_ssh_agent_lifetime | length == 0
+
+        - name: Install the SSH agent shell hook
+          ansible.builtin.template:
+            src: ssh_agent/ssh_agent.bashrc
+            dest: "{{ item.home | default('/home/' ~ item.username) }}/.bashrc.d/05_ssh_agent.bashrc"
+            owner: "{{ item.username }}"
+            group: "{{ item.primary_group | default('users') }}"
+            mode: "0750"
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
+          when: item.enabled | default(false)
+          loop_control:
+            label: "{{ item.username }}"
+
+    # Opted out (or no socket unit): remove what the set-up branch installed; the packaged
+    # socket keeps its distro state
+    - name: Remove the system SSH agent setup
+      when: not linux_basic_ssh_agent_enabled | bool
+      block:
+        - name: Remove the system SSH agent files
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: absent
+          loop:
+            - /etc/ssh/ssh_config.d/90-autobott-ssh-agent.conf
+            - /etc/systemd/user/ssh-agent.service.d/autobott-lifetime.conf
+
+        - name: Remove the SSH agent shell hook
+          ansible.builtin.file:
+            path: "{{ item.home | default('/home/' ~ item.username) }}/.bashrc.d/05_ssh_agent.bashrc"
+            state: absent
+          loop: "{{ linux_basic.users | union(linux_basic.users_extra) }}"
+          when: item.enabled | default(false)
+          loop_control:
+            label: "{{ item.username }}"

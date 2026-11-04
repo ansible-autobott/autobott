@@ -14,6 +14,9 @@ kde_packages:
   # core
   - kde-plasma-desktop
   - plasma-nm
+  # Plasma's volume applet and volume-key service (replaces KMix); listed
+  # explicitly instead of relying on plasma-desktop's dependencies
+  - plasma-pa
   - fonts-dejavu
   - fonts-freefont-ttf
   - sddm-theme-breeze
@@ -32,7 +35,6 @@ kde_packages:
   - okular-extra-backends
   - smb4k
   - yakuake
-  - kmix
   # screenshots; the shortcuts are set up per user by add_kde_screenshots
   - kde-spectacle
   - flameshot
@@ -49,3 +51,6 @@ kde_theme_packages:
 kde_packages_purge:
   - plasma-discover
   - gwenview
+  # Superseded by plasma-pa. Both register the volume keys under the same
+  # 'kmix' shortcuts, and KMix switches them off for both when it quits.
+  - kmix

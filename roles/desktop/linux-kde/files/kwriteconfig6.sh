@@ -39,9 +39,16 @@ kwriteconfig6 --file kdeglobals --group 'Shortcuts' --key 'NextCompletion' ''
 kwriteconfig6 --file kdeglobals --group 'Shortcuts' --key 'PrevCompletion' ''
 kwriteconfig6 --file kdeglobals --group 'Shortcuts' --key 'ShowMenubar' ''
 
-kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'decrease_volume' 'Ctrl+Down,Volume Down,Decrease Volume'
-kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'increase_volume' 'Ctrl+Up,Volume Up,Increase Volume'
-kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'mute' 'Ctrl+M,Volume Mute,Mute'
+# Volume keys: Ctrl+Up/Down/M plus the keyboard's media keys (tab-separated, see
+# the Yakuake note below). The 'kmix' group is Plasma's own audio service
+# (plasma-pa), which registers under KMix's old name; KMix itself is purged
+# (kde_packages_purge). KWin reads these at login, so changes apply at the next one.
+volume_down="$(printf 'Ctrl+Down\tVolume Down')"
+volume_up="$(printf 'Ctrl+Up\tVolume Up')"
+volume_mute="$(printf 'Ctrl+M\tVolume Mute')"
+kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'decrease_volume' "${volume_down},Volume Down,Decrease Volume"
+kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'increase_volume' "${volume_up},Volume Up,Increase Volume"
+kwriteconfig6 --file kglobalshortcutsrc --group 'kmix' --key 'mute' "${volume_mute},Volume Mute,Mute"
 
 kwriteconfig6 --file kglobalshortcutsrc --group 'kwin' --key 'Window Maximize' 'Meta+Ctrl+Alt+Up,Meta+PgUp,Maximize Window'
 kwriteconfig6 --file kglobalshortcutsrc --group 'kwin' --key 'Window Minimize' 'Meta+Ctrl+Alt+Down,Meta+PgDown,Minimize Window'
@@ -129,6 +136,11 @@ kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'MoveFactor' '20'
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'ResizeWobble' 'false'
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'Stiffness' '3'
 kwriteconfig6 --file kwinrc --group Effect-wobblywindows --key 'WobblynessLevel' '3'
+
+# Multi-monitor: disable the edge barrier (Plasma 6.1+, Wayland) so the cursor
+# crosses to the next screen without first sticking at the edge/corner.
+kwriteconfig6 --file kwinrc --group EdgeBarrier --key 'EdgeBarrier' '0'
+kwriteconfig6 --file kwinrc --group EdgeBarrier --key 'CornerBarrier' 'false'
 
 # NOTE: the virtual desktop setup lives in kde-provision-once.sh - it is a
 # starting point the user is expected to change, so it is only seeded once.

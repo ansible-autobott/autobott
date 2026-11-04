@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+# AutoBott linux-basic role — fallback ssh agent (linux_basic.ssh.system_agent).
+# This file is managed by Ansible; manual changes are overwritten on the next run.
+#
+# ssh reads this file after the user's ~/.ssh/config and keeps the first value it
+# obtains, so an IdentityAgent set by the user always wins over the two below.
+
+# An agent already in SSH_AUTH_SOCK (forwarded from another machine, a desktop
+# keyring, ...) is used as-is.
+Match exec "test -S \"$SSH_AUTH_SOCK\""
+    IdentityAgent SSH_AUTH_SOCK
+
+# Otherwise the user's own agent from openssh-client's ssh-agent.socket. Without a
+# systemd user session (e.g. some cron jobs) the socket is missing and ssh runs
+# without an agent, as it would without this file.
+Host *
+    IdentityAgent /run/user/%i/openssh_agent

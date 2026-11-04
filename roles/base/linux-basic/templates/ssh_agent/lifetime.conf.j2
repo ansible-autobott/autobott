@@ -1,0 +1,10 @@
+# {{ ansible_managed }}
+# AutoBott linux-basic role — ssh agent key lifetime (linux_basic.ssh.agent_lifetime).
+# This file is managed by Ansible; manual changes are overwritten on the next run.
+#
+# Keys added to the user's system agent expire after this time, unless `ssh-add -t`
+# or a per-host `AddKeysToAgent <time>` sets their own. This is the override the
+# packaged ssh-agent.service suggests; it applies when a user's agent next starts.
+[Service]
+ExecStart=
+ExecStart=/usr/bin/ssh-agent -D -t {{ linux_basic_ssh_agent_lifetime }}

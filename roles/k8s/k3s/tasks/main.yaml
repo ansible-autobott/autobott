@@ -3,7 +3,9 @@
 # K3s Role
 # ============================================================================================================
 # Installs the k3s binary and configures/starts k3s in server mode with Calico CNI.
-# Ingress is the k3s default: Traefik on ports 80/443 via ServiceLB. See About.md for the architecture.
+# Ingress is the k3s default: Traefik on ports 80/443 via ServiceLB. Also provides the host side of how autobott-k8s
+# deploys to the cluster: the deploy user kubeans, the packages it deploys with and a public copy of the API server's
+# CA. See About.md for the architecture.
 
 - name: Main k3s installation
   tags:
@@ -16,6 +18,17 @@
         - always
       ansible.builtin.set_fact:
         k3s_config: "{{ k3s_defaults | combine(k3s, recursive=true) }}"
+
+    # autobott-k8s deploys to the cluster with the kubernetes.core modules, which need python3-kubernetes >= 24.2
+    # (installed below, "Deploy access for autobott-k8s")
+    - name: Fail on Debian releases whose python3-kubernetes is too old
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution_release not in ['bullseye', 'bookworm']
+        fail_msg: >-
+          k3s needs Debian 13 (trixie) or newer: autobott-k8s deploys to it with the kubernetes.core modules, which
+          need python3-kubernetes >= 24.2, and {{ ansible_facts.distribution_release }} ships an older one.
+        quiet: true
 
     - name: Fail on a k3s version without a checksum
       ansible.builtin.assert:
@@ -263,8 +276,8 @@
     # Access control
     # ====================================================
     # The admin kubeconfig is root-only (write-kubeconfig-mode in config.yaml): ssh + sudo kubectl is the break-glass
-    # path. It is also all that deploy tools get from this role: autobott-k8s sets up its own deploy user and robot
-    # account with it. See About.md.
+    # path. autobott-k8s uses it as root too, to set up each app's namespace; it deploys the apps themselves as the
+    # deploy user of the next section. See About.md.
 
     # Interactive root shells (sudo su, sudo -i) get KUBECONFIG from /root/.bashrc.d (loaded by the root .bashrc
     # of base/enroll), so k9s, helm and other clients find the admin kubeconfig like k3s's kubectl does. Not a
@@ -285,6 +298,60 @@
         owner: root
         group: root
         mode: "0600"
+
+    # ====================================================
+    # Deploy access for autobott-k8s
+    # ====================================================
+    # The host side of how autobott-k8s deploys (../autobott-k8s/roles/k8s/About.md): Ansible logs in as the enrolled
+    # user, sets up each app's namespace as root with the admin kubeconfig, then switches to the unprivileged kubeans
+    # to apply the app's manifests with a short-lived token of autobott-k8s's own account. autobott-k8s checks that
+    # kubeans and the CA copy exist before it changes anything. See About.md ("Handoff to deploy tools").
+
+    # - python3-kubernetes: the kubernetes.core modules autobott-k8s deploys with
+    # - acl: lets Ansible switch from its login user to the unprivileged kubeans
+    - name: Install the packages autobott-k8s deploys with
+      ansible.builtin.apt:
+        name:
+          - python3-kubernetes
+          - acl
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    # No password, no SSH keys, no sudo, no login shell: Ansible only switches to it to apply app manifests, with a
+    # token it keeps in memory
+    - name: Ensure the deploy user kubeans exists
+      ansible.builtin.user:
+        name: kubeans
+        system: true
+        shell: /usr/sbin/nologin
+        home: /var/lib/kubeans
+        comment: "Deploys autobott-k8s apps with short-lived tokens"
+        create_home: true
+
+    # kubeans can't read the root-only admin kubeconfig: it checks the API server with this public copy of its CA.
+    # Copied on every run, so a new CA (after k3s-reset.sh) reaches it with the next run.
+    - name: Publish the API server's CA for kubeans
+      ansible.builtin.copy:
+        src: /var/lib/rancher/k3s/server/tls/server-ca.crt
+        dest: /etc/rancher/k3s/server-ca.crt
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+
+    # Until this role took them over, autobott-k8s created its own deploy user (kubeops) and CA copy (in
+    # /etc/autobott-k8s). Drop these two tasks in the release after next.
+    - name: Remove autobott-k8s's former deploy user
+      ansible.builtin.user:
+        name: kubeops
+        state: absent
+        remove: true
+
+    - name: Remove autobott-k8s's former CA copy
+      ansible.builtin.file:
+        path: /etc/autobott-k8s
+        state: absent
 
     # ====================================================
     # Kill script (standard k3s tooling)

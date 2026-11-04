@@ -4,8 +4,9 @@
 
 Single-node k3s server that keeps the k3s defaults, except where this document says otherwise: Calico replaces
 Flannel as the CNI, the host firewall is always on, and the admin kubeconfig is readable only by root. The role
-installs and maintains the cluster; deploying apps is the job of a separate repo, autobott-k8s, which gets the admin
-kubeconfig and sets up its own access with it (see "Handoff to deploy tools").
+installs and maintains the cluster. Deploying apps is the job of a separate repo, autobott-k8s, which only talks to
+the API: this role provides the host side of its access, the admin kubeconfig, the deploy user `kubeans` and a public
+copy of the API server's CA (see "Handoff to deploy tools").
 
 ## Traffic Flow
 
@@ -130,7 +131,7 @@ identity provider.
 | Who | Credential | Can do | Status |
 |-----|------------|--------|--------|
 | Admin (break-glass) | `ssh` + `sudo kubectl` on the node | everything | implemented |
-| Deploy tools (autobott-k8s) | the admin kubeconfig, as root on the node | everything; autobott-k8s sets up its own least-privilege deploy account with it | implemented |
+| Deploy tools (autobott-k8s) | the admin kubeconfig, as root on the node; then 1h tokens of its `autobott` account, used as `kubeans` | everything for its setup (app namespaces, its account); the apps' manifests only inside the app namespaces | implemented |
 | People, daily work | 8h `<user>-dev` token, minted with a GPG-locked master pass | `edit` in their listed app namespaces | planned |
 | People, admin work | 1h `<user>-admin` token, minted over `ssh` + `sudo` | everything | planned |
 
@@ -153,12 +154,20 @@ and makes sure a leaked credential is not automatically full cluster control. Th
 ### Handoff to deploy tools (autobott-k8s)
 
 This role installs and maintains the cluster. Deploying apps is the job of autobott-k8s (separate repo,
-`../autobott-k8s`), and how it logs in is its own business. All a deploy tool gets from this role:
+`../autobott-k8s`), which only talks to the API: what it needs on the host comes from this role.
 
 - **The admin kubeconfig** `/etc/rancher/k3s/k3s.yaml`, root-only, with the API address (`https://127.0.0.1:6443`)
-  and the API server's CA in it. autobott-k8s uses it as root to set up its own access (a deploy user, a robot
-  account that is admin only inside each app's namespace, a copy of the CA) and to create app namespaces, never to
-  deploy apps: see `../autobott-k8s/roles/k8s/About.md`.
+  and the API server's CA in it. autobott-k8s uses it as root to create its own account (`autobott`, admin only
+  inside each app's namespace) and the app namespaces, never to deploy apps: see `../autobott-k8s/roles/k8s/About.md`.
+- **The deploy user `kubeans`:** a system user with no password, no SSH keys, no sudo and `nologin`. Ansible logs in
+  as the enrolled user and switches to `kubeans` to apply an app's manifests, with a 1h token of the `autobott`
+  account that it keeps in memory.
+- **A public copy of the API server's CA**, `/etc/rancher/k3s/server-ca.crt` (`0644`), copied from
+  `/var/lib/rancher/k3s/server/tls/server-ca.crt` on every run: `kubeans` checks the API server with it, since it
+  can't read the admin kubeconfig.
+- **The packages autobott-k8s deploys with:** `python3-kubernetes` for the `kubernetes.core` modules (24.2 or newer,
+  so k3s hosts need Debian 13: the role fails early on an older release) and `acl`, which Ansible needs to switch
+  from its login user to `kubeans`.
 - **kubectl** at `/usr/local/bin/kubectl` (the k3s symlink).
 - **The API only from the node:** the firewall keeps `6443` closed (see "Firewall" above), so deploy tools run on
   the node.
@@ -169,14 +178,18 @@ This role installs and maintains the cluster. Deploying apps is the job of autob
 - **No `HelmChart` for namespace admins:** k3s's helm-controller installs `HelmChart` resources with full admin, and
   the `admin` ClusterRole does not include `helm.cattle.io`, so a namespace admin cannot use it. autobott-k8s
   checks this before it hands out a token.
-- **After `k3s-reset.sh`** the cluster has a new CA and is empty: run the deploy tool again (autobott-k8s reads the
-  new CA and creates its account again).
+- **After `k3s-reset.sh`** the cluster has a new CA and is empty: run this role (it copies the new CA), then the
+  deploy tool (autobott-k8s creates its account again).
+
+`kubeans`, the CA copy's path and the packages are the contract with autobott-k8s: its settings default to them, and
+it checks that they exist before it changes anything. Earlier, autobott-k8s created its own deploy user (`kubeops`)
+and CA copy (`/etc/autobott-k8s/`): this role removes both, until the release after next.
 
 ### What the API server accepts
 
 1. **Certificates signed by k3s's client CA:** the root-only admin kubeconfig and k3s's own components.
-2. **ServiceAccount tokens:** e.g. the 1h tokens of autobott-k8s's deployer robot, and the token Kubernetes gives each
-   pod that mounts one.
+2. **ServiceAccount tokens:** e.g. the 1h tokens of autobott-k8s's `autobott` account, and the token Kubernetes gives
+   each pod that mounts one.
 3. **Proxy certificates** (request-header CA, used for metrics-server): a trusted proxy can act as any user.
 4. **The k3s join token**, on the same port (`6443`): lets a machine join the cluster, and a machine that joins as
    a server receives every CA key. On a single node nothing should ever join.
@@ -202,8 +215,8 @@ like root.
 
 ## Checks on the vagrant VM
 
-Last run 2026-10-18 on `make vagrant-up VER=13-k3s` (a second playbook run changed nothing). The checks of the
-deployer robot moved to `../autobott-k8s/roles/k8s/About.md`, with the robot.
+Last run 2026-10-18 on `make vagrant-up VER=13-k3s` (a second playbook run changed nothing). The checks of
+autobott-k8s's `autobott` account are in `../autobott-k8s/roles/k8s/About.md`, with the account.
 
 - `/etc/rancher/k3s/k3s.yaml` is `root:root 0600` after a k3s restart.
 - With the firewall on, pods still reach the API: `https://kubernetes.default.svc` answers `401`.
@@ -213,6 +226,13 @@ deployer robot moved to `../autobott-k8s/roles/k8s/About.md`, with the robot.
 - Traefik on 8083/8446 with the redirect on (2026-10-25): from your machine, `http://sonarr.k3s.localhost:8083/`
   answers `301` to `https://sonarr.k3s.localhost:8446/` (a `POST` gets `308`; path and query stay), which sends a
   browser that isn't logged in to autobott-k8s's Authelia portal. A second run changed nothing.
+- Deploy access for autobott-k8s (2026-11-03, `make vagrant-run VER=13-k3s TAG=k3s` on a VM that autobott-k8s had set
+  up the old way):
+  - `kubeans` exists: a system user with `nologin` and a locked password (`!`);
+  - `/etc/rancher/k3s/server-ca.crt` is `root:root 0644` and the same certificate as the CA in the admin kubeconfig;
+  - `python3-kubernetes` (30.1) and `acl` are installed;
+  - `kubeops` with its home and `/etc/autobott-k8s/` are gone;
+  - a second run changed nothing.
 
 ## Configuration Reference
 

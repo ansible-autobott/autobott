@@ -8,3 +8,10 @@
     - sshd
     - ssh
   failed_when: false # in case one of the services does not exist
+
+# journald re-reads its config and trims archived files to the new limits on restart
+- name: Restart journald
+  ansible.builtin.service:
+    name: systemd-journald
+    state: restarted
+  listen: restart journald

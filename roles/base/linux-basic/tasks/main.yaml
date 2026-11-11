@@ -201,6 +201,24 @@
           when: sysctl_conf_changed.changed
           changed_when: true
 
+    # Journald limits
+    - name: Create journald drop-in directory
+      ansible.builtin.file:
+        path: /etc/systemd/journald.conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Deploy autobott journald limits
+      ansible.builtin.template:
+        src: journald.conf.j2
+        dest: /etc/systemd/journald.conf.d/60-autobott.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart journald
+
     - name: Final package cleanup
       ansible.builtin.apt:
         clean: true

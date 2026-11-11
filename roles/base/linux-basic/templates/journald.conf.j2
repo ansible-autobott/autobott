@@ -1,0 +1,18 @@
+# {{ ansible_managed }}
+# AutoBott linux-basic role — journald limits (linux_basic.journald).
+# This file is managed by Ansible; manual changes are overwritten on the next run.
+#
+# An option set to "" leaves that key at the systemd default.
+[Journal]
+{% if linux_basic.journald.system_max_use | default("") | string | length %}
+SystemMaxUse={{ linux_basic.journald.system_max_use }}
+{% endif %}
+{% if linux_basic.journald.system_keep_free | default("") | string | length %}
+SystemKeepFree={{ linux_basic.journald.system_keep_free }}
+{% endif %}
+{% if linux_basic.journald.max_retention | default("") | string | length %}
+MaxRetentionSec={{ linux_basic.journald.max_retention }}
+{% endif %}
+{% for key, value in (linux_basic.journald.options | default({})) | dictsort %}
+{{ key }}={{ (value | ternary('yes', 'no')) if value is boolean else value }}
+{% endfor %}

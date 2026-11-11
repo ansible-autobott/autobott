@@ -228,6 +228,29 @@ linux_basic_defaults:
     vm_swappiness: "" # set to e.g. 10 on ZFS servers
 
   # ============================================================================================================
+  # Journald (systemd journal)
+  # ============================================================================================================
+  # Limits for the persistent journal (/var/log/journal), written to
+  # /etc/systemd/journald.conf.d/60-autobott.conf; journald is restarted on change and
+  # trims archived files down to the new limits. systemd's own defaults are 10% of the
+  # filesystem for the journal and 15% kept free, each capped at 4G, so on a big disk
+  # the journal grows to 4G. Set an option to "" to leave it at the systemd default.
+  journald:
+    # SystemMaxUse: total disk space the journal may use. The size of a single file
+    # (SystemMaxFileSize) follows as 1/8 of this, so it does not need its own setting.
+    system_max_use: "500M"
+    # SystemKeepFree: disk space journald always leaves free on the filesystem
+    system_keep_free: "1G"
+    # MaxRetentionSec: also delete entries older than this, e.g. "1month". Leave "" to
+    # keep as much history as the size limit allows.
+    max_retention: ""
+    # any other [Journal] key, written as Key=value, e.g.
+    # options:
+    #   Storage: persistent
+    #   MaxLevelStore: info
+    options: {}
+
+  # ============================================================================================================
   # Mixed
   # ============================================================================================================
   cron_email: "" # cron will send errors to this email address

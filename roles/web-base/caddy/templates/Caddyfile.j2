@@ -3,8 +3,8 @@
     email {{ caddy_config.email }}
     skip_install_trust
 
-{% if caddy_config.email | bool %}
-metrics
+{% if caddy_config.metrics | bool %}
+    metrics
 {% endif %}
 {% if caddy_config.http_port is defined and caddy_config.http_port != 80 %}
     http_port {{ caddy_config.http_port }}

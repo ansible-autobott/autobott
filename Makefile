@@ -69,19 +69,22 @@ prepare: check-tools ## Prepare the ansible environment (recreates ./venv if it'
 	@command -v $(PYTHON) >/dev/null 2>&1 || { \
 		echo "Error: '$(PYTHON)' not found; install it or pass PYTHON=..., e.g. 'make prepare PYTHON=python3'." >&2; exit 1; }
 	@cur=$$($(PYTHON) -c 'import sys; print("%d.%d" % sys.version_info[:2])'); \
-	if [ -f ./venv/pyvenv.cfg ]; then \
+	if [ -d ./venv ] && { [ ! -f ./venv/pyvenv.cfg ] || [ ! -f ./venv/bin/activate ]; }; then \
+		echo ">> ./venv is incomplete (no pyvenv.cfg or bin/activate); recreating"; \
+		rm -rf ./venv; \
+	elif [ -f ./venv/pyvenv.cfg ]; then \
 		venvver=$$(sed -n 's/^version *= *\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' ./venv/pyvenv.cfg); \
 		if [ "$$venvver" != "$$cur" ]; then \
 			echo ">> ./venv was built for Python $${venvver:-unknown}, current $(PYTHON) is $$cur; recreating"; \
 			rm -rf ./venv; \
 		fi; \
-	elif [ -d ./venv ]; then \
-		echo ">> ./venv is incomplete (no pyvenv.cfg); recreating"; \
-		rm -rf ./venv; \
 	fi; \
 	if [ ! -d ./venv ]; then \
 		echo ">> creating ./venv with $(PYTHON) ($$cur)"; \
-		$(PYTHON) -m venv ./venv; \
+		$(PYTHON) -m venv ./venv && [ -f ./venv/bin/activate ] || { \
+			rm -rf ./venv; \
+			echo "Error: creating ./venv failed. On Debian, install the venv module first: 'sudo apt-get install python3-venv'." >&2; \
+			exit 1; }; \
 	fi
 	@source venv/bin/activate && pip install -r ./requirements.txt
 	@source venv/bin/activate && ansible-galaxy collection install community.sops
@@ -99,6 +102,10 @@ inv_dir := $(if $(wildcard $(INV)/.),$(abspath $(INV))/,$(dir $(abspath $(INV)))
 # imports autobott.yaml and adds roles that live in the inventory repo (e.g. private ones kept out of this repo).
 # Override with PLAYBOOK=<path>.
 PLAYBOOK ?= $(if $(wildcard $(inv_dir)playbook.yaml),$(inv_dir)playbook.yaml,autobott.yaml)
+
+# Absolute path of this checkout, exported to every recipe so an inventory playbook.yaml can import
+# $AUTOBOTT_DIR/autobott.yaml whatever the checkout directory is called.
+export AUTOBOTT_DIR := $(CURDIR)
 
 
 ##@ Run

@@ -32,6 +32,13 @@
     path: /etc/apt/sources.list.d/hashicorp_vagrant.list
     state: absent
 
+# A hand-added copy of the same repo (e.g. from HashiCorp's install docs) makes apt warn that every target is
+# configured multiple times; the repo above replaces it.
+- name: Remove duplicate HashiCorp source
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/hashicorp.sources
+    state: absent
+
 - name: Update apt cache
   ansible.builtin.apt:
     update_cache: true

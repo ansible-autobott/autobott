@@ -35,7 +35,8 @@ linux_kde_defaults:
   # - Debian trixie or Ubuntu 26.04 resolute today, per kde_klassy_available in
   # vars/<release>.yaml - and skipped on releases it is not built for; its own
   # decoration look, klassyrc, is left at its defaults - tune it via
-  # klassy-settings). It also installs the
+  # klassy-settings), plus the Telementary icon theme from the same repo, kept at
+  # its latest release (installed, not selected). It also installs the
   # Twemoji colour emoji font system-wide and makes it the preferred emoji font
   # via fontconfig, replacing the stock Noto Color Emoji. Opt-in; re-runs
   # converge.

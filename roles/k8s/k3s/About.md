@@ -74,6 +74,8 @@ Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik �
 - A cluster set up with Calico can't switch in place: the role fails when it finds Calico's manifest
   (`server/manifests/calico.yaml`). Rebuild the host, or remove k3s (`k3s-killall.sh`, then delete
   `/var/lib/rancher/k3s`, `/etc/rancher/k3s`, `/etc/cni/net.d` and `/var/lib/cni`) and run the role again.
+- No NetworkManager drop-in: the Calico one (`unmanaged-devices` for `cali*`, `tunl*`, …) went with Calico, and the
+  k3s docs ask for nothing similar for Flannel.
 
 ### Applications: ClusterIP Services behind an Ingress
 

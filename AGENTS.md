@@ -41,15 +41,15 @@ make lint
 make lint-fix          # review the diff: the fixer can reflow Jinja/long lines
 
 # Run playbook against real inventory
-make run INV=../inventory/main.yaml HOST=myhost TAG=role_docker
-make run-verbose INV=../inventory/main.yaml TAG=role_caddy
+make run INV=../inventory/main.yaml HOST=myhost TAG=docker
+make run-verbose INV=../inventory/main.yaml TAG=caddy
 
 # Enroll a new host
 make enroll INV=../inventory/main.yaml HOST=myhost ANSIBLE_USER=root
 
 # Vagrant testing (Debian 13 VMs; Debian 14 placeholder)
 make vagrant-up
-make vagrant-run TAG=role_docker        # Test a specific role
+make vagrant-run TAG=docker              # Test a specific role
 make vagrant-test                        # Run validation tests (test.yaml)
 make vagrant-destroy
 
@@ -139,7 +139,7 @@ Some roles include an `About.md` file with detailed architecture decisions and t
 
 Key rules:
 - Every role has a boolean `run_role_<name>: true` in defaults — this is how per-host opt-out works
-- Tasks always use `block:` with `tags: [role_<rolename>]` and `when: run_role_<name>`
+- Tasks always use `block:` with `tags: [<rolename>]` and `when: run_role_<name>` — the tag is the plain role name (`TAG=docker`), only the variable carries the `run_role_` prefix
 - Use `ansible.builtin.*` fully-qualified module names
 - Variables follow `<rolename>_<setting>` pattern (e.g. `wireguard_port`, `mariadb_root_pass`)
 - Sensitive defaults (passwords, keys) use empty string `""` — must be overridden in inventory
@@ -149,13 +149,15 @@ Key rules:
 
 Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by category (base.yaml, webservices.yaml, etc.). Secrets are SOPS-encrypted `secrets.sops.yaml` files, decrypted at runtime by the `community.sops` vars plugin; the age private key lives at `<inventory-dir>/sops_key` (never commit a real key).
 
+An inventory can also carry its own `playbook.yaml`, next to the inventory file or directory. When it exists, `make run`, `make run-verbose` and `make run-local` run it instead of `autobott.yaml` (override with `PLAYBOOK=<path>`). It imports `autobott.yaml` and adds plays for roles that live in the inventory's own `roles/` directory — private roles that stay out of this repo and follow the same role conventions. `autobott.yaml` never references them.
+
 ## Adding a New Role
 
 1. Create `roles/<category>/<rolename>/defaults/main.yaml` and `tasks/main.yaml`
 2. In defaults: define `run_role_<rolename>: true` and all variables
-3. In tasks: wrap all tasks in `block:` guarded by `when: run_role_<rolename>` with `tags: [role_<rolename>]`
+3. In tasks: wrap all tasks in `block:` guarded by `when: run_role_<rolename>` with `tags: [<rolename>]`
 4. Add the role to the correct play in `autobott.yaml`
-5. Test: `make vagrant-run TAG=role_<rolename>`
+5. Test: `make vagrant-run TAG=<rolename>`
 6. Lint: `make lint`
 
 ## Key Files

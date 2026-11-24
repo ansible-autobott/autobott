@@ -92,6 +92,14 @@ prepare: check-tools ## Prepare the ansible environment (recreates ./venv if it'
 INV ?= inventory/vagrant.yaml
 VER ?= 13
 
+# The inventory's own directory: INV itself when it is a directory, else the directory of the INV file.
+inv_dir := $(if $(wildcard $(INV)/.),$(abspath $(INV))/,$(dir $(abspath $(INV))))
+
+# Playbook to run. An inventory can carry its own playbook.yaml next to it, which then replaces autobott.yaml: it
+# imports autobott.yaml and adds roles that live in the inventory repo (e.g. private ones kept out of this repo).
+# Override with PLAYBOOK=<path>.
+PLAYBOOK ?= $(if $(wildcard $(inv_dir)playbook.yaml),$(inv_dir)playbook.yaml,autobott.yaml)
+
 
 ##@ Run
 enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS (optional), ANSIBLE_USER
@@ -118,7 +126,7 @@ enroll: ## run the enroll tag on a specific host; vars: INV, HOST, ANSIBLE_PASS 
 	  --extra-vars "$$EXTRA_VARS" \
 	  --become autobott.yaml
 
-run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
+run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>, PLAYBOOK=<path> (default: the inventory's playbook.yaml, else autobott.yaml)
 	@if [ -z "$(INV)" ]; then \
 		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
@@ -129,9 +137,10 @@ run: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
 	HOST_VAL=$$( [ -n "$(HOST)" ] && echo "-l $(HOST)" || echo "" ) && \
 	echo "Using tag: $$TAG_VAL" && \
 	echo "Using host: $$HOST_VAL" && \
-	ansible-playbook -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
+	echo "Using playbook: $(PLAYBOOK)" && \
+	ansible-playbook -i $(INV) $$TAG_VAL $$HOST_VAL $(PLAYBOOK)
 
-run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>
+run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<tag>, PLAYBOOK=<path> (default: the inventory's playbook.yaml, else autobott.yaml)
 	@if [ -z "$(INV)" ]; then \
 		echo "Error: Missing required parameter 'INV'" >&2; \
 		exit 1; \
@@ -142,12 +151,13 @@ run-verbose: ## run playbook, env Vars: INV=inventory_path, HOST=<host>, TAG=<ta
 	HOST_VAL=$$( [ -n "$(HOST)" ] && echo "-l $(HOST)" || echo "" ) && \
 	echo "Using tag: $$TAG_VAL" && \
 	echo "Using host: $$HOST_VAL" && \
-	ansible-playbook -vvv -i $(INV) $$TAG_VAL $$HOST_VAL autobott.yaml
+	echo "Using playbook: $(PLAYBOOK)" && \
+	ansible-playbook -vvv -i $(INV) $$TAG_VAL $$HOST_VAL $(PLAYBOOK)
 
-# 'run-local' reads INV/HOST/TAG (and optional EXTRA_ARGS / SOPS_AGE_KEY_FILE) from a
+# 'run-local' reads INV/HOST/TAG (and optional EXTRA_ARGS / PLAYBOOK / SOPS_AGE_KEY_FILE) from a
 # git-ignored env file so you don't retype them on every 'make run'. Copy
 # run-local.env.example -> run-local.env and edit it. Override the file: RUN_LOCAL_FILE=<path>.
-# Any of INV/HOST/TAG/EXTRA_ARGS/SOPS_AGE_KEY_FILE passed on the command line
+# Any of INV/HOST/TAG/EXTRA_ARGS/PLAYBOOK/SOPS_AGE_KEY_FILE passed on the command line
 # (e.g. 'make run-local TAG=role_docker') takes precedence over the env file.
 RUN_LOCAL_FILE ?= run-local.env
 
@@ -157,11 +167,11 @@ run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (defaul
 		echo "       Create it from the template:  cp run-local.env.example $(RUN_LOCAL_FILE)" >&2; \
 		exit 1; \
 	fi
-	@_INV_CLI="$$INV"; _HOST_CLI="$$HOST"; _TAG_CLI="$$TAG"; _EXTRA_CLI="$$EXTRA_ARGS"; _SOPS_CLI="$(SOPS_AGE_KEY_FILE_CLI)"; \
+	@_INV_CLI="$$INV"; _HOST_CLI="$$HOST"; _TAG_CLI="$$TAG"; _EXTRA_CLI="$$EXTRA_ARGS"; _PLAYBOOK_CLI="$$PLAYBOOK"; _SOPS_CLI="$(SOPS_AGE_KEY_FILE_CLI)"; \
 	unset SOPS_AGE_KEY_FILE; \
 	set -a; . "$(CURDIR)/$(RUN_LOCAL_FILE)"; set +a; \
 	INV="$${_INV_CLI:-$$INV}"; HOST="$${_HOST_CLI:-$$HOST}"; TAG="$${_TAG_CLI:-$$TAG}"; \
-	EXTRA_ARGS="$${_EXTRA_CLI:-$$EXTRA_ARGS}"; SOPS_AGE_KEY_FILE="$${_SOPS_CLI:-$$SOPS_AGE_KEY_FILE}"; \
+	EXTRA_ARGS="$${_EXTRA_CLI:-$$EXTRA_ARGS}"; PLAYBOOK="$${_PLAYBOOK_CLI:-$$PLAYBOOK}"; SOPS_AGE_KEY_FILE="$${_SOPS_CLI:-$$SOPS_AGE_KEY_FILE}"; \
 	if [ -z "$$INV" ]; then \
 		echo "Error: 'INV' is not set in $(RUN_LOCAL_FILE)" >&2; \
 		exit 1; \
@@ -171,14 +181,19 @@ run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (defaul
 		else SOPS_AGE_KEY_FILE="$$(dirname "$$INV")/sops_key"; fi; \
 	fi; \
 	export SOPS_AGE_KEY_FILE; \
+	if [ -z "$$PLAYBOOK" ]; then \
+		if [ -d "$$INV" ]; then inv_dir="$$INV"; else inv_dir="$$(dirname "$$INV")"; fi; \
+		if [ -f "$$inv_dir/playbook.yaml" ]; then PLAYBOOK="$$inv_dir/playbook.yaml"; else PLAYBOOK=autobott.yaml; fi; \
+	fi; \
 	echo "Running with inventory: $$INV" && \
 	echo "Using sops key:         $$SOPS_AGE_KEY_FILE" && \
+	echo "Using playbook:         $$PLAYBOOK" && \
 	. ./venv/bin/activate && \
 	TAG_VAL=$$( [ -n "$$TAG" ] && echo "-t $$TAG" || echo "" ) && \
 	HOST_VAL=$$( [ -n "$$HOST" ] && echo "-l $$HOST" || echo "" ) && \
 	echo "Using tag:  $$TAG_VAL" && \
 	echo "Using host: $$HOST_VAL" && \
-	ansible-playbook -i "$$INV" $$TAG_VAL $$HOST_VAL $$EXTRA_ARGS autobott.yaml
+	ansible-playbook -i "$$INV" $$TAG_VAL $$HOST_VAL $$EXTRA_ARGS "$$PLAYBOOK"
 
 
 ##@ Secrets
@@ -187,7 +202,7 @@ run-local: ## run playbook with INV/HOST/TAG from a git-ignored env file (defaul
 # <inventory-dir>/sops_key. INV may be the inventory DIRECTORY (key goes inside
 # it) or an inventory FILE (key goes in the file's directory). Or set
 # SOPS_AGE_KEY_FILE=<path> to point directly at a key file.
-sops_key_dir := $(if $(wildcard $(INV)/.),$(abspath $(INV))/,$(dir $(abspath $(INV))))
+sops_key_dir := $(inv_dir)
 export SOPS_AGE_KEY_FILE ?= $(sops_key_dir)sops_key
 
 # The default export above always sets SOPS_AGE_KEY_FILE (derived from the sample

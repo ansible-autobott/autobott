@@ -36,7 +36,7 @@ and `todo list --json` cover the common actions — run `todo --help`.
     for strict modules (e.g. `community.general.xml`).
   - Strict undefined: undefined vars in `{% if %}`/conditionals now error
     (dead `run_role_node` guard already removed — watch for more leftovers).
-- [ ] (Optional) If releasing this upgrade, bump `autobot_version` in
+- [ ] (Optional) If releasing this upgrade, bump `autobott_version` in
   `roles/base/enroll/defaults/main.yaml` before opening the PR.
 
 ## Borgmatic repo-init: key export/fetch logic bug

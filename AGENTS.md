@@ -58,7 +58,7 @@ make encrypt INV=../inventory/main.yaml KEY=mariadb_root_pass VALUE=s3cr3t
 make decrypt INV=../inventory/main.yaml
 
 # Release (clean git, on main branch)
-# First bump autobot_version in roles/base/enroll/defaults/main.yaml, then tag.
+# First bump autobott_version in roles/base/enroll/defaults/main.yaml, then tag.
 # Pushing the tag triggers .github/workflows/release.yml, which publishes the
 # GitHub release (with auto-generated notes).
 make tag version=v0.2.0
@@ -66,7 +66,7 @@ make tag version=v0.2.0
 
 ## Before Opening a PR
 
-Review whether the change should ship as a release. If it should, bump `autobot_version` in
+Review whether the change should ship as a release. If it should, bump `autobott_version` in
 `roles/base/enroll/defaults/main.yaml` **before** opening the PR, so the version bump is part
 of the reviewed diff. Tagging later (`make tag`) triggers `.github/workflows/release.yml`, so
 the version file must already reflect the intended release by the time the PR is merged.
@@ -165,7 +165,7 @@ An inventory can also carry its own `playbook.yaml`, next to the inventory file 
 | File | Purpose |
 |------|---------|
 | `autobott.yaml` | Main playbook — add new roles here |
-| `roles/base/enroll/defaults/main.yaml` | Contains `autobot_version` — bump before release |
+| `roles/base/enroll/defaults/main.yaml` | Contains `autobott_version` — bump before release |
 | `Makefile` | All commands — read before running anything |
 | `inventory/vagrant.yaml` | Vagrant test inventory |
 | `.sops.yaml` | SOPS creation rules — which age keys encrypt which files; edit secrets via `make edit-secrets` |

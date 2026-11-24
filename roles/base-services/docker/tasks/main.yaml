@@ -108,11 +108,14 @@
 
 # Docker removal: run_role_docker false (the default) reverts this role and deletes everything Docker holds
 # (containers, images, volumes). Changes nothing where Docker is not installed.
+# Debian only: the removal uses apt, and a non-Debian host in the inventory (e.g. a Bazzite gaming box that only
+# runs private roles) has no Docker of this role to remove.
 - name: Remove Docker
   tags:
     - docker
   when:
     - not (run_role_docker | bool)
+    - ansible_facts['os_family'] == 'Debian'
   block:
     # Containers go while dockerd runs (with live_restore they would outlive it), then dockerd stops for good, so it
     # cannot recreate the iptables rules removed next

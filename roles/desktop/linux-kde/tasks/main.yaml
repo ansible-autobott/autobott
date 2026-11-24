@@ -391,6 +391,16 @@
             name: klassy
             state: present
 
+        # Telementary icon theme (https://github.com/ansible-autobott/telementary-icons), built by the same autobott
+        # apt repo for every suite that has klassy. Installed only, not selected: pick it in System Settings > Icons.
+        # state: latest so a new release reaches the host on the next run.
+        - name: Install the Telementary icon theme # noqa: package-latest (picks up new theme releases on each run)
+          ansible.builtin.apt:
+            name: telementary-icons
+            state: latest
+            update_cache: true
+            cache_valid_time: 3600
+
         # Select Klassy for the desktop user, both as the KWin window decoration
         # and as the Qt/KDE application (widget) style. Done here rather than in
         # kwriteconfig6.sh so it only runs on the releases where the package is

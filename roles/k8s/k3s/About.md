@@ -69,6 +69,13 @@ Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik �
 - Replaces the default Flannel.
 - Provides NetworkPolicy support to restrict pod-to-pod traffic, e.g. only Traefik may reach an app's pods.
 - Flannel backend is set to `none` and default network policy is disabled in k3s config to let Calico handle everything.
+- NetworkManager is kept off Calico's interfaces (pod veths `cali*`, tunnels `tunl*`, `vxlan.calico`,
+  `vxlan-v6.calico`, `wireguard.cali`, `wg-v6.cali`) with `/etc/NetworkManager/conf.d/calico.conf`, as the Calico
+  docs ask ("Configure NetworkManager"): Calico sets up these interfaces and their routes itself, and NetworkManager
+  could flush them or run DHCP on them. The file is deployed on every host, with or without NetworkManager, so a later
+  install starts with it in place. No reload: a NetworkManager that already runs reads it at its next start.
+  NetworkManager does not merge `unmanaged-devices` across files (the last file wins), so a host that needs its own
+  unmanaged devices adds them to this list.
 
 ### Applications: ClusterIP Services behind an Ingress
 
@@ -242,6 +249,7 @@ autobott-k8s's `autobott` account are in `../autobott-k8s/roles/k8s/About.md`, w
 | `templates/config.yaml.j2` | k3s server config |
 | `templates/k3s.service.j2` | systemd unit |
 | `files/calico-*.yaml` | Calico CNI manifest |
+| `files/networkmanager-calico.conf` | Keeps NetworkManager off Calico's interfaces |
 | `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): ports (`http_port`, `https_port`), HTTP → HTTPS redirect (`https_redirect`) |
 
 ## Planned (not implemented): API access for people

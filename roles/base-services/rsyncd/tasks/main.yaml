@@ -71,12 +71,15 @@
 # Clean up when the role is turned off: stop the daemon and remove the config it created.
 # The rsync package is intentionally left installed, and module (share) directories are left
 # in place so their data is not destroyed.
+# Debian only: on Fedora-based hosts (e.g. Bazzite) the rsync package ships /etc/rsyncd.conf itself and the daemon
+# unit is not called rsync, so the file does not mean this role configured the host.
 # ============================================================================================================
 - name: Rsyncd teardown block
   tags:
     - rsyncd
   when:
     - not (run_role_rsyncd | bool)
+    - ansible_facts['os_family'] == 'Debian'
   block:
     - name: Check for an existing rsync daemon configuration
       ansible.builtin.stat:

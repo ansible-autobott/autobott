@@ -176,6 +176,29 @@
         - restart k3s
 
     # ====================================================
+    # NetworkManager
+    # ====================================================
+    # Keeps NetworkManager off Calico's interfaces (see About.md). Deployed whether NetworkManager is installed or not:
+    # without it nothing reads the file, and if it gets installed later it starts with the file in place. No reload: a
+    # NetworkManager that already runs picks it up at its next start.
+
+    - name: Create NetworkManager drop-in directory
+      ansible.builtin.file:
+        path: /etc/NetworkManager/conf.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Keep NetworkManager off Calico's interfaces
+      ansible.builtin.copy:
+        src: files/networkmanager-calico.conf
+        dest: /etc/NetworkManager/conf.d/calico.conf
+        owner: root
+        group: root
+        mode: "0644"
+
+    # ====================================================
     # Firewall
     # ====================================================
     # k3s always runs behind the firewall: this turns the firewall role on and registers the rules k3s

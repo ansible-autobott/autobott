@@ -92,13 +92,14 @@ A `k8s_clusters` host is in no other host-type group: `base/preconditions` fails
 ```
 roles/
   base/          # preconditions, enroll, linux-apt, linux-basic, zfs, nullmailer, smartd, hdparm
-  base-services/ # wireguard, tailscale, docker, samba, mariadb, borg, borgmatic, goback
+  base-services/ # wireguard, tailscale, docker, samba, rsyncd, mariadb, borg, borgmatic, goback
   security/      # lynis, malwarescan, crowdsec, firewall
   web-base/      # php-fpm, caddy, authelia, vhosts
   monitoring/    # prometheus, alertmanager, node_exporter, grafana, monit
-  webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin
+  webservices/   # homepage, docmost, mediawiki, immich, mealie, etnafinance, radicale, fe26, phpmyadmin, aether, dashi
   servarr/       # jellyfin, kavita, transmission, sonarr, radarr, prowlarr, lidarr, whisparr, romm, stash, xbvr
-  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps, cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-ai, dev-generic
+  desktop/       # linux-desktop, linux-kde, vbox-guest, gui-apps
+  tools/         # cli-apps, dev-node, dev-go, dev-java, dev-k8s, dev-ai, dev-generic
   games/         # minecraft
   k8s/           # k3s
   validation/    # test roles
@@ -109,15 +110,16 @@ roles/
 > `<role>_available` list; per-app tasks in `tasks/apps/<app>.yaml`; per-app
 > defaults in `defaults/main.yaml`):
 > - **`desktop/gui-apps`** — GUI apps (via `gui_apps_config`)
-> - **`desktop/cli-apps`** — general CLI utilities: ytdlp, linux-candy, dibs,
+> - **`tools/cli-apps`** — general CLI utilities: ytdlp, linux-candy, dibs,
 >   todo (via `cli_apps_config`)
-> - **`desktop/dev-node`** — Node.js toolchain (via `dev_node_config`)
-> - **`desktop/dev-go`** — Go toolchain + go-deps-view (via `dev_go_config`)
-> - **`desktop/dev-java`** — jenv + maven (via `dev_java_config`)
-> - **`desktop/dev-k8s`** — kubectl + k9s (via `dev_k8s_config`)
-> - **`desktop/dev-ai`** — AI coding agents: herdr, claude-code, pi,
->   copilot-cli (via `dev_ai_config`)
-> - **`desktop/dev-generic`** — other dev tools: vagrant, vault, github-cli
+> - **`tools/dev-node`** — Node.js toolchain (via `dev_node_config`)
+> - **`tools/dev-go`** — Go toolchain + go-deps-view (via `dev_go_config`)
+> - **`tools/dev-java`** — jenv + maven (via `dev_java_config`)
+> - **`tools/dev-k8s`** — kubectl + k9s (via `dev_k8s_config`)
+> - **`tools/dev-ai`** — AI coding agents: herdr, claude-code, pi,
+>   copilot-cli (via `dev_ai_config`). Install-only: pinned, checksummed,
+>   root-owned binaries (self-updaters can't replace them); no auth or config
+> - **`tools/dev-generic`** — other dev tools: vagrant, vault, github-cli
 >   (via `dev_generic_config`)
 >
 > The candy-tools shared apt repo is used by both `cli-apps` (dibs, linux-candy,

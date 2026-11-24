@@ -121,7 +121,7 @@
 
         - name: Extract desired major version
           ansible.builtin.set_fact:
-            desired_major: "{{ (autobot_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
+            desired_major: "{{ (autobott_version.split('.')[0] | regex_replace('[^0-9]', '')) | int }}"
 
         - name: Extract current major version (only if file exists)
           ansible.builtin.set_fact:
@@ -138,7 +138,7 @@
         - name: Autobott execution not viable
           ansible.builtin.debug:
             msg: >
-              Invalid upgrade path detected!, Current version: {{ current_version }}; Target version: {{ autobot_version }}
+              Invalid upgrade path detected!, Current version: {{ current_version }}; Target version: {{ autobott_version }}
               Rule: Only same-major ({{ current_major | int }}) or next-major ({{ (current_major | int) + 1 }}) upgrades are allowed.
           when: invalid_upgrade | bool
           changed_when: true
@@ -151,7 +151,7 @@
 - name: Write new version to host
   ansible.builtin.copy:
     dest: "/etc/autobott_version"
-    content: "{{ autobot_version }}\n"
+    content: "{{ autobott_version }}\n"
     owner: root
     group: root
     mode: "0644"

@@ -372,12 +372,12 @@ check-branch:
 
 check-autobott-version:
 	@[ "${version}" ] || ( echo ">> version is not set, usage: make tag version=\"v1.2.3\" "; exit 1 )
-	@AUTOBOT_VERSION=$$(grep -E '^autobot_version:' ./roles/base/enroll/defaults/main.yaml | awk '{print $$2}') && \
-	if [ "$$AUTOBOT_VERSION" != "$(version)" ]; then \
-		echo "Error: autobot_version ($$AUTOBOT_VERSION) does not match the release version ($(version))"; \
+	@AUTOBOTT_VERSION=$$(grep -E '^autobott_version:' ./roles/base/enroll/defaults/main.yaml | awk '{print $$2}') && \
+	if [ "$$AUTOBOTT_VERSION" != "$(version)" ]; then \
+		echo "Error: autobott_version ($$AUTOBOTT_VERSION) does not match the release version ($(version))"; \
 		exit 1; \
 	else \
-		echo "autobot_version ($$AUTOBOT_VERSION) matches release version ($(version))"; \
+		echo "autobott_version ($$AUTOBOTT_VERSION) matches release version ($(version))"; \
 	fi
 
 .PHONY: tag

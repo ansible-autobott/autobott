@@ -75,6 +75,9 @@ kwriteconfig6 --file dolphinrc --group 'Toolbar mainToolBar' --key 'ToolButtonSt
 kwriteconfig6 --file dolphinrc --group 'TabBar' --key 'TabBarVisibility' 'AlwaysShowTabBar'
 # Open new tabs at the end of the tab bar instead of next to the active one.
 kwriteconfig6 --file dolphinrc --group 'General' --key 'OpenNewTabAfterLastTab' --type 'bool' 'true'
+# Always show the full-width status bar (Dolphin >= 25.04 enum: Small | FullWidth | Disabled;
+# the default "Small" is a floating overlay that only appears on hover/selection).
+kwriteconfig6 --file dolphinrc --group 'General' --key 'ShowStatusBar' 'FullWidth'
 
 
 # =====================================================================================

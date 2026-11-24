@@ -6,7 +6,7 @@
 # Included from linux-desktop's main tasks when
 # linux_desktop_config.input_remapper.install is true. Installs input-remapper
 # (the distro archive package on Ubuntu, the pinned upstream .deb on Debian —
-# see the install tasks below), enables the system daemon, and — when any presets
+# see the install tasks below), removes the superseded xbindkeys, xvkbd and ~/.xbindkeysrc, enables the system daemon, and — when any presets
 # are configured — deploys per-user presets + autoload config for the desktop user.
 # Presets are data-driven via linux_desktop_config.input_remapper.presets and rendered
 # into ~/.config/input-remapper-2/. The package's XDG autostart applies them on the
@@ -58,6 +58,23 @@
               ansible.builtin.file:
                 path: "/tmp/input-remapper-{{ input_remapper_version }}.deb"
                 state: absent
+
+    # xbindkeys + xvkbd were the legacy way to map mouse buttons to synthetic key
+    # events; input-remapper replaces both, so drop them when present. Purged so
+    # the xbindkeys XDG autostart entry (a conffile) does not survive the removal.
+    - name: Remove xbindkeys and xvkbd (superseded by input-remapper)
+      ansible.builtin.apt:
+        name:
+          - xbindkeys
+          - xvkbd
+        state: absent
+        purge: true
+
+    # The legacy xbindkeys mouse bindings called xvkbd; drop the user's config too.
+    - name: Remove the desktop user's legacy xbindkeys config
+      ansible.builtin.file:
+        path: "/home/{{ linux_desktop_config.user }}/.xbindkeysrc"
+        state: absent
 
     # Ubuntu's split package names the unit input-remapper-daemon.service (with
     # input-remapper.service as an alias); the upstream Debian .deb ships

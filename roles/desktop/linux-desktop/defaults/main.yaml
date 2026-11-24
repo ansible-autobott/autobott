@@ -89,7 +89,9 @@ linux_desktop_defaults:
   # Install input-remapper (https://github.com/sezanzeb/input-remapper) and enable its
   # system daemon, then optionally deploy per-user remapping presets into
   # ~/.config/input-remapper-2/ (the package's XDG autostart applies them on next
-  # login). Off by default; the pinned release + hash are the role vars below.
+  # login). Also removes xbindkeys, xvkbd and the user's ~/.xbindkeysrc, which
+  # input-remapper supersedes. Off by default; the
+  # pinned release + hash are the role vars below.
   input_remapper:
     # install the app + enable the system daemon
     install: false

@@ -6,7 +6,7 @@
 run_role_autobott_enroll: true
 
 # current version
-autobott_version: v0.2.3
+autobott_version: v0.2.4
 # used to write the version back to the host at the end
 run_autobott_write_version: false
 

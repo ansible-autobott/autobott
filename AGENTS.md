@@ -149,7 +149,7 @@ Key rules:
 
 Per-host config lives in `inventory/host_vars/<hostname>/` with files grouped by category (base.yaml, webservices.yaml, etc.). Secrets are SOPS-encrypted `secrets.sops.yaml` files, decrypted at runtime by the `community.sops` vars plugin; the age private key lives at `<inventory-dir>/sops_key` (never commit a real key).
 
-An inventory can also carry its own `playbook.yaml`, next to the inventory file or directory. When it exists, `make run`, `make run-verbose` and `make run-local` run it instead of `autobott.yaml` (override with `PLAYBOOK=<path>`). It imports `autobott.yaml` and adds plays for roles that live in the inventory's own `roles/` directory — private roles that stay out of this repo and follow the same role conventions. `autobott.yaml` never references them.
+An inventory can also carry its own `playbook.yaml`, next to the inventory file or directory. When it exists, `make run`, `make run-verbose` and `make run-local` run it instead of `autobott.yaml` (override with `PLAYBOOK=<path>`). It imports `autobott.yaml` — via `$AUTOBOTT_DIR`, which the Makefile exports as the absolute path of this checkout, so the checkout directory can have any name — and adds plays for roles that live in the inventory's own `roles/` directory — private roles that stay out of this repo and follow the same role conventions. `autobott.yaml` never references them.
 
 ## Adding a New Role
 

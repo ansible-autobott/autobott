@@ -168,6 +168,7 @@ linux_basic_defaults:
   #            - git@github.com:WorkOrg/
   #      aliases: # list: a string is resolved from git_alias_catalog; a {name: value} is a free-form alias
   #        - "prune-branches"                       # catalogue: the role supplies the command
+  #        - "bs"                                   # catalogue: branch-status table
   #        - co: checkout                           # free-form: you supply the command (escaped for you)
   #        - lg: "log --oneline --graph --decorate"
   #    uid: 2001
@@ -197,6 +198,9 @@ linux_basic_defaults:
     last: log -1 HEAD
     unstage: reset HEAD --
     lg: log --oneline --graph --decorate --all
+    # `git branch` as a table: uncommitted changes, refs on the tip, unpushed / squash-merged
+    # (runs /usr/local/bin/git-branch-status, installed by this role; -f fetches first)
+    bs: branch-status
 
   # ============================================================================================================
   # Kernel limits (sysctl)

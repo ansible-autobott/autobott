@@ -21,6 +21,35 @@
     # Flags of roles in later plays (e.g. k3s) are only defined here when the inventory sets them: default(false)
     # matches their role defaults.
 
+    # The linux_servers play and the k8s_clusters play both claim ports 80/443 and the firewall
+    - name: Fail when the host is both a linux server and a k8s cluster
+      ansible.builtin.fail:
+        msg: >-
+          The host is in both the linux_servers and the k8s_clusters inventory groups. A host is either a server
+          or a k8s cluster: remove it from one of the two groups.
+      when:
+        - "'linux_servers' in group_names"
+        - "'k8s_clusters' in group_names"
+
+    - name: Fail when the host is both a linux desktop and a k8s cluster
+      ansible.builtin.fail:
+        msg: >-
+          The host is in both the linux_desktop and the k8s_clusters inventory groups. A k8s cluster is never a
+          desktop: remove it from one of the two groups.
+      when:
+        - "'linux_desktop' in group_names"
+        - "'k8s_clusters' in group_names"
+
+    # k3s only runs in the k8s_clusters play: anywhere else run_role_k3s would be silently ignored
+    - name: Fail when k3s is enabled outside the k8s_clusters group
+      ansible.builtin.fail:
+        msg: >-
+          run_role_k3s is true, but the host is not in the k8s_clusters inventory group, the only play that runs
+          k3s. Move the host to k8s_clusters or disable k3s.
+      when:
+        - run_role_k3s | default(false) | bool
+        - "'k8s_clusters' not in group_names"
+
     - name: Fail when both docker and k3s are enabled
       ansible.builtin.fail:
         msg: >-

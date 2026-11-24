@@ -12,11 +12,15 @@ all:
       hosts:
         ansible-autobott2-linux-debian-13:
           ansible_python_interpreter: /usr/bin/python3
-        # debian-13 plus the k3s role (see its host_vars/k3s.yaml)
-        ansible-autobott2-linux-debian-13-k3s:
-          ansible_python_interpreter: /usr/bin/python3
         # ansible-autobott2-linux-debian-14:   # TODO: placeholder, enable when Debian 14 (forky) is available
         #   ansible_python_interpreter: /usr/bin/python3
+
+    # a k8s_clusters host is never in linux_servers or linux_desktop (checked by base/preconditions)
+    k8s_clusters:
+      hosts:
+        # debian-13 with the k3s role (see its host_vars/k3s.yaml)
+        ansible-autobott2-linux-debian-13-k3s:
+          ansible_python_interpreter: /usr/bin/python3
 
     email_server:
       hosts:

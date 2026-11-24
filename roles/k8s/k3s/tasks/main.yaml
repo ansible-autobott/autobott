@@ -2,8 +2,8 @@
 # ============================================================================================================
 # K3s Role
 # ============================================================================================================
-# Installs the k3s binary and configures/starts k3s in server mode with Calico CNI.
-# Ingress is the k3s default: Traefik on ports 80/443 via ServiceLB. Also provides the host side of how autobott-k8s
+# Installs the k3s binary and configures/starts k3s in server mode with the k3s defaults: Flannel CNI with the
+# built-in NetworkPolicy controller, Traefik ingress on ports 80/443 via ServiceLB. Also provides the host side of how autobott-k8s
 # deploys to the cluster: the deploy user kubeans, the packages it deploys with and a public copy of the API server's
 # CA. See About.md for the architecture.
 
@@ -66,6 +66,23 @@
           minor version. Upgrade one minor version at a time: add a release of each minor version in between to
           k3s_checksums and run the role once per step. Going back a minor version needs a restore of a datastore
           backup taken on it (docs.k3s.io/upgrades/roll-back).
+        quiet: true
+
+    # Earlier versions of this role replaced Flannel with Calico. A running cluster can't switch its CNI in place:
+    # pods keep their Calico networking and Calico's resources stay in the datastore. Fail before changing anything.
+    - name: Check for a Calico manifest from earlier versions of this role
+      ansible.builtin.stat:
+        path: /var/lib/rancher/k3s/server/manifests/calico.yaml
+      register: k3s_calico_manifest
+
+    - name: Fail on a cluster set up with Calico
+      ansible.builtin.assert:
+        that:
+          - not k3s_calico_manifest.stat.exists
+        fail_msg: >-
+          This k3s cluster runs Calico, set up by an earlier version of this role, which now keeps the k3s default
+          CNI (Flannel). The CNI can't be switched in place: rebuild the host, or remove k3s (k3s-killall.sh, then
+          delete /var/lib/rancher/k3s, /etc/rancher/k3s, /etc/cni/net.d and /var/lib/cni) and run the role again.
         quiet: true
 
     # ServiceLB publishes ports with iptables redirects, not listening sockets: a program already listening on one
@@ -176,38 +193,16 @@
         - restart k3s
 
     # ====================================================
-    # NetworkManager
-    # ====================================================
-    # Keeps NetworkManager off Calico's interfaces (see About.md). Deployed whether NetworkManager is installed or not:
-    # without it nothing reads the file, and if it gets installed later it starts with the file in place. No reload: a
-    # NetworkManager that already runs picks it up at its next start.
-
-    - name: Create NetworkManager drop-in directory
-      ansible.builtin.file:
-        path: /etc/NetworkManager/conf.d
-        state: directory
-        owner: root
-        group: root
-        mode: "0755"
-
-    - name: Keep NetworkManager off Calico's interfaces
-      ansible.builtin.copy:
-        src: files/networkmanager-calico.conf
-        dest: /etc/NetworkManager/conf.d/calico.conf
-        owner: root
-        group: root
-        mode: "0644"
-
-    # ====================================================
     # Firewall
     # ====================================================
     # k3s always runs behind the firewall: this turns the firewall role on and registers the rules k3s
     # needs (see About.md):
     # - host -> pods (kubelet probes, API server -> pods): the firewall rejects outgoing traffic by default.
+    # - pods -> host (the API, also through the kubernetes Service, e.g. CoreDNS): the firewall rejects
+    #   incoming traffic by default.
     # - pods -> anywhere (pod to pod, CoreDNS upstream): on hosts that also run Docker, the ufw-docker
     #   rules drop forwarded traffic to private addresses, which includes the pod network.
-    # Pods -> host (e.g. the API) is accepted by Calico before UFW sees it, and service IPs are already
-    # rewritten to pod IPs when UFW checks the packet.
+    # Service IPs are already rewritten to pod or host IPs when UFW checks the packet.
 
     - name: Enable the firewall with the rules k3s needs # noqa: role-name[path] var-naming[no-role-prefix]
       ansible.builtin.import_role:
@@ -219,6 +214,9 @@
           - direction: out
             to_ip: "{{ k3s_config.cluster_cidr }}"
             comment: host to k3s pods
+          - direction: in
+            from_ip: "{{ k3s_config.cluster_cidr }}"
+            comment: k3s pods to host
           - route: true
             from_ip: "{{ k3s_config.cluster_cidr }}"
             comment: k3s pods to anywhere
@@ -251,10 +249,6 @@
         state: started
         daemon_reload: true
 
-    # ====================================================
-    # Calico CNI
-    # ====================================================
-
     - name: Wait for k3s to be ready
       ansible.builtin.command: /usr/local/bin/k3s kubectl get nodes
       register: k3s_ready
@@ -262,22 +256,6 @@
       delay: 5
       until: k3s_ready.rc == 0
       changed_when: false
-
-    - name: Deploy Calico kubernetes-services-endpoint ConfigMap
-      ansible.builtin.copy:
-        src: files/calico-kubernetes-services-endpoint.yaml
-        dest: /var/lib/rancher/k3s/server/manifests/calico-kubernetes-services-endpoint.yaml
-        owner: root
-        group: root
-        mode: "0600"
-
-    - name: Deploy Calico manifest
-      ansible.builtin.template:
-        src: calico.yaml.j2
-        dest: /var/lib/rancher/k3s/server/manifests/calico.yaml
-        owner: root
-        group: root
-        mode: "0600"
 
     # ====================================================
     # Traefik (ingress)

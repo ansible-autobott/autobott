@@ -2,8 +2,8 @@
 # ============================================================================================================
 # K3s
 # ============================================================================================================
-# Single-node k3s server: binary installation + server configuration (Calico CNI, k3s default ingress:
-# Traefik on ports 80/443 via ServiceLB).
+# Single-node k3s server: binary installation + server configuration (k3s defaults: Flannel CNI with the built-in
+# NetworkPolicy controller, Traefik ingress on ports 80/443 via ServiceLB).
 # See About.md for the architecture.
 
 # Role execution control
@@ -31,10 +31,6 @@ k3s_defaults:
 
   # Cluster DNS address
   cluster_dns: 10.43.0.10
-
-  # Calico CNI configuration
-  calico:
-    version: 3.29.3
 
   # Extra arguments passed to k3s server
   # Example: ["--node-label=environment=production"]

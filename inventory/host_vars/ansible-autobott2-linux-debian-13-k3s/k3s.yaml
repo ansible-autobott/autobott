@@ -1,9 +1,9 @@
 #============================================================================================================
 # k3s
 #============================================================================================================
-# Single-node k3s server: Calico CNI, Traefik ingress on ports 8083/8446 (below, see roles/k8s/k3s/About.md).
+# Single-node k3s server: Flannel CNI, Traefik ingress on ports 8083/8446 (below, see roles/k8s/k3s/About.md).
 # Enabling k3s also turns on the firewall and registers the rules k3s needs.
-# The role defaults (version, cluster/service CIDRs, cluster DNS, Calico version) fit this box as is.
+# The role defaults (version, cluster/service CIDRs, cluster DNS) fit this box as is.
 # The apps on it (sample page included) come from autobott-k8s, with its own host_vars overlay.
 run_role_k3s: true
 

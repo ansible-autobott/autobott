@@ -86,29 +86,23 @@ and `todo list --json` cover the common actions — run `todo --help`.
 
 ## Follow-ups (rated 3-6)
 
-- [ ] mutually exlusive hosts: desktop, server and k8s
-- [ ] [6] Calico: bump the pin and make `k3s.calico.version` real (or drop Calico)
-      Calico 3.29 is tested against Kubernetes 1.29-1.32 only and is four minors behind 3.33 (tested
-      against 1.35-1.37); the role installs Kubernetes 1.35.1. The knob is a no-op: `calico.yaml.j2`
-      hardcodes the `v3.29.3` images and only `CALICO_IPV4POOL_CIDR` is templated (verified by diffing
-      against the upstream 3.29.3 manifest: one changed line).
-  - Replace the vendored manifest with 3.33.x and template the image tag from the knob, or remove the knob.
-  - Re-check the justification: stock k3s already enforces NetworkPolicy (embedded kube-router
-    controller), so "NetworkPolicy support" is not a reason for Calico. State the real reason in
-    About.md or go back to the k3s default.
+- [x] mutually exlusive hosts: desktop, server and k8s (k8s_clusters group + preconditions checks: k8s excludes server and desktop; server + desktop stays allowed)
+- [x] [6] Calico: dropped, back to the k3s default (Flannel + built-in NetworkPolicy controller)
+  - [ ] Verify on a fresh VM (destroy + reprovision `13-k3s`): node Ready, CoreDNS/Traefik reach the API
+        through the new `k3s pods to host` UFW rule, the apps' NetworkPolicies still isolate namespaces.
+  - [ ] Existing Calico clusters (the VM, neptuno) need a rebuild: the role now fails on them.
 - [ ] [5] A namespace admin can publish host ports past UFW
   ClusterRole `admin` lets autobott-k8s's `autobott` account create NodePort / LoadBalancer Services (checked: `create services` is allowed in a bound namespace) and Services with `spec.externalIPs` set to the node IP (the CVE-2020-8554 pattern). ServiceLB and kube-proxy publish them with iptables before UFW, so an app role can open any port to the internet, outside `servicelb_ports` and the firewall. Traefik's LoadBalancer also allocates NodePorts (30846 / 32389 on the VM), open today.
   - Here: `kube-apiserver-arg: [enable-admission-plugins=DenyServiceExternalIPs]` in `config.yaml.j2`. The ResourceQuota per app namespace (`services.loadbalancers: "0"`, `services.nodeports: "0"`; `admin` cannot edit quotas) is autobott-k8s's part, tracked in its TODO.md. Alternative: a ValidatingAdmissionPolicy denying those Service types outside `kube-system`.
   - `service.spec.allocateLoadBalancerNodePorts: false` for Traefik through the HelmChartConfig; document.
-- [ ] [5] No readiness gate after the Calico / Traefik manifests
-      The role only waits for the API (`kubectl get nodes`); Calico and Traefik are applied in the
-      background by the manifests dir. On a fresh host, roles that deploy next (autobott-k8s apps with
-      `wait: true`) can hit a NotReady node or a missing IngressClass while images pull.
-  - `kubectl wait --for=condition=Ready node --all` after the Calico manifest, and
-    `rollout status deploy/traefik -n kube-system` before handing over.
-  - Write the Calico files and the Traefik HelmChartConfig into the manifests dir before the first
-    start: today the node boots without a CNI and Traefik installs twice on a fresh host (defaults
-    first, then again when `traefik-config.yaml` appears).
+- [ ] [5] No readiness gate after the Traefik manifest
+      The role only waits for the API (`kubectl get nodes`); Traefik is applied in the background by
+      the manifests dir. On a fresh host, roles that deploy next (autobott-k8s apps with `wait: true`)
+      can hit a NotReady node or a missing IngressClass while images pull.
+  - `kubectl wait --for=condition=Ready node --all`, and `rollout status deploy/traefik -n kube-system`
+    before handing over.
+  - Write the Traefik HelmChartConfig into the manifests dir before the first start: today Traefik
+    installs twice on a fresh host (defaults first, then again when `traefik-config.yaml` appears).
 - [ ] [4] Docs: no role page for k3s; drop-in and vagrant docs uncommitted in `../docs`
   `../docs/content/docs/roles/` has no k3s page; the `firewall.md` (drop-ins) and `vagrant.md`
   edits sit uncommitted on the docs repo's `main`. Add the page in a new `k8s/` section, like the

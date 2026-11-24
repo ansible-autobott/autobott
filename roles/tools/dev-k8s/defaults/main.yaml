@@ -47,11 +47,15 @@ kubectl_versions:
 
 # ----- kubelogin (Azure AD auth plugin for kubectl; installed alongside kubectl) -----
 # https://github.com/Azure/kubelogin/releases  (version -> arch -> sha256 of the linux-<arch> zip)
-kubelogin_default_version: "v0.2.19"
+# The default is held on the v0.1 release line (latest v0.1.x); v0.2.x stays catalogued for opt-in.
+kubelogin_default_version: "v0.1.9"
 kubelogin_versions:
   "v0.0.34":
     amd64: "de2a529b4b044f6d41b82cd256c9d9fba44a68ad3c48f2d68e1c093eba51db02"
     arm64: "b0e8b23d26ad6fe7245acf01516171f19581842c7db4e89c5564955a3fe87ee2"
+  "v0.1.9":
+    amd64: "d13c37c25da0b19ef838e9d966bebc7bacfd0c4a53aeb9f4e6cdd3b1dd6ae7d9"
+    arm64: "ccc8f76463dd8406564dac446407e76ddf7086fb58c0d22d21d4bd225f0faf2d"
   "v0.2.19":
     amd64: "ebaeff02aa899c5cae6a2b954b64fc02738185319df2570f7dc053451efa4b2f"
     arm64: "aad7e7ca2a8e67db15b110e535123c1bc0f31ef488f5d3ab5b9ae7c9de6f48d3"

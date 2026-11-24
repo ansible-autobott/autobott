@@ -152,6 +152,17 @@
           loop_control:
             label: "{{ item.0.username }}: {{ item.1 }}"
 
+        # git runs any git-<name> on the PATH as `git <name>`; the catalogue alias
+        # `bs` (branch-status) depends on it. Copied, not templated: bash ${#...}
+        # would open a Jinja comment.
+        - name: Install the git branch-status command
+          ansible.builtin.copy:
+            src: git-branch-status
+            dest: /usr/local/bin/git-branch-status
+            owner: root
+            group: root
+            mode: "0755"
+
         - name: Configure user git config
           ansible.builtin.blockinfile:
             path: "{{ item.home | default( '/home/' ~ item.username ) }}/.gitconfig"

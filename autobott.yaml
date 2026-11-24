@@ -97,6 +97,18 @@
     # ===============  Other services  =============== #
     - games/minecraft
 
+#============================================================================================================
+# K8s Cluster
+# never also a linux_servers or linux_desktop host: base/preconditions fails a host that is in both groups
+#============================================================================================================
+- hosts:
+    - k8s_clusters
+  become: true
+  roles:
+    # ===============  Security   =============== #
+    - security/crowdsec
+    - security/firewall
+
     # ===============  K8s  =============== #
     # Last on purpose: k3s fails if a program already listens on a port ServiceLB publishes (80/443 by default),
     # and that check only sees the services of the roles above if they ran first.

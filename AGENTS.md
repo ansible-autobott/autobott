@@ -75,11 +75,17 @@ the version file must already reflect the intended release by the time the PR is
 
 ### Playbook Structure
 
-`autobott.yaml` has 4 plays:
+`autobott.yaml` has 6 plays:
 1. **All hosts** — base, base-services, security foundation
 2. **linux_servers** — web-base, monitoring, servarr, webservices
-3. **linux_desktop** — KDE, gui-apps, cli-apps, dev-* toolchains
-4. **post-setup** — finalization, version write
+3. **k8s_clusters** — crowdsec, firewall, k3s
+4. **linux_desktop** — KDE, gui-apps
+5. **All hosts (tools)** — cli-apps, dev-* toolchains
+6. **post-setup** — finalization, version write
+
+A `k8s_clusters` host is in no other host-type group: `base/preconditions` fails a host that is also in
+`linux_servers` or `linux_desktop`, and a host with `run_role_k3s: true` outside `k8s_clusters`.
+(`linux_servers` + `linux_desktop` on one host is allowed.)
 
 ### Role Organization
 

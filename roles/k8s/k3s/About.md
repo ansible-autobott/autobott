@@ -2,8 +2,9 @@
 
 ## Overview
 
-Single-node k3s server that keeps the k3s defaults, except where this document says otherwise: Calico replaces
-Flannel as the CNI, the host firewall is always on, and the admin kubeconfig is readable only by root. The role
+Single-node k3s server that keeps the k3s defaults (Flannel CNI, the built-in NetworkPolicy controller, Traefik),
+except where this document says otherwise: the host firewall is always on, and the admin kubeconfig is readable
+only by root. The role
 installs and maintains the cluster. Deploying apps is the job of a separate repo, autobott-k8s, which only talks to
 the API: this role provides the host side of its access, the admin kubeconfig, the deploy user `kubeans` and a public
 copy of the API server's CA (see "Handoff to deploy tools").
@@ -64,18 +65,17 @@ Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik �
   files never manage the same object. Other Traefik chart overrides belong in this file too: a chart takes a single
   HelmChartConfig.
 
-### Calico CNI
+### CNI: the k3s default (Flannel)
 
-- Replaces the default Flannel.
-- Provides NetworkPolicy support to restrict pod-to-pod traffic, e.g. only Traefik may reach an app's pods.
-- Flannel backend is set to `none` and default network policy is disabled in k3s config to let Calico handle everything.
-- NetworkManager is kept off Calico's interfaces (pod veths `cali*`, tunnels `tunl*`, `vxlan.calico`,
-  `vxlan-v6.calico`, `wireguard.cali`, `wg-v6.cali`) with `/etc/NetworkManager/conf.d/calico.conf`, as the Calico
-  docs ask ("Configure NetworkManager"): Calico sets up these interfaces and their routes itself, and NetworkManager
-  could flush them or run DHCP on them. The file is deployed on every host, with or without NetworkManager, so a later
-  install starts with it in place. No reload: a NetworkManager that already runs reads it at its next start.
-  NetworkManager does not merge `unmanaged-devices` across files (the last file wins), so a host that needs its own
-  unmanaged devices adds them to this list.
+- Flannel (VXLAN backend) is the pod network; k3s's embedded NetworkPolicy controller (kube-router) enforces the
+  standard `NetworkPolicy` resources, ingress and egress, e.g. only Traefik may reach an app's pods.
+- Earlier versions of this role replaced Flannel with Calico (2026-11). It was dropped: about 200 MB of memory on the
+  single node, a vendored manifest that lagged the Kubernetes version, and no Calico-only feature in use.
+- A cluster set up with Calico can't switch in place: the role fails when it finds Calico's manifest
+  (`server/manifests/calico.yaml`). Rebuild the host, or remove k3s (`k3s-killall.sh`, then delete
+  `/var/lib/rancher/k3s`, `/etc/rancher/k3s`, `/etc/cni/net.d` and `/var/lib/cni`) and run the role again.
+- No NetworkManager drop-in: the Calico one (`unmanaged-devices` for `cali*`, `tunl*`, …) went with Calico, and the
+  k3s docs ask for nothing similar for Flannel.
 
 ### Applications: ClusterIP Services behind an Ingress
 
@@ -86,7 +86,7 @@ Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik �
 ### Firewall (UFW) is always on
 
 - The k3s role imports `security/firewall` with `run_role_firewall: true`, so enabling k3s turns the firewall on
-  even if the host does not enable it. The API (`6443`), kubelet (`10250`) and Calico BGP (`179`) are not
+  even if the host does not enable it. The API (`6443`), kubelet (`10250`) and Flannel VXLAN (`8472/udp`) are not
   reachable from outside: the firewall rejects all inbound traffic except the allowed ports.
 - Keep it that way: do not add the host's public name to `k3s.tls_san` or open `6443`. People are meant to reach
   the API through an SSH tunnel or WireGuard (planned, see the end of this document).
@@ -94,22 +94,25 @@ Client → node :80 / :443 (k3s.http_port / https_port, ServiceLB) → Traefik �
   `servicelb_ports`; NodePorts) are reachable from outside whatever the firewall allows. kube-proxy rewrites them to
   a pod address on arrival (`KUBE-SERVICES` in `nat PREROUTING`) and accepts them in `KUBE-FORWARD`, which runs
   before UFW's forward chains; they never reach UFW's inbound allowlist. Restricting them takes Kubernetes-side
-  tools, not UFW: `loadBalancerSourceRanges` on a `LoadBalancer` Service, or Calico host endpoint policies
-  (`preDNAT`) for NodePorts.
+  tools, not UFW: `loadBalancerSourceRanges` on a `LoadBalancer` Service, or not allocating NodePorts at all.
 - k3s registers its rules as a drop-in file (`/etc/ufw/autobott.d/k3s.json`). The firewall role applies every
   drop-in, so the rules survive the UFW reset it does whenever its own config changes.
 - Rules (found by running without them and reading the UFW block log):
   - **host → pods** (`allow out to <cluster_cidr>`): the firewall rejects outgoing traffic by default, which
     breaks kubelet probes and API server → pod calls (metrics-server, webhooks).
+  - **pods → host** (`allow in from <cluster_cidr>`): the firewall rejects incoming traffic by default, which
+    breaks pods that call the API (CoreDNS, Traefik, helm-controller jobs), also through the `kubernetes` Service:
+    its IP is rewritten to the node's `6443` before UFW sees the packet. Calico used to accept this traffic before
+    UFW; Flannel does not. Not yet checked on the VM.
   - **pods → anywhere** (`route allow from <cluster_cidr>`): on hosts that also run Docker, the ufw-docker rules
     drop forwarded traffic to private addresses, which includes pod → pod (e.g. CoreDNS) and CoreDNS → a private
     upstream resolver.
-- Not needed: pods → host (e.g. the API) is accepted by Calico before UFW sees it
-  (`FELIX_DEFAULTENDPOINTTOHOSTACTION=ACCEPT`), and service IPs are already rewritten to pod IPs when UFW checks
-  the packet.
-- **Limit:** Calico accepts forwarded pod traffic at the end of the `FORWARD` chain, so the firewall's outbound
-  port allowlist does not apply to pods — pods can reach any port on the internet. Restricting pod egress needs
-  Calico network policies.
+- Service IPs are already rewritten to pod or host IPs when UFW checks the packet, so they need no rules.
+- **Limit:** the pods → anywhere rule (and Flannel's own `FLANNEL-FWD` accept rules) let forwarded pod traffic
+  through, so the firewall's outbound port allowlist does not apply to pods — pods can reach any port on the
+  internet. Restricting pod egress needs egress NetworkPolicies.
+- **Limit:** pods → host is any port: a pod can reach every service on the host, also those the firewall keeps
+  from the outside. Restricting it needs egress NetworkPolicies too.
 - **Side effect on the host's own traffic:** outgoing traffic is rejected except DNS, HTTP and HTTPS
   (`firewall_required`), also on hosts that never enabled the firewall themselves. Host services that use other
   ports stop working until the host's `firewall` settings allow them, e.g. `allowed_outbound_tcp: [587]` for
@@ -180,7 +183,7 @@ This role installs and maintains the cluster. Deploying apps is the job of autob
   the node.
 - **Ingress:** Traefik with its CRDs, IngressClass `traefik`, on `k3s.http_port` / `https_port` (80/443) through
   ServiceLB, with the optional cluster-wide HTTPS redirect.
-- **NetworkPolicy**, enforced by Calico, and **Pod Security admission** (built into Kubernetes) for namespaces that
+- **NetworkPolicy**, enforced by k3s's built-in controller, and **Pod Security admission** (built into Kubernetes) for namespaces that
   set a level.
 - **No `HelmChart` for namespace admins:** k3s's helm-controller installs `HelmChart` resources with full admin, and
   the `admin` ClusterRole does not include `helm.cattle.io`, so a namespace admin cannot use it. autobott-k8s
@@ -213,9 +216,9 @@ like root.
 
 | Layer | What it protects |
 |-------|-----------------|
-| UFW (always on) | API, kubelet and BGP not reachable from outside |
+| UFW (always on) | API, kubelet and VXLAN not reachable from outside |
 | Traefik Ingress rules | Routes only matching hostname/path, not a generic proxy |
-| Calico NetworkPolicies | Pod-to-pod isolation, e.g. only Traefik reaches app pods |
+| NetworkPolicies (k3s's built-in controller) | Pod-to-pod isolation, e.g. only Traefik reaches app pods |
 | ClusterIP services | No ports bound on the host for application pods |
 | Admin kubeconfig 0600 (root) | Full cluster admin takes SSH key + sudo, like root |
 | Pod Security admission | Namespaces that enforce `baseline` or `restricted` get no privileged pods or host access (autobott-k8s's app namespaces do) |
@@ -245,11 +248,9 @@ autobott-k8s's `autobott` account are in `../autobott-k8s/roles/k8s/About.md`, w
 
 | File | Purpose |
 |------|---------|
-| `defaults/main.yaml` | Role variables: version, CIDRs, DNS, Calico version, Traefik's ports, other ServiceLB ports, HTTPS redirect |
+| `defaults/main.yaml` | Role variables: version, CIDRs, DNS, Traefik's ports, other ServiceLB ports, HTTPS redirect |
 | `templates/config.yaml.j2` | k3s server config |
 | `templates/k3s.service.j2` | systemd unit |
-| `files/calico-*.yaml` | Calico CNI manifest |
-| `files/networkmanager-calico.conf` | Keeps NetworkManager off Calico's interfaces |
 | `templates/traefik-config.yaml.j2` | Traefik chart overrides (HelmChartConfig): ports (`http_port`, `https_port`), HTTP → HTTPS redirect (`https_redirect`) |
 
 ## Planned (not implemented): API access for people

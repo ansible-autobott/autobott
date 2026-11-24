@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+# git branch-status — `git branch` as a table with the information that matters:
+#
+#   BRANCH           REFS                          STATUS
+#   * main           tag: v1.0, origin/main        ✎ 2
+#     feature                                      ↑ 2
+#       ├─ add parser origin/feature               last pushed
+#       └─ initial    tag: v1.0, origin/main, main
+#
+# REFS:     tags / remote branches sitting on the tip.
+# STATUS:   ✎ N  uncommitted changes (branches checked out in a worktree)
+#           ↑ N  unpushed commits since the last pushed (or squash-merged) commit
+#           ✓    squash-merged into a remote default branch, nothing new since
+#           "in <remote>" when the tip is contained in a remote branch without sitting on it.
+# Nested rows (only when the head moved past what is pushed): the nearest commits in
+# the branch history carrying a tag, remote branch or other local branch, down to the
+# last pushed commit, capped at $MAX_ENTRIES, showing each commit's subject.
+#
+# Remote info uses local remote-tracking refs; pass -f/--fetch to fetch first.
+set -euo pipefail
+
+MAX_ENTRIES=5
+
+if [[ "${1:-}" == "-f" || "${1:-}" == "--fetch" ]]; then
+  git fetch --all --tags --prune --quiet
+fi
+
+git rev-parse --git-dir >/dev/null
+
+if [[ -t 1 ]]; then
+  R=$'\e[0m' GREEN=$'\e[32m' RED=$'\e[31m' YELLOW=$'\e[33m' CYAN=$'\e[36m' BLUE=$'\e[34m' DIM=$'\e[2m' BOLD=$'\e[1m'
+else
+  R='' GREEN='' RED='' YELLOW='' CYAN='' BLUE='' DIM='' BOLD=''
+fi
+
+has_remotes=$([[ -n "$(git remote)" ]] && echo 1 || echo 0)
+sep=$'\x1f'
+deco_fmt='%(decorate:prefix=,suffix=,separator=%x2C ,pointer= -> )'
+
+# Table buffer: each row is 3 fields joined by $sep, with a parallel row of colors.
+# (STATUS is the last column, so it may carry inline colors — it is never padded.)
+headers=("BRANCH" "REFS" "STATUS")
+rows=(); colors=()
+add_row() {  # add_row <branch> <c> <refs> <c> <status> <c>
+  rows+=("$1$sep$3$sep$5")
+  colors+=("$2$sep$4$sep$6")
+}
+
+# First remote branch containing a commit (ignoring <remote>/HEAD aliases).
+in_remote() {
+  git for-each-ref --contains "$1" --format='%(refname)' refs/remotes \
+    | grep -v '/HEAD$' | head -n1 | sed 's#^refs/remotes/##' || true
+}
+
+# Default branch of every remote (origin/HEAD target, else <remote>/main or /master):
+# where squash merges land.
+default_branches=()
+for r in $(git remote); do
+  d=$(git symbolic-ref -q --short "refs/remotes/$r/HEAD" || true)
+  if [[ -z "$d" ]]; then
+    for b in main master; do
+      git show-ref -q --verify "refs/remotes/$r/$b" && { d="$r/$b"; break; }
+    done
+  fi
+  [[ -n "$d" ]] && default_branches+=("$d")
+done
+
+# Squash-merge detection: a branch whose commits are on no remote may still have
+# landed as a single squash commit (and had its remote branch deleted). Walk the
+# branch from the tip; the first commit whose cumulative diff since the merge base
+# matches the patch-id of a commit on a default branch is where it was squash-merged.
+# Sets squash_commit / squash_into.
+find_squash() {
+  squash_commit=""; squash_into=""
+  local d mb ids c pid
+  for d in "${default_branches[@]}"; do
+    mb=$(git merge-base "$1" "$d" 2>/dev/null) || continue
+    [[ "$mb" == "$(git rev-parse "$d")" ]] && continue   # nothing landed since branching
+    ids=$(git log -p --no-merges -n 500 "$mb..$d" | git patch-id --stable | cut -d' ' -f1)
+    [[ -z "$ids" ]] && continue
+    while read -r c; do
+      pid=$(git diff "$mb" "$c" | git patch-id --stable | cut -d' ' -f1)
+      if [[ -n "$pid" ]] && grep -qxF "$pid" <<<"$ids"; then
+        squash_commit=$c; squash_into=$d; return
+      fi
+    done < <(git rev-list -n 30 "$mb..$1")
+  done
+}
+
+# Width of the BRANCH column ("* " + longest name), at least 40 so nested rows have
+# room for their commit subject.
+name_width=$(git for-each-ref refs/heads --format='%(refname:short)' | awk '{ if (length > m) m = length } END { print m + 2 }')
+(( name_width < 40 )) && name_width=40
+
+while IFS="$sep" read -r head name sha wtpath; do
+  # --- branch row --------------------------------------------------------------
+  marker=" "; c_name=""
+  if [[ "$head" == "*" ]]; then marker="*"; c_name="$GREEN$BOLD"
+  elif [[ -n "$wtpath" ]]; then marker="+"; c_name="$CYAN"; fi   # checked out in another worktree
+
+  # Tags and remote branches pointing exactly at the tip.
+  tip_deco=$(git log -1 --decorate-refs=refs/tags --decorate-refs=refs/remotes \
+    --decorate-refs-exclude='refs/remotes/*/HEAD' --format="$deco_fmt" "$sha")
+
+  status=()
+  if [[ -n "$wtpath" ]]; then
+    n=$(git -C "$wtpath" status --porcelain 2>/dev/null | wc -l)
+    (( n > 0 )) && status+=("$YELLOW✎ $n$R")
+  fi
+
+  # Unpushed = commits on no remote branch, counted only from the last pushed commit:
+  # either where the branch leaves the remote history, or where it was squash-merged.
+  unpushed=0; pushed_hash=""; pushed_note=""; squash_commit=""
+  if (( has_remotes )); then
+    unpushed=$(git rev-list --count "$sha" --not --remotes)
+    if (( unpushed > 0 )); then
+      pushed_hash=$(git rev-list --boundary "$sha" --not --remotes | sed -n 's/^-//p' | head -n1)
+      find_squash "$sha"
+      if [[ -n "$squash_commit" ]]; then
+        since_squash=$(git rev-list --count "$squash_commit..$sha")
+        if (( since_squash < unpushed )); then
+          unpushed=$since_squash; pushed_hash=$squash_commit; pushed_note="squash-merged into $squash_into"
+        fi
+      fi
+    fi
+    if (( unpushed > 0 )); then status+=("$RED↑ $unpushed$R")
+    elif [[ -n "$pushed_note" ]]; then status+=("$GREEN✓ $pushed_note$R")
+    elif [[ "$tip_deco" != *"/"* ]]; then
+      # Not directly on a remote branch, but contained in one (e.g. already merged).
+      in_ref=$(in_remote "$sha")
+      [[ -n "$in_ref" ]] && status+=("${DIM}in $in_ref$R")
+    fi
+  fi
+
+  status_cell=""
+  for s in "${status[@]}"; do status_cell+="${status_cell:+  }$s"; done
+  add_row "$marker $name" "$c_name" "$tip_deco" "$YELLOW" "$status_cell" ""
+
+  # --- nested rows: only when the head moved past what is pushed ----------------
+  # (In repos without remotes: whenever the tip itself is untagged.)
+  if (( unpushed > 0 )) || { (( ! has_remotes )) && [[ -z "$tip_deco" ]]; }; then
+    refs_opts=(--decorate-refs=refs/tags --decorate-refs=refs/remotes --decorate-refs=refs/heads
+               --decorate-refs-exclude="refs/heads/$name" --decorate-refs-exclude='refs/remotes/*/HEAD')
+    entry_fmt="%H$sep%s$sep$deco_fmt"
+
+    # Decorated commits in the history (tags, remote branches, other local branches).
+    entries=()
+    while IFS= read -r e; do
+      # Skip the tip itself, and undecorated commits (the root commit always shows up).
+      [[ "${e%%"$sep"*}" == "$sha" || "$e" == *"$sep" ]] || entries+=("$e")
+    done < <(git log --simplify-by-decoration -n $((MAX_ENTRIES + 1)) "${refs_opts[@]}" --format="$entry_fmt" "$sha")
+
+    # The last pushed commit (where the unpushed commits start) is always shown,
+    # even if it carries no ref of its own or falls outside the cap.
+    pushed_entry=""
+    if [[ -n "$pushed_hash" ]]; then
+      pushed_entry=$(git log -1 "${refs_opts[@]}" --format="$entry_fmt" "$pushed_hash")
+      if [[ -n "$pushed_note" ]]; then
+        [[ "$pushed_entry" == *"$sep" ]] && pushed_entry+="$pushed_note" || pushed_entry+=", $pushed_note"
+      elif [[ "$pushed_entry" == *"$sep" ]]; then   # no decoration: say which remote has it
+        pushed_entry+="in $(in_remote "$pushed_hash")"
+      fi
+      keep=()
+      for e in "${entries[@]}"; do [[ "${e%%"$sep"*}" == "$pushed_hash" ]] || keep+=("$e"); done
+      entries=("${keep[@]}")
+    fi
+
+    # Order by distance from the tip; history older than the last pushed commit is
+    # already published and not interesting, so stop there. Cap, keeping the pushed
+    # commit in the last slot if needed.
+    max_dist=-1
+    [[ -n "$pushed_hash" ]] && max_dist=$(git rev-list --count "$pushed_hash..$sha")
+    sorted=()
+    while IFS= read -r e; do
+      (( max_dist >= 0 && ${e%%"$sep"*} > max_dist )) || sorted+=("$e")
+    done < <(
+      for e in "${entries[@]}" ${pushed_entry:+"$pushed_entry"}; do
+        printf '%s%s%s\n' "$(git rev-list --count "${e%%"$sep"*}..$sha")" "$sep" "$e"
+      done | sort -t"$sep" -k1,1n)
+    gap=-1
+    if (( ${#sorted[@]} > MAX_ENTRIES )); then
+      shown=("${sorted[@]:0:MAX_ENTRIES}")
+      if [[ -n "$pushed_hash" ]] && ! printf '%s\n' "${shown[@]}" | grep -qF "$pushed_hash"; then
+        shown=("${sorted[@]:0:MAX_ENTRIES-1}")
+        gap=${#shown[@]}
+        for e in "${sorted[@]}"; do [[ "$e" == *"$pushed_hash"* ]] && shown+=("$e"); done
+      fi
+      sorted=("${shown[@]}")
+    fi
+
+    count=${#sorted[@]}
+    for i in "${!sorted[@]}"; do
+      (( i == gap )) && add_row "    │  ⋮" "$DIM" "" "" "" ""
+      IFS="$sep" read -r dist full subj deco <<<"${sorted[i]}"
+      branch_char="├─"; (( i == count - 1 )) && branch_char="└─"
+      label=""; [[ "$full" == "$pushed_hash" ]] && label="last pushed"
+      # Commit subject, truncated so it never widens the BRANCH column.
+      prefix="    $branch_char "
+      max=$(( name_width - ${#prefix} ))
+      (( ${#subj} > max )) && subj="${subj:0:max-3}..."
+      add_row "$prefix$subj" "$DIM" "$deco" "$GREEN" "$label" "$BLUE"
+    done
+  fi
+done < <(git for-each-ref --sort=refname refs/heads \
+  --format="%(HEAD)$sep%(refname:short)$sep%(objectname)$sep%(worktreepath)")
+
+# --- print the table (pad by character count, so ✎ ↑ ├─ don't break alignment) --
+widths=()
+for i in "${!headers[@]}"; do widths[i]=${#headers[i]}; done
+for row in "${rows[@]}"; do
+  IFS="$sep" read -r -a f <<<"$row"
+  for i in "${!f[@]}"; do (( ${#f[i]} > widths[i] )) && widths[i]=${#f[i]}; done
+done
+
+print_row() {  # print_row <fields-array-name> <colors-array-name>
+  local -n _f=$1 _c=$2
+  local i last=$(( ${#headers[@]} - 1 )) out="" cell
+  for i in "${!headers[@]}"; do
+    cell=${_f[i]:-}
+    out+="${_c[i]:-}$cell$R"
+    (( i < last )) && out+=$(printf '%*s' $(( widths[i] - ${#cell} + 2 )) '')
+  done
+  printf '%s\n' "${out%"${out##*[![:space:]]}"}"   # trim trailing padding
+}
+
+hdr_colors=("$BOLD" "$BOLD" "$BOLD")
+print_row headers hdr_colors
+for r in "${!rows[@]}"; do
+  IFS="$sep" read -r -a f <<<"${rows[r]}"
+  IFS="$sep" read -r -a c <<<"${colors[r]}"
+  print_row f c
+done

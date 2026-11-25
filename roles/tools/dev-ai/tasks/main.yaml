@@ -52,3 +52,6 @@
     - name: GitHub Copilot CLI
       ansible.builtin.import_tasks: apps/copilot-cli.yaml
       when: "'copilot-cli' in dev_ai_config"
+    - name: MCP Inspector
+      ansible.builtin.import_tasks: apps/mcp-inspector.yaml
+      when: "'mcp-inspector' in dev_ai_config"

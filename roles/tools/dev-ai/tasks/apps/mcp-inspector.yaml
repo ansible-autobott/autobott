@@ -1,0 +1,93 @@
+---
+# ============================================================================================================
+# mcp-inspector — MCP Inspector, a browser UI and CLI for testing MCP servers
+# https://github.com/modelcontextprotocol/inspector
+#
+# Published only as an npm package (@modelcontextprotocol/inspector), so there is no
+# standalone binary to pin by checksum. It is installed per user, pinned to
+# mcp_inspector_version, with the npm of the Node that dev-node installed into that
+# user's nvm, into ~/<mcp_inspector_dir> (outside ~/.nvm, like pi). A user whose
+# installed version differs gets the pinned one.
+# Only the `mcp-inspector` command is linked onto PATH (the package's `inspector` alias and
+# `mcpdo` stay in <mcp_inspector_dir>/node_modules/.bin).
+#
+# Depends on dev-node: 'node' must be selected in dev_node_config.
+# ============================================================================================================
+- name: Check that dev-node installs Node for MCP Inspector
+  ansible.builtin.fail:
+    msg: "mcp-inspector needs Node from dev-node: add 'node' to dev_node_config."
+  when: "'node' not in (dev_node_config | default({}, true))"
+
+- name: Resolve the selected MCP Inspector version
+  ansible.builtin.set_fact:
+    mcp_inspector_version: "{{ (dev_ai_config['mcp-inspector'] | default({}, true)).version | default(mcp_inspector_default_version, true) }}"
+
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
+
+- name: Check that dev-node set up nvm for each user
+  ansible.builtin.stat:
+    path: "{{ item.home }}/.nvm/nvm.sh"
+  register: mcp_inspector_nvm
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Fail when nvm is missing for a user
+  ansible.builtin.fail:
+    msg: "mcp-inspector needs Node from dev-node, but {{ item.item.home }}/.nvm is missing: run the role_dev_node tag first."
+  when: not item.stat.exists
+  loop: "{{ mcp_inspector_nvm.results }}"
+  loop_control:
+    label: "{{ item.item.username }}"
+
+# Like pi, it lives outside ~/.nvm, so switching or adding Node versions does not hide
+# it: npm installs it into its own prefix (mcp_inspector_dir), and its commands are
+# linked into ~/.local/bin (on PATH via base/linux-basic). Skipped when the prefix
+# already holds the pinned version.
+- name: Install MCP Inspector for each user
+  become: true
+  become_user: "{{ item.username }}"
+  ansible.builtin.shell: >-
+    source "$NVM_DIR/nvm.sh" && nvm use default >/dev/null &&
+    current=$(node -p "require('$DIR/node_modules/$PKG/package.json').version" 2>/dev/null || true) &&
+    if [ "$current" = "$VERSION" ]; then echo PRESENT;
+    else npm install --prefix "$DIR" --no-fund --no-audit "$PKG@$VERSION"; fi
+  environment:
+    HOME: "{{ item.home }}"
+    NVM_DIR: "{{ item.home }}/.nvm"
+    DIR: "{{ item.home }}/{{ mcp_inspector_dir }}"
+    PKG: "@modelcontextprotocol/inspector"
+    VERSION: "{{ mcp_inspector_version }}"
+  args:
+    executable: /bin/bash
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+  register: mcp_inspector_install
+  changed_when: "'PRESENT' not in mcp_inspector_install.stdout"
+
+- name: Make sure ~/.local/bin exists for each user
+  ansible.builtin.file:
+    path: "{{ item.home }}/.local/bin"
+    state: directory
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+    mode: "0755"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Link the mcp-inspector command into ~/.local/bin
+  ansible.builtin.file:
+    src: "{{ item.home }}/{{ mcp_inspector_dir }}/node_modules/.bin/mcp-inspector"
+    dest: "{{ item.home }}/.local/bin/mcp-inspector"
+    state: link
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"

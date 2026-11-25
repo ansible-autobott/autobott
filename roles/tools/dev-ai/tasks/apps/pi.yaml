@@ -1,76 +1,89 @@
 ---
 # ============================================================================================================
 # pi — pi coding agent
-# https://github.com/badlogic/pi-mono/releases  (version -> arch -> sha256 of pi-<platform>.tar.gz)
+# https://pi.dev
 #
-# The release tarball is a pi/ directory: the binary plus the assets it loads
-# from beside itself (package.json, themes, wasm, native modules), so it cannot
-# be copied out alone. Extracts it to /opt/pi-<version>, points a stable /opt/pi
-# symlink at it, and links the binary into /usr/local/bin (already on PATH).
+# Unlike the other dev-ai tools, pi is installed per user so `pi update` can keep it
+# current. pi's own installer (pi.dev/install.sh, vendored as files/pi_install.sh) is run once as every enabled
+# linux-basic user, on the Node that dev-node installed into that user's nvm. It
+# puts pi in ~/.pi/agent/install (outside ~/.nvm, so switching Node versions does not
+# hide it) and links a launcher into ~/.local/bin. After that, `pi update` owns pi;
+# the role does not pin or update its version.
+#
+# Depends on dev-node: 'node' must be selected in dev_node_config.
 # ============================================================================================================
-- name: Resolve the selected pi version
-  ansible.builtin.set_fact:
-    pi_version: "{{ (dev_ai_config['pi'] | default({}, true)).version | default(pi_default_version, true) }}"
+- name: Check that dev-node installs Node for pi
+  ansible.builtin.fail:
+    msg: "pi needs Node from dev-node: add 'node' to dev_node_config."
+  when: "'node' not in (dev_node_config | default({}, true))"
 
-- name: Validate the selected pi version is available
-  ansible.builtin.assert:
-    that:
-      - pi_version in pi_versions
-      - dev_ai_arch in pi_versions[pi_version]
-    fail_msg: >-
-      Unknown pi version '{{ pi_version }}' for {{ dev_ai_arch }}.
-      Available: {{ pi_versions | dict2items | selectattr('value', 'contains', dev_ai_arch) | map(attribute='key') | join(', ') }}
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
 
-- name: Check whether this pi version is already installed
+# Older autobott versions installed pi system-wide from the release tarball. pi's
+# installer stops (without a terminal) when another pi is on PATH, so remove it.
+- name: Check for the system-wide pi from older autobott versions
   ansible.builtin.stat:
-    path: "/opt/pi-{{ pi_version }}/pi"
-  register: pi_installed
+    path: /usr/local/bin/pi
+  register: pi_system_link
 
-- name: Install pi from the release tarball
-  when: not pi_installed.stat.exists
+- name: Remove the system-wide pi link
+  ansible.builtin.file:
+    path: /usr/local/bin/pi
+    state: absent
+  when:
+    - pi_system_link.stat.islnk | default(false)
+    - pi_system_link.stat.lnk_target == '/opt/pi/pi'
+
+- name: Find the system-wide pi installs
+  ansible.builtin.find:
+    paths: /opt
+    # only /opt/pi and /opt/pi-<version>, not other tools such as /opt/pi-hole
+    patterns: '^pi(-\d+\.\d+\.\d+)?$'
+    use_regex: true
+    file_type: any
+  register: pi_system_installs
+
+- name: Remove the system-wide pi installs
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ pi_system_installs.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Check which users already have pi
+  ansible.builtin.stat:
+    path: "{{ item.home }}/.pi/agent/install/managed-install.json"
+  register: pi_stat
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Install pi for the users that lack it
+  when: pi_stat.results | rejectattr('stat.exists') | list | length > 0
   block:
-    - name: Download pi release tarball
-      ansible.builtin.get_url:
-        url: "{{ pi_base_url }}/v{{ pi_version }}/pi-{{ dev_ai_platforms[dev_ai_arch] }}.tar.gz"
-        dest: "/tmp/pi-{{ pi_version }}.tar.gz"
-        checksum: "sha256:{{ pi_versions[pi_version][dev_ai_arch] }}"
-        owner: root
-        group: root
-        mode: "0644"
-
-    - name: Create the pi install dir
-      ansible.builtin.file:
-        path: "/opt/pi-{{ pi_version }}"
-        state: directory
+    # Vendored copy of pi.dev/install.sh (files/pi_install.sh), so a changed upstream
+    # script is never run unreviewed.
+    - name: Copy the pi installer
+      ansible.builtin.copy:
+        src: pi_install.sh
+        dest: /tmp/pi_install.sh
         owner: root
         group: root
         mode: "0755"
 
-    - name: Install pi into /opt
-      ansible.builtin.unarchive:
-        src: "/tmp/pi-{{ pi_version }}.tar.gz"
-        dest: "/opt/pi-{{ pi_version }}"
-        extra_opts:
-          - --strip-components=1
-        remote_src: true
-        owner: root
-        group: root
+    - name: Install pi for each user
+      ansible.builtin.include_tasks: pi_user.yaml
+      loop: "{{ linux_basic_enabled_users }}"
+      loop_control:
+        loop_var: pi_user
+        label: "{{ pi_user.username }}"
 
-    - name: Remove the pi tarball
+    - name: Remove the pi installer
       ansible.builtin.file:
-        path: "/tmp/pi-{{ pi_version }}.tar.gz"
+        path: /tmp/pi_install.sh
         state: absent
-
-- name: Point /opt/pi at the installed version
-  ansible.builtin.file:
-    src: "/opt/pi-{{ pi_version }}"
-    dest: /opt/pi
-    state: link
-    force: true
-
-- name: Link pi into /usr/local/bin
-  ansible.builtin.file:
-    src: /opt/pi/pi
-    dest: /usr/local/bin/pi
-    state: link
-    force: true

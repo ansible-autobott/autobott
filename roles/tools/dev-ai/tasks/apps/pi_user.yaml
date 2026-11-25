@@ -1,0 +1,42 @@
+---
+# ============================================================================================================
+# pi — per-user install, included from pi.yaml once per enabled linux-basic user
+# (pi_user: {username, home, group}). Expects the installer at /tmp/pi_install.sh
+# whenever this user has no managed pi install yet.
+# ============================================================================================================
+- name: Check that dev-node set up nvm for {{ pi_user.username }}
+  ansible.builtin.stat:
+    path: "{{ pi_user.home }}/.nvm/nvm.sh"
+  register: pi_nvm
+
+- name: Fail when nvm is missing for {{ pi_user.username }}
+  ansible.builtin.fail:
+    msg: "pi needs Node from dev-node, but {{ pi_user.home }}/.nvm is missing: run the role_dev_node tag first."
+  when: not pi_nvm.stat.exists
+
+# The installer links pi into the first known user bin dir on PATH; ~/.local/bin is
+# put on PATH below, and base/linux-basic's profile adds it to login shells.
+- name: Make sure ~/.local/bin exists for {{ pi_user.username }}
+  ansible.builtin.file:
+    path: "{{ pi_user.home }}/.local/bin"
+    state: directory
+    owner: "{{ pi_user.username }}"
+    group: "{{ pi_user.group }}"
+    mode: "0755"
+
+# nvm.sh selects the user's default Node, which the installer uses for npm. setsid
+# detaches it from any terminal, so it takes its default answers instead of
+# waiting for a key press.
+- name: Install pi for {{ pi_user.username }}
+  become: true
+  become_user: "{{ pi_user.username }}"
+  ansible.builtin.shell: >-
+    . "$NVM_DIR/nvm.sh" && nvm use default >/dev/null &&
+    setsid -w sh /tmp/pi_install.sh </dev/null
+  environment:
+    HOME: "{{ pi_user.home }}"
+    NVM_DIR: "{{ pi_user.home }}/.nvm"
+    PATH: "{{ pi_user.home }}/.local/bin:/usr/local/bin:/usr/bin:/bin"
+  args:
+    executable: /bin/bash
+    creates: "{{ pi_user.home }}/.pi/agent/install/managed-install.json"

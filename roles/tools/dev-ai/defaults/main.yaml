@@ -8,7 +8,9 @@ run_role_dev_ai: true
 
 # App selection. Keys are tool names; value is an optional { version: } override
 # (must be one of that tool's catalogued versions below); an empty value installs
-# the tool's default version.
+# the tool's default version. pi takes no version: it is installed per user and
+# updates itself with `pi update`; it needs 'node' selected in dev_node_config.
+# mcp-inspector is a per-user npm package, so it also needs 'node' in dev_node_config.
 # Example:
 #   dev_ai_config:
 #     herdr:
@@ -16,6 +18,8 @@ run_role_dev_ai: true
 #       version: "2.1.267"
 #     pi:
 #     copilot-cli:
+#     mcp-inspector:
+#       version: "2.16.0"
 dev_ai_config: {}
 
 # Source of truth for validation — every key allowed in dev_ai_config.
@@ -24,6 +28,7 @@ dev_ai_available:
   - claude-code
   - pi
   - copilot-cli
+  - mcp-inspector
 
 # Host CPU architecture (ansible_facts.architecture) -> its Debian name, which keys the
 # per-architecture checksums in the catalogs below.
@@ -31,7 +36,7 @@ dev_ai_arch_names:
   x86_64: amd64
   aarch64: arm64
 
-# claude-code, pi and copilot-cli name their Linux builds the Node way (Debian arch -> platform).
+# claude-code and copilot-cli name their Linux builds the Node way (Debian arch -> platform).
 dev_ai_platforms:
   amd64: linux-x64
   arm64: linux-arm64
@@ -42,7 +47,7 @@ dev_ai_platforms:
 
 # ----- herdr (runtime platform for coding agents) -----
 # https://github.com/herdrdev/herdr/releases  (version -> arch -> sha256 of the linux binary)
-herdr_default_version: "0.9.1"
+herdr_default_version: "0.9.5"
 herdr_versions:
   "0.9.0":
     amd64: "4fa1a01158dd8043da92d31b270780b0dcc10603038d9b61cac4d81ab63fb71f"
@@ -50,6 +55,9 @@ herdr_versions:
   "0.9.1":
     amd64: "2a02fed16beb651ef006e1d43f048f652ca4dc58ad053cd2d44450563d5c54b7"
     arm64: "f4ccf4de745f2cb9a39a983e9ba3703dad50ec2a58dea83026ceab721bbd8d9e"
+  "0.9.5":
+    amd64: "14d9e8bc8b4a9e0118d77c32266f76d461f09b40342eb23752960bd89f59929d"
+    arm64: "17d7536f2da50859523680ef279dffcac8e4a235f4e46fe8da6c2ec44141897c"
 herdr_base_url: "https://github.com/herdrdev/herdr/releases/download"
 # Release binary per Debian arch (herdr names them after `uname -m`)
 herdr_assets:
@@ -67,14 +75,19 @@ claude_code_versions:
     arm64: "226a4e009574044a18bf5495f127806b2a1bfcbf25b3c01608705fafee95fefb"
 claude_code_base_url: "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases"
 
+# Per-user shell settings, written to ~/.bashrc.d/20_claude-code.bashrc of every enabled
+# linux-basic user. Set claude_code_tmpdir to "" / claude_code_aliases to {} to leave them out.
+# Temp dir Claude Code uses instead of /tmp ($HOME is expanded by the shell)
+claude_code_tmpdir: "$HOME/.cache/claude-tmp"
+# Shell aliases: alias name -> command
+claude_code_aliases:
+  klaus: "claude --enable-auto-mode --model opus"
+
 # ----- pi (pi coding agent) -----
-# https://github.com/badlogic/pi-mono/releases  (version -> arch -> sha256 of pi-<platform>.tar.gz)
-pi_default_version: "0.87.1"
-pi_versions:
-  "0.87.1":
-    amd64: "80d78dd62d50049a006b981d994c61255bcc10e730b0c278d4ea0a755909764c"
-    arm64: "364b4a9f8491450b27a4857d4e3c780dbaf696790821c176a873e860cbbc3b89"
-pi_base_url: "https://github.com/badlogic/pi-mono/releases/download"
+# Not catalogued: pi's own installer sets it up per user (see tasks/apps/pi.yaml)
+# and `pi update` keeps it current. The installer is vendored, not downloaded:
+# files/pi_install.sh is a reviewed copy of https://pi.dev/install.sh — to refresh
+# it, download the new script, review the diff, and replace the file.
 
 # ----- copilot-cli (GitHub Copilot CLI) -----
 # https://github.com/github/copilot-cli/releases  (version -> arch -> sha256 of copilot-<platform>.tar.gz)
@@ -84,3 +97,10 @@ copilot_cli_versions:
     amd64: "42f40c08ff8a8ff78522161e4b5e2b86340ad8bb0853a5f1aa64ce65b48d007b"
     arm64: "e263f5f9eb0db5dddf5775ac98c437e27743857ce0ba310f08f2338aebd1107d"
 copilot_cli_base_url: "https://github.com/github/copilot-cli/releases/download"
+
+# ----- mcp-inspector (MCP Inspector) -----
+# https://www.npmjs.com/package/@modelcontextprotocol/inspector  (npm only, no checksum:
+# npm verifies the package integrity itself). Latest: `npm view @modelcontextprotocol/inspector version`
+mcp_inspector_default_version: "2.16.0"
+# Install prefix, relative to each user's home (outside ~/.nvm, so it survives Node switches)
+mcp_inspector_dir: ".local/share/mcp-inspector"

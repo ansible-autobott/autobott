@@ -6,14 +6,21 @@
 # Master on/off for the whole role
 run_role_dev_node: true
 
-# App selection. The `node` key installs Node via nvm; its optional override:
-#   version:     nvm install target — "lts" (default), "node" (latest), or an
-#                exact version like "22.11.0".
+# App selection. The `node` key installs nvm plus the latest Node LTS, once: only
+# when the user has no Node yet. After that the user manages Node with nvm
+# (`nvm install`, `nvm alias default`); the role never adds or switches versions.
+# Optional overrides:
 #   nvm_version: catalogued nvm version to install (sha-verified).
+#   packages:    global npm packages for every user. Installed into the user's
+#                default Node when missing (never upgraded or removed), and written
+#                to ~/.nvm/default-packages so `nvm install` adds them to each new
+#                Node too. Package names may carry a version (e.g. "pkg@1.2.3").
 # Example:
 #   dev_node_config:
 #     node:
-#       version: "lts"
+#       nvm_version: "0.40.8"
+#       packages:
+#         - "@tobilu/qmd"
 dev_node_config: {}
 
 # Source of truth for validation — every key allowed in dev_node_config.
@@ -28,7 +35,3 @@ nvm_default_version: "0.40.8"
 nvm_versions:
   "0.40.7": "066ce4eaf4d78eaa6410433bc9ba58faaba646157cbbed6109153e6c24c5f8a5"
   "0.40.8": "48a0eee9a60e07422dce0eb5774754c83889570ca1ee2566c516acbe8af03a9e"
-
-# Default `nvm install` target for Node (see the `node` key above): "lts",
-# "node" (latest), or an exact version.
-node_default_version: "lts"

@@ -136,7 +136,7 @@
 
         - name: Download aether deb
           ansible.builtin.get_url:
-            url: "https://github.com/andresbott/aether/releases/download/v{{ aether_config.version }}/{{ aether_deb_file }}"
+            url: "https://github.com/aether-music-player/aether-server/releases/download/v{{ aether_config.version }}/{{ aether_deb_file }}"
             dest: "/tmp/aether/{{ aether_deb_file }}"
             checksum: "sha256:{{ aether_checksums[aether_config.version] }}"
             mode: "0600"

@@ -32,13 +32,56 @@
     owner: "{{ dev_node_user.username }}"
     group: "{{ dev_node_user.group }}"
 
-- name: Install Node for {{ dev_node_user.username }}
+# The latest LTS only seeds a first Node; after that the user owns Node via nvm. Adding
+# a newer LTS on later runs would move nvm's "node" default alias onto it, away from
+# the global npm packages installed under the current Node.
+- name: Find the Node versions already installed for {{ dev_node_user.username }}
+  ansible.builtin.find:
+    paths: "{{ dev_node_user.home }}/.nvm/versions/node"
+    file_type: directory
+  register: node_installed
+
+- name: Install the latest Node LTS for {{ dev_node_user.username }}
+  when: node_installed.matched == 0
   become: true
   become_user: "{{ dev_node_user.username }}"
-  ansible.builtin.shell: "source {{ dev_node_user.home }}/.nvm/nvm.sh && nvm install {{ '--lts' if node_version == 'lts' else node_version }}"
+  ansible.builtin.shell: "source {{ dev_node_user.home }}/.nvm/nvm.sh && nvm install --lts"
   environment:
     NVM_DIR: "{{ dev_node_user.home }}/.nvm"
   args:
     executable: /bin/bash
-  register: install_node
-  changed_when: "'is already installed' not in (install_node.stdout + install_node.stderr)"
+  changed_when: true
+
+# nvm installs every package listed in $NVM_DIR/default-packages into each Node it
+# installs later, so the user's global tools follow them to a new Node version.
+- name: Write the nvm default-packages list for {{ dev_node_user.username }}
+  ansible.builtin.copy:
+    content: "{{ (['# managed by autobott (dev_node_config.node.packages)'] + node_packages) | join('\n') }}\n"
+    dest: "{{ dev_node_user.home }}/.nvm/default-packages"
+    owner: "{{ dev_node_user.username }}"
+    group: "{{ dev_node_user.group }}"
+    mode: "0644"
+  when: node_packages | length > 0
+
+- name: Remove the nvm default-packages list for {{ dev_node_user.username }}
+  ansible.builtin.file:
+    path: "{{ dev_node_user.home }}/.nvm/default-packages"
+    state: absent
+  when: node_packages | length == 0
+
+# Install the packages into the user's current default Node now; packages already
+# there are left as they are (never upgraded or removed).
+- name: Install the global npm packages for {{ dev_node_user.username }}
+  become: true
+  become_user: "{{ dev_node_user.username }}"
+  ansible.builtin.shell: >-
+    source "$NVM_DIR/nvm.sh" && nvm use default >/dev/null &&
+    if npm ls -g --depth=0 "$PKG" >/dev/null 2>&1; then echo PRESENT; else npm install -g "$PKG"; fi
+  environment:
+    NVM_DIR: "{{ dev_node_user.home }}/.nvm"
+    PKG: "{{ item }}"
+  args:
+    executable: /bin/bash
+  loop: "{{ node_packages }}"
+  register: node_package_install
+  changed_when: "'PRESENT' not in node_package_install.stdout"

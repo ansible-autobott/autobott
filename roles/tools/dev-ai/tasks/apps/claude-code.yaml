@@ -7,6 +7,9 @@
 # /usr/local/bin/claude, pinned by version + sha256 (from the release
 # manifest.json). The system-wide binary is root-owned, so Claude Code's
 # self-updater cannot replace it; bump the version here instead.
+#
+# Also writes a per-user ~/.bashrc.d snippet with CLAUDE_CODE_TMPDIR and shell
+# aliases (claude_code_tmpdir / claude_code_aliases).
 # ============================================================================================================
 - name: Resolve the selected Claude Code version
   ansible.builtin.set_fact:
@@ -39,3 +42,34 @@
     owner: root
     group: root
     mode: "0755"
+
+# ============================== per-user shell config ============================== #
+# ~/.bashrc.d/20_claude-code.bashrc for every enabled linux-basic user (loaded by the
+# .bashrc of base/linux-basic): CLAUDE_CODE_TMPDIR and the claude_code_aliases.
+- name: Resolve the users that get per-user tool setup # noqa: role-name[path]
+  ansible.builtin.import_role:
+    name: base/linux-basic
+    tasks_from: enabled_users
+    allow_duplicates: false
+
+- name: Make sure .bashrc.d exists
+  ansible.builtin.file:
+    path: "{{ item.home }}/.bashrc.d"
+    state: directory
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+    mode: "0750"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"
+
+- name: Copy the Claude Code .bashrc.d template
+  ansible.builtin.template:
+    src: claude-code/claude-code.bashrc.j2
+    dest: "{{ item.home }}/.bashrc.d/20_claude-code.bashrc"
+    owner: "{{ item.username }}"
+    group: "{{ item.group }}"
+    mode: "0640"
+  loop: "{{ linux_basic_enabled_users }}"
+  loop_control:
+    label: "{{ item.username }}"

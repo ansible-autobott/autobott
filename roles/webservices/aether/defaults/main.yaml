@@ -2,7 +2,7 @@
 # ============================================================================================================
 # AETHER Role Defaults
 # ============================================================================================================
-# Aether is a music server (https://github.com/andresbott/aether). It is installed from the upstream
+# Aether is a music server (https://github.com/aether-music-player/aether-server). It is installed from the upstream
 # .deb, which ships its own systemd unit, creates the `aether` system user and the /var/lib/aether data
 # directory, and drops a default config at /etc/aether/config.yaml. This role only downloads/installs that
 # .deb and then overwrites the config with a custom, Ansible-managed template.
@@ -15,7 +15,7 @@ aether: {}
 
 # Default configuration structure
 aether_defaults:
-  version: 0.13.3
+  version: 0.13.4
 
   # System packages installed with the role. libchromaprint-tools provides `fpcalc`
   # (Chromaprint/AcoustID audio fingerprinting), used by aether for track and album identification.
@@ -144,13 +144,4 @@ aether_defaults:
 
 # Supported aether versions and the sha256 checksum of their amd64 (GOAMD64 v3) .deb.
 aether_checksums:
-  "0.1.0": "ef30f04742aebd77def37de6097dd2d233cbfb9ea31a6d3da95c58922bedca85"
-  "0.2.0": "95d31f026bb8ee13e990edbc1f7149f777d94193826f68fa693f8ae8a188dde0"
-  "0.3.0": "e18c9c1ae3ff8ea582a08b2db436935cdb75fa053763b099c4b1d89ba12bb1a4"
-  "0.4.0": "6a37785485d8e38e2b3a85438a9dcea8f561744375739532fd0d772142f984f3"
-  "0.5.0": "45b1571b149f59442f2bb36b401758287ae1bc4cac4677c1a36c975c054b8f64"
-  "0.6.0": "d8b0bf0cc1130181a04a07d8cc1ef2773edb27f9e12ccfea4e65286f8e2dfcb8"
-  "0.12.3": "a3520deb127df3d2f79eb6a83f7398355ccd9dbb5a95037a2d838511bb66e341"
-  "0.12.4": "33a384c25132dafb5494e7ab42115a3b951f10b02def96e732e3f0bfac29a012"
-  "0.12.7": "9dad74f46d17913bdec88facb368791ca34b5e6b1cf66a80d8ed258e09244dc9"
-  "0.13.3": "1ab4796a757e839e24e04ce86dde0612ba6648a9be228e65c45b9be75029e6a2"
+  "0.13.4": "aebbd426c5d7f42c7c8953751b1c324e82377c73475eb149a18780fddda13447"

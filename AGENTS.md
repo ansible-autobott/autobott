@@ -117,8 +117,13 @@ roles/
 > - **`tools/dev-java`** — jenv + maven (via `dev_java_config`)
 > - **`tools/dev-k8s`** — kubectl + k9s (via `dev_k8s_config`)
 > - **`tools/dev-ai`** — AI coding agents: herdr, claude-code, pi,
->   copilot-cli (via `dev_ai_config`). Install-only: pinned, checksummed,
->   root-owned binaries (self-updaters can't replace them); no auth or config
+>   copilot-cli, mcp-inspector (via `dev_ai_config`). Install-only: pinned, checksummed,
+>   root-owned binaries (self-updaters can't replace them); no auth or config.
+>   Exception: pi is installed per user by pi's own installer, on the Node from
+>   `dev-node` (requires `node` in `dev_node_config`), and updates itself (`pi update`).
+>   mcp-inspector is a pinned per-user npm install in its own prefix (outside `~/.nvm`, like pi),
+>   with `mcp-inspector` linked into `~/.local/bin`.
+>   claude-code also gets a per-user `~/.bashrc.d` snippet (`CLAUDE_CODE_TMPDIR`, shell aliases)
 > - **`tools/dev-generic`** — other dev tools: vagrant, vault, github-cli
 >   (via `dev_generic_config`)
 >

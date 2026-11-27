@@ -1,0 +1,12 @@
+# {{ ansible_managed }}
+# Claude Code shell settings (dev-ai role)
+{% if claude_code_tmpdir %}
+
+export CLAUDE_CODE_TMPDIR="{{ claude_code_tmpdir }}"
+{% endif %}
+{% if claude_code_aliases %}
+
+{% for name, command in claude_code_aliases.items() %}
+alias {{ name }}='{{ command }}'
+{% endfor %}
+{% endif %}
